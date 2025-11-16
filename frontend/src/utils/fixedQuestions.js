@@ -57,7 +57,7 @@ export const FIXED_QUESTIONS = [
   {
     id: 'fixed_respondent_age',
     type: 'text',
-    text: 'What is your age?',
+    text: 'Could you please tell me your age in complete years?',
     description: 'Please enter your age in years.',
     required: true,
     order: 2,

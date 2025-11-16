@@ -17,6 +17,15 @@ import { getApiUrl } from '../../utils/config';
 const InterviewInterface = ({ survey, onClose, onComplete }) => {
   const { showSuccess, showError } = useToast();
   
+  // Helper function to check if an option is "Other", "Others", or "Others (Specify)"
+  const isOthersOption = (optText) => {
+    if (!optText) return false;
+    const normalized = optText.toLowerCase().trim();
+    return normalized === 'other' || 
+           normalized === 'others' || 
+           normalized === 'others (specify)';
+  };
+  
   // Core state
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [responses, setResponses] = useState({});
@@ -1326,7 +1335,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         // Find "Others" option value for this question
         const othersOption = question.options?.find(opt => {
           const optText = typeof opt === 'object' ? opt.text : opt;
-          return optText && (optText.toLowerCase().trim() === 'others' || optText.toLowerCase().trim() === 'other');
+          return isOthersOption(optText);
         });
         const othersOptionValue = othersOption ? (typeof othersOption === 'object' ? othersOption.value || othersOption.text : othersOption) : null;
         
@@ -1350,9 +1359,9 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               if (selectedOption) {
                 const optText = typeof selectedOption === 'object' ? selectedOption.text : selectedOption;
                 const optCode = typeof selectedOption === 'object' ? selectedOption.code : null;
-                const isOthersOption = optText && (optText.toLowerCase().trim() === 'others' || optText.toLowerCase().trim() === 'other');
+                const isOthers = isOthersOption(optText);
                 
-                if (isOthersOption) {
+                if (isOthers) {
                   // Get the "Others" text input value
                   const othersText = othersTextInputs[`${question.id}_${respValue}`] || '';
                   if (othersText) {
@@ -1393,9 +1402,9 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
             if (selectedOption) {
               const optText = typeof selectedOption === 'object' ? selectedOption.text : selectedOption;
               const optCode = typeof selectedOption === 'object' ? selectedOption.code : null;
-              const isOthersOption = optText && (optText.toLowerCase().trim() === 'others' || optText.toLowerCase().trim() === 'other');
+              const isOthers = isOthersOption(optText);
               
-              if (isOthersOption) {
+              if (isOthers) {
                 // Get the "Others" text input value
                 const othersText = othersTextInputs[`${question.id}_${processedResponse}`] || '';
                 if (othersText) {
@@ -1428,9 +1437,9 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         // For "Others" option, update the response to include the specified text
         let finalResponse = processedResponse;
         if (question.type === 'multiple_choice' && responseWithCodes) {
-          // Check if any response has "Others" with specified text
-          if (Array.isArray(responseWithCodes)) {
-            const othersResponse = responseWithCodes.find(r => r.optionText && (r.optionText.toLowerCase().trim() === 'others' || r.optionText.toLowerCase().trim() === 'other') && r.answer !== r.optionText);
+            // Check if any response has "Others" with specified text
+            if (Array.isArray(responseWithCodes)) {
+              const othersResponse = responseWithCodes.find(r => r.optionText && isOthersOption(r.optionText) && r.answer !== r.optionText);
             if (othersResponse) {
               // Replace the "Others" value with the specified text in the response array
               finalResponse = processedResponse.map((val) => {
@@ -1440,7 +1449,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                 return val;
               });
             }
-          } else if (responseWithCodes.optionText && (responseWithCodes.optionText.toLowerCase().trim() === 'others' || responseWithCodes.optionText.toLowerCase().trim() === 'other') && responseWithCodes.answer !== responseWithCodes.optionText) {
+          } else if (responseWithCodes.optionText && isOthersOption(responseWithCodes.optionText) && responseWithCodes.answer !== responseWithCodes.optionText) {
             // Single selection with "Others" specified text
             finalResponse = `Others: ${responseWithCodes.answer}`;
           }
@@ -1727,7 +1736,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         // Check if "Others" option exists
         const othersOption = shuffledMultipleChoiceOptions.find(opt => {
           const optText = typeof opt === 'object' ? opt.text : opt;
-          return optText && (optText.toLowerCase().trim() === 'others' || optText.toLowerCase().trim() === 'other');
+          return isOthersOption(optText);
         });
         const othersOptionValue = othersOption ? (typeof othersOption === 'object' ? othersOption.value || othersOption.text : othersOption) : null;
         const othersOptionCode = othersOption && typeof othersOption === 'object' ? othersOption.code : null;
@@ -1757,7 +1766,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               const optionId = typeof option === 'object' ? option.id : index;
               const optionCode = typeof option === 'object' ? option.code : null;
               const isNoneOption = optionText && optionText.toLowerCase().trim() === 'none';
-              const isOthersOption = optionText && (optionText.toLowerCase().trim() === 'others' || optionText.toLowerCase().trim() === 'other');
+              const isOthers = isOthersOption(optionText);
               
               // Get quota information for gender question
               let quotaInfo = null;
@@ -1802,7 +1811,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                                 return updated;
                               });
                             }
-                          } else if (isOthersOption) {
+                          } else if (isOthers) {
                             // If "Others" is selected, clear all other selections (mutual exclusivity)
                             newResponse = [optionValue];
                             // Clear "None" if it exists
@@ -1837,7 +1846,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                           if (index > -1) newResponse.splice(index, 1);
                           
                           // Clear "Others" text input if "Others" is deselected
-                          if (isOthersOption) {
+                          if (isOthers) {
                             setOthersTextInputs(prev => {
                               const updated = { ...prev };
                               delete updated[`${questionId}_${optionValue}`];
@@ -1859,7 +1868,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                               return updated;
                             });
                           }
-                        } else if (isOthersOption) {
+                        } else if (isOthers) {
                           // "Others" selected - just set it
                           handleResponseChange(questionId, optionValue);
                         } else {
@@ -1907,7 +1916,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     </div>
                 </label>
                 {/* Show text input for "Others" option when selected */}
-                {isOthersOption && isOthersSelected && (
+                {isOthers && isOthersSelected && (
                   <div className="ml-10 mt-2">
                     <input
                       type="text"
