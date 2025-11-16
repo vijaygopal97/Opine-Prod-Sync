@@ -1594,9 +1594,9 @@ const getSurveyResponseById = async (req, res) => {
 
     // Find the survey response
     const surveyResponse = await SurveyResponse.findById(responseId)
-      .populate('survey', 'surveyName description status')
-      .populate('interviewer', 'name email')
-      .populate('session', 'sessionId status startTime endTime');
+      .populate('survey', 'surveyName description status sections questions targetAudience settings')
+      .populate('interviewer', 'firstName lastName email phone')
+      .select('survey interviewer status responses location metadata interviewMode selectedAC audioRecording createdAt updatedAt startedAt completedAt totalTimeSpent completionPercentage responseId');
 
     if (!surveyResponse) {
       return res.status(404).json({
@@ -1606,7 +1606,7 @@ const getSurveyResponseById = async (req, res) => {
     }
 
     // Check if the interviewer has access to this response
-    if (surveyResponse.interviewer._id.toString() !== interviewerId) {
+    if (surveyResponse.interviewer && surveyResponse.interviewer._id.toString() !== interviewerId) {
       return res.status(403).json({
         success: false,
         message: 'You are not authorized to view this survey response'
