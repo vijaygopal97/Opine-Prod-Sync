@@ -1958,27 +1958,47 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         );
 
       case 'rating':
+      case 'rating_scale':
+        const scale = currentVisibleQuestion.scale || { min: 1, max: 5 };
+        const min = scale.min || 1;
+        const max = scale.max || 5;
+        const labels = scale.labels || [];
+        const minLabel = scale.minLabel || '';
+        const maxLabel = scale.maxLabel || '';
+        const ratings = [];
+        for (let i = min; i <= max; i++) {
+          ratings.push(i);
+        }
         return (
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              {[1, 2, 3, 4, 5].map((rating) => (
-                <button
-                  key={rating}
-                  onClick={() => handleResponseChange(currentVisibleQuestion.id, rating)}
-                  className={`w-12 h-12 rounded-full border-2 transition-all duration-200 ${
-                    currentResponse === rating
-                      ? 'bg-yellow-400 border-yellow-500 text-yellow-900'
-                      : 'bg-white border-gray-300 text-gray-600 hover:border-yellow-400'
-                  }`}
-                >
-                  {rating}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {ratings.map((rating) => {
+                const label = labels[rating - min] || '';
+                return (
+                  <button
+                    key={rating}
+                    onClick={() => handleResponseChange(currentVisibleQuestion.id, rating)}
+                    className={`w-14 h-14 rounded-full border-2 transition-all duration-200 flex flex-col items-center justify-center ${
+                      currentResponse === rating
+                        ? 'bg-yellow-400 border-yellow-500 text-yellow-900 shadow-lg scale-110'
+                        : 'bg-white border-gray-300 text-gray-600 hover:border-yellow-400 hover:bg-yellow-50'
+                    }`}
+                    title={label}
+                  >
+                    <span className="text-lg font-bold">{rating}</span>
+                    {label && (
+                      <span className="text-xs mt-0.5">{label}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>Poor</span>
-              <span>Excellent</span>
-            </div>
+            {(minLabel || maxLabel) && (
+              <div className="flex justify-between text-sm text-gray-500 px-2">
+                <span>{minLabel}</span>
+                <span>{maxLabel}</span>
+              </div>
+            )}
           </div>
         );
 

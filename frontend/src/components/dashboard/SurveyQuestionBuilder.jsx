@@ -249,6 +249,13 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
         { id: `${questionId}_opt_1`, text: 'Option 1', value: 'option1', code: '1' },
         { id: `${questionId}_opt_2`, text: 'Option 2', value: 'option2', code: '2' }
       ] : [],
+      scale: type === 'rating' ? {
+        min: 1,
+        max: 5,
+        labels: [],
+        minLabel: '',
+        maxLabel: ''
+      } : undefined,
       settings: {
         allowMultiple: type === 'multiple_choice',
         allowOther: false,
@@ -484,22 +491,42 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
         );
 
       case 'rating':
+        const scale = question.scale || { min: 1, max: 5 };
+        const min = scale.min || 1;
+        const max = scale.max || 5;
+        const labels = scale.labels || [];
+        const minLabel = scale.minLabel || '';
+        const maxLabel = scale.maxLabel || '';
+        const ratings = [];
+        for (let i = min; i <= max; i++) {
+          ratings.push(i);
+        }
         return (
           <div className="space-y-3">
             <h3 className="text-lg font-medium text-gray-900">{question.text}</h3>
             {question.description && (
               <p className="text-gray-600">{question.description}</p>
             )}
-            <div className="flex space-x-2">
-              {[1, 2, 3, 4, 5].map((rating) => (
+            <div className="flex flex-wrap items-center gap-2">
+              {ratings.map((rating) => (
                 <button
                   key={rating}
-                  className="w-10 h-10 border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500"
+                  className="w-12 h-12 border-2 border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 flex flex-col items-center justify-center"
+                  title={labels[rating - min] || ''}
                 >
-                  {rating}
+                  <span className="text-lg font-semibold">{rating}</span>
+                  {labels[rating - min] && (
+                    <span className="text-xs text-gray-500 mt-0.5">{labels[rating - min]}</span>
+                  )}
                 </button>
               ))}
             </div>
+            {(minLabel || maxLabel) && (
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>{minLabel}</span>
+                <span>{maxLabel}</span>
+              </div>
+            )}
             {question.required && (
               <p className="text-sm text-red-600">* Required</p>
             )}
@@ -1000,6 +1027,125 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                                       )}
                                     </div>
                                   )}
+                                </div>
+                              )}
+
+                              {/* Rating Scale Configuration */}
+                              {question.type === 'rating' && (
+                                <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                  <label className="block text-sm font-medium text-gray-700 mb-3">Rating Scale Configuration</label>
+                                  
+                                  <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1">Minimum Value</label>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        value={question.scale?.min || 1}
+                                        onChange={(e) => !isFixed && updateQuestion(currentSection, questionIndex, {
+                                          scale: {
+                                            ...question.scale,
+                                            min: parseInt(e.target.value) || 1,
+                                            max: Math.max(parseInt(e.target.value) || 1, question.scale?.max || 5)
+                                          }
+                                        })}
+                                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isFixed ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed' : 'border-gray-300'}`}
+                                        disabled={isFixed}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1">Maximum Value</label>
+                                      <input
+                                        type="number"
+                                        min={question.scale?.min || 1}
+                                        value={question.scale?.max || 5}
+                                        onChange={(e) => !isFixed && updateQuestion(currentSection, questionIndex, {
+                                          scale: {
+                                            ...question.scale,
+                                            max: Math.max(parseInt(e.target.value) || 5, question.scale?.min || 1)
+                                          }
+                                        })}
+                                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isFixed ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed' : 'border-gray-300'}`}
+                                        disabled={isFixed}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  {/* Labels for each point */}
+                                  <div className="mb-4">
+                                    <label className="block text-xs text-gray-600 mb-2">Labels for Each Point (Optional)</label>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                                      {(() => {
+                                        const min = question.scale?.min || 1;
+                                        const max = question.scale?.max || 5;
+                                        const labels = question.scale?.labels || [];
+                                        const points = [];
+                                        for (let i = min; i <= max; i++) {
+                                          points.push(i);
+                                        }
+                                        return points.map((point) => (
+                                          <div key={point} className="flex items-center space-x-2">
+                                            <span className="text-sm font-medium text-gray-700 w-8">{point}:</span>
+                                            <input
+                                              type="text"
+                                              value={labels[point - min] || ''}
+                                              onChange={(e) => {
+                                                if (!isFixed) {
+                                                  const newLabels = [...labels];
+                                                  newLabels[point - min] = e.target.value;
+                                                  updateQuestion(currentSection, questionIndex, {
+                                                    scale: {
+                                                      ...question.scale,
+                                                      labels: newLabels
+                                                    }
+                                                  });
+                                                }
+                                              }}
+                                              placeholder={`Label for ${point} (optional)`}
+                                              className={`flex-1 px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isFixed ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed' : 'border-gray-300'}`}
+                                              disabled={isFixed}
+                                            />
+                                          </div>
+                                        ));
+                                      })()}
+                                    </div>
+                                  </div>
+
+                                  {/* Min and Max Labels (Alternative to individual labels) */}
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1">Minimum Label (Optional)</label>
+                                      <input
+                                        type="text"
+                                        value={question.scale?.minLabel || ''}
+                                        onChange={(e) => !isFixed && updateQuestion(currentSection, questionIndex, {
+                                          scale: {
+                                            ...question.scale,
+                                            minLabel: e.target.value
+                                          }
+                                        })}
+                                        placeholder="e.g., Poor, Disagree"
+                                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isFixed ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed' : 'border-gray-300'}`}
+                                        disabled={isFixed}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-600 mb-1">Maximum Label (Optional)</label>
+                                      <input
+                                        type="text"
+                                        value={question.scale?.maxLabel || ''}
+                                        onChange={(e) => !isFixed && updateQuestion(currentSection, questionIndex, {
+                                          scale: {
+                                            ...question.scale,
+                                            maxLabel: e.target.value
+                                          }
+                                        })}
+                                        placeholder="e.g., Excellent, Agree"
+                                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${isFixed ? 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed' : 'border-gray-300'}`}
+                                        disabled={isFixed}
+                                      />
+                                    </div>
+                                  </div>
                                 </div>
                               )}
                             </div>

@@ -148,6 +148,18 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
         return response; // Return as-is (e.g., "Others: Custom text")
       }
       
+      // Handle rating responses with labels
+      if (surveyQuestion && surveyQuestion.type === 'rating' && typeof response === 'number') {
+        const scale = surveyQuestion.scale || {};
+        const labels = scale.labels || [];
+        const min = scale.min || 1;
+        const label = labels[response - min];
+        if (label) {
+          return `${response} (${label})`;
+        }
+        return response.toString();
+      }
+      
       // Map to display text using question options
       if (surveyQuestion && surveyQuestion.options) {
         const option = surveyQuestion.options.find(opt => opt.value === response);

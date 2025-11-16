@@ -242,6 +242,17 @@ const ViewResponsesModal = ({ survey, onClose }) => {
                 const option = question.options.find((opt: any) => opt.value === questionResponse);
                 row.push(option ? option.text : questionResponse);
               }
+            } else if (question.type === 'rating' && typeof questionResponse === 'number') {
+              // Handle rating responses with labels
+              const scale = question.scale || {};
+              const labels = scale.labels || [];
+              const min = scale.min || 1;
+              const label = labels[questionResponse - min];
+              if (label) {
+                row.push(`${questionResponse} (${label})`);
+              } else {
+                row.push(questionResponse);
+              }
             } else {
               row.push(questionResponse);
             }
