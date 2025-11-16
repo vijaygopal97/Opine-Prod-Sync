@@ -121,6 +121,29 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
     }
   }, [assignACs, selectedCountry, selectedState]); // Removed onACSettingsUpdate from dependencies
 
+  // Clear ACs from selected interviewers when assignACs is unchecked
+  useEffect(() => {
+    if (!assignACs) {
+      // Clear ACs from all selected interviewers
+      setSelectedInterviewers(prev => prev.map(interviewer => ({
+        ...interviewer,
+        assignedACs: []
+      })));
+      
+      // Also clear from CAPI and CATI interviewers if in multi-mode
+      if (mode === 'multi_mode' || (modes && modes.length > 1)) {
+        setCapiInterviewers(prev => prev.map(interviewer => ({
+          ...interviewer,
+          assignedACs: []
+        })));
+        setCatiInterviewers(prev => prev.map(interviewer => ({
+          ...interviewer,
+          assignedACs: []
+        })));
+      }
+    }
+  }, [assignACs, mode, modes]);
+
   // State for interviewers data
   const [interviewers, setInterviewers] = useState([]);
 

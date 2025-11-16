@@ -831,6 +831,37 @@ export const performanceAPI = {
     } catch (error) {
       throw error;
     }
+  },
+
+  // Quality Agent Performance APIs
+  // Get quality agent performance analytics
+  getQualityAgentAnalytics: async (params = {}) => {
+    try {
+      const response = await api.get('/api/performance/quality-agent/analytics', { params });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Get quality agent performance trends
+  getQualityAgentTrends: async (params = {}) => {
+    try {
+      const response = await api.get('/api/performance/quality-agent/trends', { params });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Get quality agent reviewed responses
+  getQualityAgentReviews: async (params = {}) => {
+    try {
+      const response = await api.get('/api/performance/quality-agent/reviews', { params });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 

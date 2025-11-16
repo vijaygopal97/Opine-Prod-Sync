@@ -596,8 +596,8 @@ exports.assignInterviewers = async (req, res) => {
             status: 'assigned'
           };
           
-          // Add AC assignments if provided
-          if (capiACAssignments && capiACAssignments[interviewerId]) {
+          // Add AC assignments only if assignACs is true and AC assignments are provided
+          if (survey.assignACs && capiACAssignments && capiACAssignments[interviewerId]) {
             assignment.assignedACs = capiACAssignments[interviewerId];
           }
           
@@ -639,8 +639,8 @@ exports.assignInterviewers = async (req, res) => {
             status: 'assigned'
           };
           
-          // Add AC assignments if provided
-          if (catiACAssignments && catiACAssignments[interviewerId]) {
+          // Add AC assignments only if assignACs is true and AC assignments are provided
+          if (survey.assignACs && catiACAssignments && catiACAssignments[interviewerId]) {
             assignment.assignedACs = catiACAssignments[interviewerId];
           }
           
@@ -694,8 +694,8 @@ exports.assignInterviewers = async (req, res) => {
           assignment.assignedMode = req.body.interviewerModeAssignments[interviewerId];
         }
         
-        // Add AC assignments if provided
-        if (interviewerACAssignments && interviewerACAssignments[interviewerId]) {
+        // Add AC assignments only if assignACs is true and AC assignments are provided
+        if (survey.assignACs && interviewerACAssignments && interviewerACAssignments[interviewerId]) {
           assignment.assignedACs = interviewerACAssignments[interviewerId];
         }
         
@@ -812,8 +812,8 @@ exports.assignQualityAgents = async (req, res) => {
         status: 'assigned'
       };
       
-      // Add AC assignments if provided
-      if (qualityAgentACAssignments && qualityAgentACAssignments[agentId]) {
+      // Add AC assignments only if assignACs is true and AC assignments are provided
+      if (survey.assignACs && qualityAgentACAssignments && qualityAgentACAssignments[agentId]) {
         assignment.assignedACs = qualityAgentACAssignments[agentId];
       }
       
@@ -976,15 +976,37 @@ exports.updateSurvey = async (req, res) => {
     let processedAssignedInterviewers = assignedInterviewers;
     if (assignedInterviewers && Array.isArray(assignedInterviewers)) {
       processedAssignedInterviewers = assignedInterviewers.map(assignment => {
+        const processedAssignment = { ...assignment };
+        
         // If Company Admin is reassigning an interviewer, reset status to 'assigned'
         if (assignment.status === 'rejected' && assignment.interviewer) {
-          return {
-            ...assignment,
-            status: 'assigned',
-            assignedAt: new Date() // Update assignment time
-          };
+          processedAssignment.status = 'assigned';
+          processedAssignment.assignedAt = new Date(); // Update assignment time
         }
-        return assignment;
+        
+        // If assignACs is false, explicitly set assignedACs to empty array to ensure it's removed
+        // Using empty array instead of delete to ensure Mongoose properly updates the field
+        if (assignACs === false) {
+          processedAssignment.assignedACs = [];
+        }
+        
+        return processedAssignment;
+      });
+    }
+
+    // Process assignedQualityAgents to remove ACs if assignACs is false
+    let processedAssignedQualityAgents = assignedQualityAgents || survey.assignedQualityAgents;
+    if (processedAssignedQualityAgents && Array.isArray(processedAssignedQualityAgents)) {
+      processedAssignedQualityAgents = processedAssignedQualityAgents.map(assignment => {
+        const processedAssignment = { ...assignment };
+        
+        // If assignACs is false, explicitly set assignedACs to empty array to ensure it's removed
+        // Using empty array instead of delete to ensure Mongoose properly updates the field
+        if (assignACs === false) {
+          processedAssignment.assignedACs = [];
+        }
+        
+        return processedAssignment;
       });
     }
 
@@ -1009,15 +1031,15 @@ exports.updateSurvey = async (req, res) => {
       onlineContactMode,
       contactList,
       assignedInterviewers: processedAssignedInterviewers,
-      assignedQualityAgents: assignedQualityAgents || survey.assignedQualityAgents,
+      assignedQualityAgents: processedAssignedQualityAgents,
       sections,
       templateUsed,
       settings,
       notifications,
       status,
       assignACs,
-      acAssignmentCountry,
-      acAssignmentState,
+      acAssignmentCountry: assignACs ? acAssignmentCountry : '',
+      acAssignmentState: assignACs ? acAssignmentState : '',
       updatedAt: new Date()
     };
 

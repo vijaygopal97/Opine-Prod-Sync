@@ -18,6 +18,7 @@ import MyInterviews from './MyInterviews';
 import SurveyApprovals from './SurveyApprovals';
 import InterviewerProfile from './InterviewerProfile';
 import PerformanceMonitoring from './PerformanceMonitoring';
+import QualityAgentPerformanceMonitoring from './QualityAgentPerformanceMonitoring';
 import DocumentVerification from './DocumentVerification';
 import SuperAdminDocumentVerification from './SuperAdminDocumentVerification';
 import ProfileCompletionGate from './ProfileCompletionGate';
@@ -193,11 +194,14 @@ const AdminDashboard = () => {
       if (path === '/quality-agent/available-surveys') {
         return <ComingSoon title="Available Interviews" description="Review interviews assigned for quality validation" features={["Validation Queue", "Interview Details", "Quality Metrics", "Assignment Priority"]} />;
       }
+      if (path === '/quality-agent/survey-approvals') {
+        return <SurveyApprovals />;
+      }
       if (path === '/quality-agent/validation-history') {
         return <ComingSoon title="Validation History" description="View your validation history and performance" features={["Validation Records", "Quality Scores", "Feedback History", "Performance Trends"]} />;
       }
       if (path === '/quality-agent/performance') {
-        return <ComingSoon title="Performance Monitoring" description="Track your validation performance and metrics" features={["Validation Metrics", "Quality Scores", "Efficiency Metrics", "Performance Reports"]} />;
+        return <QualityAgentPerformanceMonitoring />;
       }
       if (path === '/quality-agent/payments-history') {
         return <ComingSoon title="Payments History" description="View your payment history and earnings" features={["Payment History", "Earnings Breakdown", "Payment Status", "Financial Reports"]} />;

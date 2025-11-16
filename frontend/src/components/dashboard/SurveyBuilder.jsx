@@ -40,7 +40,23 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
     qualityAgents: [],
     template: null,
     questions: [],
-    acSettings: {
+    // Separate AC settings for each step
+    interviewerACSettings: {
+      assignACs: false,
+      selectedCountry: '',
+      selectedState: ''
+    },
+    capiACSettings: {
+      assignACs: false,
+      selectedCountry: '',
+      selectedState: ''
+    },
+    catiACSettings: {
+      assignACs: false,
+      selectedCountry: '',
+      selectedState: ''
+    },
+    qualityAgentACSettings: {
       assignACs: false,
       selectedCountry: '',
       selectedState: ''
@@ -253,8 +269,25 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             }) : [],
         template: editingSurvey.template || null,
         questions: editingSurvey.sections || editingSurvey.questions || [],
-        acSettings: {
-          assignACs: editingSurvey.assignACs || false,
+        // Initialize separate AC settings for each step
+        // For backward compatibility, check if any interviewer has ACs assigned
+        interviewerACSettings: {
+          assignACs: (editingSurvey.assignedInterviewers && editingSurvey.assignedInterviewers.some(i => i.assignedACs && i.assignedACs.length > 0)) || editingSurvey.assignACs || false,
+          selectedCountry: editingSurvey.acAssignmentCountry || '',
+          selectedState: editingSurvey.acAssignmentState || ''
+        },
+        capiACSettings: {
+          assignACs: (editingSurvey.capiInterviewers && editingSurvey.capiInterviewers.some(i => i.assignedACs && i.assignedACs.length > 0)) || false,
+          selectedCountry: editingSurvey.acAssignmentCountry || '',
+          selectedState: editingSurvey.acAssignmentState || ''
+        },
+        catiACSettings: {
+          assignACs: (editingSurvey.catiInterviewers && editingSurvey.catiInterviewers.some(i => i.assignedACs && i.assignedACs.length > 0)) || false,
+          selectedCountry: editingSurvey.acAssignmentCountry || '',
+          selectedState: editingSurvey.acAssignmentState || ''
+        },
+        qualityAgentACSettings: {
+          assignACs: (editingSurvey.assignedQualityAgents && editingSurvey.assignedQualityAgents.some(qa => qa.assignedACs && qa.assignedACs.length > 0)) || false,
           selectedCountry: editingSurvey.acAssignmentCountry || '',
           selectedState: editingSurvey.acAssignmentState || ''
         }
@@ -412,9 +445,20 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
     });
   }, []);
 
-  // Stable callback for AC settings updates
-  const handleACSettingsUpdate = useCallback((data) => {
-    updateSurveyData('acSettings', data);
+  // Stable callback for AC settings updates - now accepts step identifier
+  const handleACSettingsUpdate = useCallback((data, step) => {
+    // Determine which AC settings to update based on step
+    let settingsKey = 'interviewerACSettings'; // default
+    if (step === 'capi') {
+      settingsKey = 'capiACSettings';
+    } else if (step === 'cati') {
+      settingsKey = 'catiACSettings';
+    } else if (step === 'qualityAgent') {
+      settingsKey = 'qualityAgentACSettings';
+    } else if (step === 'interviewer') {
+      settingsKey = 'interviewerACSettings';
+    }
+    updateSurveyData(settingsKey, data);
   }, [updateSurveyData]);
 
   const handleSaveDraft = async () => {
@@ -524,10 +568,20 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           whatsappReminders: false,
           reminderFrequency: 'weekly'
         },
-        // AC Assignment settings
-        assignACs: surveyData.acSettings?.assignACs || false,
-        acAssignmentCountry: surveyData.acSettings?.selectedCountry || '',
-        acAssignmentState: surveyData.acSettings?.selectedState || ''
+        // AC Assignment settings - set to true if ANY step has assignACs enabled (for backward compatibility)
+        assignACs: (surveyData.interviewerACSettings?.assignACs || 
+                    surveyData.capiACSettings?.assignACs || 
+                    surveyData.catiACSettings?.assignACs || 
+                    surveyData.qualityAgentACSettings?.assignACs) || false,
+        // Use the first available country/state from any step (for backward compatibility)
+        acAssignmentCountry: surveyData.interviewerACSettings?.selectedCountry || 
+                             surveyData.capiACSettings?.selectedCountry || 
+                             surveyData.catiACSettings?.selectedCountry || 
+                             surveyData.qualityAgentACSettings?.selectedCountry || '',
+        acAssignmentState: surveyData.interviewerACSettings?.selectedState || 
+                           surveyData.capiACSettings?.selectedState || 
+                           surveyData.catiACSettings?.selectedState || 
+                           surveyData.qualityAgentACSettings?.selectedState || ''
       };
 
       // Only add fields if they have values (for draft)
@@ -570,12 +624,12 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
         if (isMultiMode) {
           // Handle multi-mode interviewer assignments
           try {
-            // Prepare CAPI assignments
+            // Prepare CAPI assignments - only if CAPI step's assignACs is enabled
             const capiACAssignments = {};
             const capiStateAssignments = {};
             const capiCountryAssignments = {};
             
-            if (surveyData.capiInterviewers && surveyData.capiInterviewers.length > 0) {
+            if (surveyData.capiInterviewers && surveyData.capiInterviewers.length > 0 && surveyData.capiACSettings?.assignACs) {
               surveyData.capiInterviewers.forEach(interviewer => {
                 if (interviewer.assignedACs && interviewer.assignedACs.length > 0) {
                   capiACAssignments[interviewer.id] = interviewer.assignedACs;
@@ -589,12 +643,12 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
               });
             }
             
-            // Prepare CATI assignments
+            // Prepare CATI assignments - only if CATI step's assignACs is enabled
             const catiACAssignments = {};
             const catiStateAssignments = {};
             const catiCountryAssignments = {};
             
-            if (surveyData.catiInterviewers && surveyData.catiInterviewers.length > 0) {
+            if (surveyData.catiInterviewers && surveyData.catiInterviewers.length > 0 && surveyData.catiACSettings?.assignACs) {
               surveyData.catiInterviewers.forEach(interviewer => {
                 if (interviewer.assignedACs && interviewer.assignedACs.length > 0) {
                   catiACAssignments[interviewer.id] = interviewer.assignedACs;
@@ -633,14 +687,15 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           // Handle single-mode interviewer assignments (original logic)
           if (surveyData.interviewers && surveyData.interviewers.length > 0) {
             try {
-              // Prepare AC assignments data
+              // Prepare AC assignments data - only if interviewer step's assignACs is enabled
               const interviewerACAssignments = {};
               const interviewerStateAssignments = {};
               const interviewerCountryAssignments = {};
               const interviewerModeAssignments = {};
               
               surveyData.interviewers.forEach(interviewer => {
-                if (interviewer.assignedACs && interviewer.assignedACs.length > 0) {
+                // Only include AC assignments if this step's assignACs is enabled
+                if (surveyData.interviewerACSettings?.assignACs && interviewer.assignedACs && interviewer.assignedACs.length > 0) {
                   interviewerACAssignments[interviewer.id] = interviewer.assignedACs;
                 }
                 if (interviewer.selectedState) {
@@ -854,10 +909,20 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           reminderFrequency: 'weekly'
         },
         status: 'active', // Set status to active when publishing
-        // AC Assignment settings
-        assignACs: surveyData.acSettings?.assignACs || false,
-        acAssignmentCountry: surveyData.acSettings?.selectedCountry || '',
-        acAssignmentState: surveyData.acSettings?.selectedState || ''
+        // AC Assignment settings - set to true if ANY step has assignACs enabled (for backward compatibility)
+        assignACs: (surveyData.interviewerACSettings?.assignACs || 
+                    surveyData.capiACSettings?.assignACs || 
+                    surveyData.catiACSettings?.assignACs || 
+                    surveyData.qualityAgentACSettings?.assignACs) || false,
+        // Use the first available country/state from any step (for backward compatibility)
+        acAssignmentCountry: surveyData.interviewerACSettings?.selectedCountry || 
+                             surveyData.capiACSettings?.selectedCountry || 
+                             surveyData.catiACSettings?.selectedCountry || 
+                             surveyData.qualityAgentACSettings?.selectedCountry || '',
+        acAssignmentState: surveyData.interviewerACSettings?.selectedState || 
+                           surveyData.capiACSettings?.selectedState || 
+                           surveyData.catiACSettings?.selectedState || 
+                           surveyData.qualityAgentACSettings?.selectedState || ''
       };
 
       // Debug: Log the survey payload
@@ -883,12 +948,12 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
         if (isMultiMode) {
           // Handle multi-mode interviewer assignments
           try {
-            // Prepare CAPI assignments
+            // Prepare CAPI assignments - only if CAPI step's assignACs is enabled
             const capiACAssignments = {};
             const capiStateAssignments = {};
             const capiCountryAssignments = {};
             
-            if (surveyData.capiInterviewers && surveyData.capiInterviewers.length > 0) {
+            if (surveyData.capiInterviewers && surveyData.capiInterviewers.length > 0 && surveyData.capiACSettings?.assignACs) {
               surveyData.capiInterviewers.forEach(interviewer => {
                 if (interviewer.assignedACs && interviewer.assignedACs.length > 0) {
                   capiACAssignments[interviewer.id] = interviewer.assignedACs;
@@ -902,12 +967,12 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
               });
             }
             
-            // Prepare CATI assignments
+            // Prepare CATI assignments - only if CATI step's assignACs is enabled
             const catiACAssignments = {};
             const catiStateAssignments = {};
             const catiCountryAssignments = {};
             
-            if (surveyData.catiInterviewers && surveyData.catiInterviewers.length > 0) {
+            if (surveyData.catiInterviewers && surveyData.catiInterviewers.length > 0 && surveyData.catiACSettings?.assignACs) {
               surveyData.catiInterviewers.forEach(interviewer => {
                 if (interviewer.assignedACs && interviewer.assignedACs.length > 0) {
                   catiACAssignments[interviewer.id] = interviewer.assignedACs;
@@ -946,14 +1011,15 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           // Handle single-mode interviewer assignments (original logic)
           if (surveyData.interviewers && surveyData.interviewers.length > 0) {
             try {
-              // Prepare AC assignments data
+              // Prepare AC assignments data - only if interviewer step's assignACs is enabled
               const interviewerACAssignments = {};
               const interviewerStateAssignments = {};
               const interviewerCountryAssignments = {};
               const interviewerModeAssignments = {};
               
               surveyData.interviewers.forEach(interviewer => {
-                if (interviewer.assignedACs && interviewer.assignedACs.length > 0) {
+                // Only include AC assignments if this step's assignACs is enabled
+                if (surveyData.interviewerACSettings?.assignACs && interviewer.assignedACs && interviewer.assignedACs.length > 0) {
                   interviewerACAssignments[interviewer.id] = interviewer.assignedACs;
                 }
                 if (interviewer.selectedState) {
@@ -985,22 +1051,34 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
         // Assign quality agents if any are selected
         if (surveyData.qualityAgents && surveyData.qualityAgents.length > 0) {
           try {
-            // Prepare quality agent AC assignments data
+            // Prepare quality agent AC assignments data - only if quality agent step's assignACs is enabled
             const qualityAgentACAssignments = {};
             const qualityAgentStateAssignments = {};
             const qualityAgentCountryAssignments = {};
             
-            surveyData.qualityAgents.forEach(agent => {
-              if (agent.assignedACs && agent.assignedACs.length > 0) {
-                qualityAgentACAssignments[agent.id] = agent.assignedACs;
-              }
-              if (agent.selectedState) {
-                qualityAgentStateAssignments[agent.id] = agent.selectedState;
-              }
-              if (agent.selectedCountry) {
-                qualityAgentCountryAssignments[agent.id] = agent.selectedCountry;
-              }
-            });
+            if (surveyData.qualityAgentACSettings?.assignACs) {
+              surveyData.qualityAgents.forEach(agent => {
+                if (agent.assignedACs && agent.assignedACs.length > 0) {
+                  qualityAgentACAssignments[agent.id] = agent.assignedACs;
+                }
+                if (agent.selectedState) {
+                  qualityAgentStateAssignments[agent.id] = agent.selectedState;
+                }
+                if (agent.selectedCountry) {
+                  qualityAgentCountryAssignments[agent.id] = agent.selectedCountry;
+                }
+              });
+            } else {
+              // If assignACs is disabled, still include state/country assignments but not ACs
+              surveyData.qualityAgents.forEach(agent => {
+                if (agent.selectedState) {
+                  qualityAgentStateAssignments[agent.id] = agent.selectedState;
+                }
+                if (agent.selectedCountry) {
+                  qualityAgentCountryAssignments[agent.id] = agent.selectedCountry;
+                }
+              });
+            }
 
             await surveyAPI.assignQualityAgents(response.data.survey._id, {
               qualityAgentIds: surveyData.qualityAgents.map(agent => agent.id),
@@ -1086,13 +1164,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             return (
               <InterviewerSelection 
                 onUpdate={(data) => updateSurveyData('capiInterviewers', data)}
-                onACSettingsUpdate={handleACSettingsUpdate}
+                onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'capi')}
                 initialData={surveyData.capiInterviewers}
                 mode="capi"
                 modes={surveyData.modes}
                 modeAllocation={surveyData.modeAllocation}
                 geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-                acSettings={surveyData.acSettings}
+                acSettings={surveyData.capiACSettings}
               />
             );
           } else if (isOnlyCAPIEdit) {
@@ -1100,13 +1178,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             return (
               <InterviewerSelection 
                 onUpdate={(data) => updateSurveyData('interviewers', data)}
-                onACSettingsUpdate={handleACSettingsUpdate}
+                onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'interviewer')}
                 initialData={surveyData.interviewers}
                 mode="capi"
                 modes={surveyData.modes}
                 modeAllocation={surveyData.modeAllocation}
                 geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-                acSettings={surveyData.acSettings}
+                acSettings={surveyData.interviewerACSettings}
               />
             );
           } else if (isOnlyCATIEdit) {
@@ -1114,13 +1192,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             return (
               <InterviewerSelection 
                 onUpdate={(data) => updateSurveyData('interviewers', data)}
-                onACSettingsUpdate={handleACSettingsUpdate}
+                onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'interviewer')}
                 initialData={surveyData.interviewers}
                 mode="cati"
                 modes={surveyData.modes}
                 modeAllocation={surveyData.modeAllocation}
                 geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-                acSettings={surveyData.acSettings}
+                acSettings={surveyData.interviewerACSettings}
               />
             );
           } else {
@@ -1128,13 +1206,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             return (
               <InterviewerSelection 
                 onUpdate={(data) => updateSurveyData('interviewers', data)}
-                onACSettingsUpdate={handleACSettingsUpdate}
+                onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'interviewer')}
                 initialData={surveyData.interviewers}
                 mode={surveyData.mode}
                 modes={surveyData.modes}
                 modeAllocation={surveyData.modeAllocation}
                 geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-                acSettings={surveyData.acSettings}
+                acSettings={surveyData.interviewerACSettings}
               />
             );
           }
@@ -1147,13 +1225,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             return (
               <InterviewerSelection 
                 onUpdate={(data) => updateSurveyData('catiInterviewers', data)}
-                onACSettingsUpdate={handleACSettingsUpdate}
+                onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'cati')}
                 initialData={surveyData.catiInterviewers}
                 mode="cati"
                 modes={surveyData.modes}
                 modeAllocation={surveyData.modeAllocation}
                 geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-                acSettings={surveyData.acSettings}
+                acSettings={surveyData.catiACSettings}
               />
             );
           } else {
@@ -1162,11 +1240,11 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             return (
               <QualityAgentSelection 
                 onUpdate={(data) => updateSurveyData('qualityAgents', data)}
-                onACSettingsUpdate={handleACSettingsUpdate}
+                onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'qualityAgent')}
                 initialData={surveyData.qualityAgents}
                 mode={surveyData.mode}
                 geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-                acSettings={surveyData.acSettings}
+                acSettings={surveyData.qualityAgentACSettings}
               />
             );
           }
@@ -1179,11 +1257,11 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             return (
               <QualityAgentSelection 
                 onUpdate={(data) => updateSurveyData('qualityAgents', data)}
-                onACSettingsUpdate={handleACSettingsUpdate}
+                onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'qualityAgent')}
                 initialData={surveyData.qualityAgents}
                 mode={surveyData.mode}
                 geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-                acSettings={surveyData.acSettings}
+                acSettings={surveyData.qualityAgentACSettings}
               />
             );
           } else {
@@ -1251,13 +1329,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           return (
             <InterviewerSelection 
               onUpdate={(data) => updateSurveyData('capiInterviewers', data)}
-              onACSettingsUpdate={handleACSettingsUpdate}
+              onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'capi')}
               initialData={surveyData.capiInterviewers}
               mode="capi"
               modes={surveyData.modes}
               modeAllocation={surveyData.modeAllocation}
               geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-              acSettings={surveyData.acSettings}
+              acSettings={surveyData.capiACSettings}
             />
           );
         } else if (isOnlyCAPI) {
@@ -1265,13 +1343,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           return (
             <InterviewerSelection 
               onUpdate={(data) => updateSurveyData('interviewers', data)}
-              onACSettingsUpdate={handleACSettingsUpdate}
+              onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'interviewer')}
               initialData={surveyData.interviewers}
               mode="capi"
               modes={surveyData.modes}
               modeAllocation={surveyData.modeAllocation}
               geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-              acSettings={surveyData.acSettings}
+              acSettings={surveyData.interviewerACSettings}
             />
           );
         } else if (isOnlyCATI) {
@@ -1279,13 +1357,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           return (
             <InterviewerSelection 
               onUpdate={(data) => updateSurveyData('interviewers', data)}
-              onACSettingsUpdate={handleACSettingsUpdate}
+              onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'interviewer')}
               initialData={surveyData.interviewers}
               mode="cati"
               modes={surveyData.modes}
               modeAllocation={surveyData.modeAllocation}
               geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-              acSettings={surveyData.acSettings}
+              acSettings={surveyData.interviewerACSettings}
             />
           );
         } else {
@@ -1293,13 +1371,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           return (
             <InterviewerSelection 
               onUpdate={(data) => updateSurveyData('interviewers', data)}
-              onACSettingsUpdate={handleACSettingsUpdate}
+              onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'interviewer')}
               initialData={surveyData.interviewers}
               mode={surveyData.mode}
               modes={surveyData.modes}
               modeAllocation={surveyData.modeAllocation}
               geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-              acSettings={surveyData.acSettings}
+              acSettings={surveyData.interviewerACSettings}
             />
           );
         }
@@ -1311,13 +1389,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           return (
             <InterviewerSelection 
               onUpdate={(data) => updateSurveyData('catiInterviewers', data)}
-              onACSettingsUpdate={handleACSettingsUpdate}
+              onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'cati')}
               initialData={surveyData.catiInterviewers}
               mode="cati"
               modes={surveyData.modes}
               modeAllocation={surveyData.modeAllocation}
               geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-              acSettings={surveyData.acSettings}
+              acSettings={surveyData.catiACSettings}
             />
           );
         } else {
@@ -1325,11 +1403,11 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           return (
             <QualityAgentSelection 
               onUpdate={(data) => updateSurveyData('qualityAgents', data)}
-              onACSettingsUpdate={handleACSettingsUpdate}
+              onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'qualityAgent')}
               initialData={surveyData.qualityAgents}
               mode={surveyData.mode}
               geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-              acSettings={surveyData.acSettings}
+              acSettings={surveyData.qualityAgentACSettings}
             />
           );
         }
@@ -1341,11 +1419,11 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           return (
             <QualityAgentSelection 
               onUpdate={(data) => updateSurveyData('qualityAgents', data)}
-              onACSettingsUpdate={handleACSettingsUpdate}
+              onACSettingsUpdate={(data) => handleACSettingsUpdate(data, 'qualityAgent')}
               initialData={surveyData.qualityAgents}
               mode={surveyData.mode}
               geographicTargeting={surveyData.specifications.targetAudience?.geographic}
-              acSettings={surveyData.acSettings}
+              acSettings={surveyData.qualityAgentACSettings}
             />
           );
         } else {

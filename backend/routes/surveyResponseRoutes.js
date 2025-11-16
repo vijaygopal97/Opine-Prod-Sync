@@ -28,7 +28,13 @@ const { protect } = require('../middleware/auth');
 // Configure multer for audio file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../../uploads/temp/')); // Use absolute path
+    const tempDir = path.join(__dirname, '../../uploads/temp/');
+    // Ensure temp directory exists
+    const fs = require('fs');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    cb(null, tempDir);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + file.originalname);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   Search,
   Filter,
@@ -32,6 +33,7 @@ import {
 import { surveyResponseAPI, surveyAPI } from '../../services/api';
 
 const SurveyApprovals = () => {
+  const { user } = useAuth();
   const [interviews, setInterviews] = useState([]);
   const [allResponses, setAllResponses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,44 +69,69 @@ const SurveyApprovals = () => {
   };
 
   // Fetch full survey data when modal opens
-  const fetchFullSurveyData = async (surveyId) => {
+  // For quality agents, use the survey data already populated in the interview object
+  // For company admins, try to fetch additional details if needed
+  const fetchFullSurveyData = async (surveyId, interviewSurveyData) => {
     try {
-      // Try the direct survey endpoint first
-      try {
-        const response = await surveyAPI.getSurvey(surveyId);
-        
-        if (response.success) {
-          setFullSurveyData(response.data.survey); // Use the nested survey object
-          return;
-        }
-      } catch (directError) {
-        console.log('Direct API failed, trying available surveys endpoint:', directError);
+      // If we already have survey data from the interview, use it (especially for quality agents)
+      if (interviewSurveyData && interviewSurveyData._id === surveyId) {
+        setFullSurveyData(interviewSurveyData);
+        return;
       }
       
-      // Fallback: Try to get from available surveys (like AvailableSurveys does)
-      try {
-        const availableResponse = await surveyAPI.getAvailableSurveys();
-        
-        if (availableResponse.success) {
-          const survey = availableResponse.data.surveys?.find(s => s._id === surveyId);
-          if (survey) {
-            setFullSurveyData(survey);
+      // For company admins, try to fetch additional details if needed
+      if (user?.userType !== 'quality_agent') {
+        // Try the direct survey endpoint first
+        try {
+          const response = await surveyAPI.getSurvey(surveyId);
+          
+          if (response.success) {
+            setFullSurveyData(response.data.survey); // Use the nested survey object
             return;
           }
+        } catch (directError) {
+          console.log('Direct API failed, trying available surveys endpoint:', directError);
         }
-      } catch (availableError) {
-        console.log('Available surveys API also failed:', availableError);
+        
+        // Fallback: Try to get from available surveys (like AvailableSurveys does)
+        try {
+          const availableResponse = await surveyAPI.getAvailableSurveys();
+          
+          if (availableResponse.success) {
+            const survey = availableResponse.data.surveys?.find(s => s._id === surveyId);
+            if (survey) {
+              setFullSurveyData(survey);
+              return;
+            }
+          }
+        } catch (availableError) {
+          console.log('Available surveys API also failed:', availableError);
+        }
       }
       
-      console.error('All methods failed to fetch survey data');
+      // If all else fails, use the interview survey data if available
+      if (interviewSurveyData) {
+        setFullSurveyData(interviewSurveyData);
+      } else {
+        console.error('All methods failed to fetch survey data');
+      }
     } catch (error) {
       console.error('Error fetching full survey data:', error);
+      // Fallback to interview survey data if available
+      if (interviewSurveyData) {
+        setFullSurveyData(interviewSurveyData);
+      }
     }
   };
 
   // Fetch all responses for stats
   const fetchAllResponses = async () => {
     try {
+      // For quality agents, we don't need to fetch all company responses
+      // Stats will be calculated from the filtered interviews array
+      if (user?.userType === 'quality_agent') {
+        return;
+      }
       const response = await surveyResponseAPI.getDebugResponses();
       setAllResponses(response.data.responses || []);
     } catch (error) {
@@ -161,9 +188,31 @@ const SurveyApprovals = () => {
     });
   };
 
+  // Cleanup audio when component unmounts
+  useEffect(() => {
+    return () => {
+      // Cleanup: stop all audio and remove dynamically created audio elements
+      const allAudioElements = document.querySelectorAll('audio[data-interview-id]');
+      allAudioElements.forEach(el => {
+        el.pause();
+        el.currentTime = 0;
+        // Only remove dynamically created elements (not the one in modal)
+        if (!el.closest('.bg-gray-50')) {
+          el.remove();
+        }
+      });
+      setAudioPlaying(null);
+    };
+  }, []);
+
   // Cleanup audio when modal closes
   const handleCloseModal = () => {
     // Stop any playing audio
+    const allAudioElements = document.querySelectorAll('audio[data-interview-id]');
+    allAudioElements.forEach(el => {
+      el.pause();
+      el.currentTime = 0;
+    });
     if (audioElement) {
       audioElement.pause();
       setAudioElement(null);
@@ -596,12 +645,58 @@ const SurveyApprovals = () => {
       }
     } else {
       // Stop any currently playing audio
-      if (audioElement) {
-        audioElement.pause();
+      const allAudioElements = document.querySelectorAll('audio[data-interview-id]');
+      allAudioElements.forEach(el => {
+        if (el.getAttribute('data-interview-id') !== interviewId) {
+          el.pause();
+          el.currentTime = 0;
+        }
+      });
+      
+      // Find or create the audio element for this interview
+      let audioEl = document.querySelector(`audio[data-interview-id="${interviewId}"]`);
+      
+      // If audio element doesn't exist, create it dynamically
+      if (!audioEl) {
+        audioEl = document.createElement('audio');
+        audioEl.setAttribute('data-interview-id', interviewId);
+        
+        // Construct the audio URL
+        let audioSrc = '';
+        if (!audioUrl) {
+          audioSrc = '';
+        } else if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
+          if (audioUrl.includes('localhost') && window.location.protocol === 'https:') {
+            const urlPath = audioUrl.replace(/^https?:\/\/[^\/]+/, '');
+            audioSrc = `${window.location.origin}${urlPath}`;
+          } else {
+            audioSrc = audioUrl;
+          }
+        } else {
+          const isProduction = window.location.protocol === 'https:' || window.location.hostname !== 'localhost';
+          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (isProduction ? '' : 'http://localhost:5000');
+          audioSrc = `${API_BASE_URL}${audioUrl}`;
+        }
+        
+        audioEl.src = audioSrc;
+        audioEl.style.display = 'none';
+        audioEl.onended = () => setAudioPlaying(null);
+        audioEl.onpause = () => {
+          // Only clear if not manually paused by user clicking pause
+          if (audioPlaying === interviewId) {
+            setAudioPlaying(null);
+          }
+        };
+        audioEl.onerror = (e) => {
+          console.error('Audio element error:', e);
+          showError('Failed to load audio file');
+          setAudioPlaying(null);
+        };
+        
+        document.body.appendChild(audioEl);
       }
       
-      // Play the HTML audio element
-      const audioEl = document.querySelector(`audio[data-interview-id="${interviewId}"]`);
+      // Play the audio
       if (audioEl) {
         audioEl.play().catch(error => {
           console.error('Audio play error:', error);
@@ -613,13 +708,25 @@ const SurveyApprovals = () => {
     }
   };
 
-  // Calculate statistics based on ALL responses, not just pending ones
-  const stats = {
-    total: allResponses.filter(i => i.status === 'Pending_Approval').length, // Only pending responses
+  // Calculate statistics
+  // For quality agents, use the filtered interviews array (already filtered by backend)
+  // For company admins, use allResponses for overall company stats
+  const stats = user?.userType === 'quality_agent' ? {
+    // Quality agent stats - calculated from their assigned interviews only
+    // Note: interviews array only contains pending approvals (filtered by backend)
+    // Approved/Rejected counts would require fetching all responses for quality agent
+    total: interviews.length, // Total pending interviews assigned to this quality agent
+    pending: interviews.length, // All interviews in the array are pending
+    withAudio: interviews.filter(i => i.audioRecording?.hasAudio).length,
+    completed: 0, // Approved responses are not in pending list - would need separate API call
+    rejected: 0 // Rejected responses are not in pending list - would need separate API call
+  } : {
+    // Company admin stats - calculated from all company responses
+    total: allResponses.filter(i => i.status === 'Pending_Approval').length,
     pending: allResponses.filter(i => i.status === 'Pending_Approval').length,
     withAudio: allResponses.filter(i => i.audioRecording?.hasAudio).length,
     completed: allResponses.filter(i => i.status === 'Approved').length,
-    rejected: allResponses.filter(i => i.status === 'Rejected').length // Add rejected count
+    rejected: allResponses.filter(i => i.status === 'Rejected').length
   };
 
 
@@ -1003,8 +1110,9 @@ const SurveyApprovals = () => {
                           resetVerificationForm();
                           setShowResponseDetails(true);
                           // Fetch full survey data to get target audience
+                          // Pass the survey data already in the interview object
                           if (interview?.survey?._id) {
-                            fetchFullSurveyData(interview.survey._id);
+                            fetchFullSurveyData(interview.survey._id, interview.survey);
                           }
                         }}
                         className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -1485,15 +1593,39 @@ const SurveyApprovals = () => {
                     </button>
                     <audio
                       data-interview-id={selectedInterview._id}
-                      src={selectedInterview.audioRecording.audioUrl.startsWith('http') 
-                        ? selectedInterview.audioRecording.audioUrl 
-                        : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${selectedInterview.audioRecording.audioUrl}`}
+                      src={(() => {
+                        const audioUrl = selectedInterview.audioRecording.audioUrl;
+                        if (!audioUrl) return '';
+                        
+                        // If it's already a full URL (including S3 URLs), use it as is
+                        if (audioUrl.startsWith('http://') || audioUrl.startsWith('https://')) {
+                          // Replace localhost URLs with the current origin in production
+                          if (audioUrl.includes('localhost') && window.location.protocol === 'https:') {
+                            // Extract the path from the URL and use current origin
+                            const urlPath = audioUrl.replace(/^https?:\/\/[^\/]+/, '');
+                            return `${window.location.origin}${urlPath}`;
+                          }
+                          // S3 URLs or other external URLs - use as is
+                          return audioUrl;
+                        }
+                        // Otherwise, construct the full URL using the same logic as the API service
+                        const isProduction = window.location.protocol === 'https:' || window.location.hostname !== 'localhost';
+                        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (isProduction ? '' : 'http://localhost:5000');
+                        return `${API_BASE_URL}${audioUrl}`;
+                      })()}
                       onEnded={() => setAudioPlaying(null)}
                       onPause={() => setAudioPlaying(null)}
                       onError={(e) => {
                         console.error('Audio element error:', e);
-                        showError('Failed to load audio file');
+                        const audioEl = e.target;
+                        const src = audioEl?.src || selectedInterview.audioRecording.audioUrl;
+                        console.error('Failed to load audio from:', src);
+                        showError('Audio file not found. The file may have been deleted or moved.');
                         setAudioPlaying(null);
+                        // Hide the audio element on error
+                        if (audioEl) {
+                          audioEl.style.display = 'none';
+                        }
                       }}
                       className="w-full"
                       controls

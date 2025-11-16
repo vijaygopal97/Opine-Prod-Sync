@@ -125,6 +125,7 @@ function App() {
             {/* Quality Agent routes */}
             <Route path="/quality-agent/dashboard" element={<AdminDashboard />} />
             <Route path="/quality-agent/available-surveys" element={<AdminDashboard />} />
+            <Route path="/quality-agent/survey-approvals" element={<AdminDashboard />} />
             <Route path="/quality-agent/validation-history" element={<AdminDashboard />} />
             <Route path="/quality-agent/performance" element={<AdminDashboard />} />
             <Route path="/quality-agent/payments-history" element={<AdminDashboard />} />

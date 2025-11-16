@@ -679,13 +679,24 @@ const uploadAudioFile = async (req, res) => {
       fileSize: req.file?.size,
       sessionId: req.body.sessionId,
       surveyId: req.body.surveyId,
-      interviewerId: req.user?.id
+      interviewerId: req.user?.id,
+      fileDetails: req.file ? {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path,
+        fieldname: req.file.fieldname,
+        encoding: req.file.encoding
+      } : null
     });
     
     const { sessionId, surveyId } = req.body;
     const interviewerId = req.user.id;
 
     if (!req.file) {
+      console.error('No file received in request');
+      console.error('Request body:', req.body);
+      console.error('Request files:', req.files);
       return res.status(400).json({
         success: false,
         message: 'No audio file provided'
@@ -753,6 +764,13 @@ const uploadAudioFile = async (req, res) => {
       const finalPath = path.join(uploadDir, filename);
       
       console.log('Moving file from:', tempPath, 'to:', finalPath);
+      console.log('File details:', {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path,
+        fieldname: req.file.fieldname
+      });
       
       // Check if temp file exists
       if (fs.existsSync(tempPath)) {
@@ -760,7 +778,16 @@ const uploadAudioFile = async (req, res) => {
         console.log('File moved successfully');
       } else {
         console.error('Temp file does not exist:', tempPath);
-        throw new Error('Temporary file not found');
+        const tempDir = path.dirname(tempPath);
+        if (fs.existsSync(tempDir)) {
+          console.error('Available files in temp directory:', fs.readdirSync(tempDir));
+        } else {
+          console.error('Temp directory does not exist:', tempDir);
+          // Try to create it
+          fs.mkdirSync(tempDir, { recursive: true });
+          console.log('Created temp directory:', tempDir);
+        }
+        throw new Error(`Temporary file not found at: ${tempPath}. File may not have been uploaded correctly.`);
       }
       
       // Generate URL for accessing the file
@@ -1003,11 +1030,105 @@ const getPendingApprovals = async (req, res) => {
 
     console.log('getPendingApprovals - User company ID:', companyId);
     console.log('getPendingApprovals - User:', req.user.email, req.user.userType);
+    console.log('getPendingApprovals - User ID:', req.user.id, 'Type:', typeof req.user.id);
 
     // Build query - only get responses with status 'Pending_Approval' for surveys belonging to this company
     let query = { 
       status: 'Pending_Approval'
     };
+
+    // If quality agent, first get the surveys they're assigned to and filter responses by those surveys
+    let assignedSurveyIds = null;
+    let surveyAssignmentsMap = {}; // Map to store AC assignments for each survey
+    if (userType === 'quality_agent') {
+      const Survey = require('../models/Survey');
+      const mongoose = require('mongoose');
+      
+      // Convert userId to ObjectId for proper matching
+      const userIdObjectId = mongoose.Types.ObjectId.isValid(userId) 
+        ? new mongoose.Types.ObjectId(userId) 
+        : userId;
+      
+      console.log('getPendingApprovals - Querying surveys for quality agent:', {
+        userId: userId,
+        userIdObjectId: userIdObjectId,
+        companyId: companyId
+      });
+      
+      // Query surveys where this quality agent is assigned
+      // Try both ObjectId and string matching
+      const assignedSurveys = await Survey.find({
+        company: companyId,
+        'assignedQualityAgents.qualityAgent': { $in: [userIdObjectId, userId] }
+      })
+      .select('_id surveyName assignedQualityAgents')
+      .lean();
+      
+      console.log('getPendingApprovals - Found assigned surveys:', assignedSurveys.length);
+      console.log('getPendingApprovals - Survey IDs:', assignedSurveys.map(s => s._id.toString()));
+      
+      // Build a map of survey assignments for quick lookup
+      assignedSurveys.forEach(survey => {
+        // Find the assignment for this quality agent
+        const agentAssignment = survey.assignedQualityAgents.find(a => {
+          if (!a.qualityAgent) return false;
+          
+          // Handle both ObjectId and string formats
+          const agentId = a.qualityAgent._id || a.qualityAgent;
+          const agentIdStr = agentId?.toString();
+          const userIdStr = userId?.toString();
+          
+          return agentIdStr === userIdStr;
+        });
+        
+        if (agentAssignment) {
+          surveyAssignmentsMap[survey._id.toString()] = {
+            assignedACs: agentAssignment.assignedACs || [],
+            selectedState: agentAssignment.selectedState,
+            selectedCountry: agentAssignment.selectedCountry
+          };
+          
+          console.log('getPendingApprovals - Survey assignment map entry:', {
+            surveyId: survey._id.toString(),
+            surveyName: survey.surveyName,
+            assignedACs: agentAssignment.assignedACs,
+            assignedACsRaw: JSON.stringify(agentAssignment.assignedACs),
+            assignedACsLength: (agentAssignment.assignedACs || []).length,
+            assignedACsType: typeof agentAssignment.assignedACs,
+            isArray: Array.isArray(agentAssignment.assignedACs)
+          });
+        } else {
+          console.log('getPendingApprovals - WARNING: No assignment found for quality agent in survey:', survey._id.toString());
+          console.log('getPendingApprovals - Available assignments:', survey.assignedQualityAgents.map(a => ({
+            qualityAgentId: (a.qualityAgent?._id || a.qualityAgent)?.toString(),
+            assignedACs: a.assignedACs
+          })));
+        }
+      });
+      
+      assignedSurveyIds = assignedSurveys.map(s => s._id);
+      console.log('getPendingApprovals - Quality agent assigned survey IDs:', assignedSurveyIds);
+      console.log('getPendingApprovals - Survey assignments map keys:', Object.keys(surveyAssignmentsMap));
+      
+      if (assignedSurveyIds.length === 0) {
+        console.log('getPendingApprovals - Quality agent has no assigned surveys, returning empty');
+        return res.status(200).json({
+          success: true,
+          data: {
+            interviews: [],
+            total: 0
+          }
+        });
+      }
+      
+      // Filter responses to only those surveys
+      query.survey = { $in: assignedSurveyIds };
+      console.log('getPendingApprovals - Query for responses:', JSON.stringify(query, null, 2));
+      
+      // Check how many pending responses exist for these surveys
+      const pendingCount = await SurveyResponse.countDocuments(query);
+      console.log('getPendingApprovals - Total pending responses for assigned surveys:', pendingCount);
+    }
 
     // Build sort object
     const sort = {};
@@ -1018,7 +1139,7 @@ const getPendingApprovals = async (req, res) => {
       .populate({
         path: 'survey',
         select: 'surveyName description category sections company assignedQualityAgents',
-        match: { company: companyId }, // Only surveys belonging to this company
+        ...(userType !== 'quality_agent' ? { match: { company: companyId } } : {}), // Only filter by company if not quality agent (we already filtered by survey IDs)
         populate: {
           path: 'assignedQualityAgents.qualityAgent',
           select: 'firstName lastName email _id'
@@ -1026,53 +1147,82 @@ const getPendingApprovals = async (req, res) => {
       })
       .sort(sort)
       .lean();
-
+    
     console.log('getPendingApprovals - Found interviews before filtering:', interviews.length);
+    console.log('getPendingApprovals - Interview survey IDs:', interviews.map(i => i.survey?._id?.toString() || i.survey?.toString() || 'null').filter((v, i, a) => a.indexOf(v) === i));
     console.log('getPendingApprovals - Raw interviews data:', interviews.map(i => ({
       id: i._id,
       responseId: i.responseId,
       status: i.status,
-      surveyId: i.survey,
+      surveyId: i.survey?._id || i.survey,
+      surveyName: i.survey?.surveyName,
+      hasSurvey: !!i.survey,
       createdAt: i.createdAt
     })));
 
     // Filter out responses where survey is null (doesn't belong to company)
+    const beforeNullFilter = interviews.length;
     interviews = interviews.filter(interview => interview.survey !== null);
+    console.log('getPendingApprovals - After null survey filter:', interviews.length, '(removed', beforeNullFilter - interviews.length, 'responses with null survey)');
     
-    // If user is a quality agent, filter by their assignments
+    // Debug: Log the structure of assignedQualityAgents to see if assignedACs is included
+    if (interviews.length > 0 && interviews[0].survey && interviews[0].survey.assignedQualityAgents) {
+      console.log('getPendingApprovals - Sample assignedQualityAgents structure:', 
+        JSON.stringify(interviews[0].survey.assignedQualityAgents[0], null, 2));
+    }
+    
+    // If user is a quality agent, filter by AC assignments if any
     if (userType === 'quality_agent') {
+      console.log('getPendingApprovals - Quality agent filtering, total interviews before filter:', interviews.length);
+      console.log('getPendingApprovals - Survey assignments map:', JSON.stringify(surveyAssignmentsMap, null, 2));
+      
       interviews = interviews.filter(interview => {
         const survey = interview.survey;
-        if (!survey || !survey.assignedQualityAgents) return false;
+        if (!survey || !survey._id) {
+          console.log('getPendingApprovals - Interview filtered out: no survey');
+          return false;
+        }
         
-        // Check if this quality agent is assigned to the survey
-        const agentAssignment = survey.assignedQualityAgents.find(
-          assignment => assignment.qualityAgent && 
-          (assignment.qualityAgent._id.toString() === userId.toString() || 
-           assignment.qualityAgent.toString() === userId.toString())
-        );
+        const surveyId = survey._id.toString();
+        const assignment = surveyAssignmentsMap[surveyId];
         
-        if (!agentAssignment) return false;
+        if (!assignment) {
+          console.log('getPendingApprovals - Interview filtered out: no assignment found for survey', surveyId);
+          return false;
+        }
         
-        // If AC is assigned to the quality agent, filter by AC
-        if (agentAssignment.assignedACs && agentAssignment.assignedACs.length > 0) {
+        // Simple check: if assignedACs array has more than 0 elements, ACs are assigned
+        const assignedACs = assignment.assignedACs || [];
+        const acsCount = Array.isArray(assignedACs) ? assignedACs.length : 0;
+        const hasAssignedACs = acsCount > 0;
+        
+        console.log('getPendingApprovals - AC check for response:', {
+          responseId: interview.responseId,
+          surveyId: surveyId,
+          surveyName: survey.surveyName,
+          assignedACs: assignedACs,
+          acsCount: acsCount,
+          hasAssignedACs: hasAssignedACs,
+          interviewSelectedAC: interview.selectedAC
+        });
+        
+        // If ACs are assigned (count > 0), filter by AC
+        if (hasAssignedACs) {
           // Only show responses from the assigned ACs
-          return interview.selectedAC && agentAssignment.assignedACs.includes(interview.selectedAC);
+          if (interview.selectedAC && assignedACs.includes(interview.selectedAC)) {
+            console.log('getPendingApprovals - ✅ INCLUDING response: AC matches');
+            return true;
+          }
+          // Response doesn't have selectedAC or AC doesn't match, exclude it
+          console.log('getPendingApprovals - ❌ EXCLUDING response: AC mismatch or missing');
+          return false;
         }
         
-        // If state is assigned, filter by state
-        if (agentAssignment.selectedState) {
-          return interview.location && interview.location.state === agentAssignment.selectedState;
-        }
-        
-        // If country is assigned, filter by country
-        if (agentAssignment.selectedCountry) {
-          return interview.location && interview.location.country === agentAssignment.selectedCountry;
-        }
-        
-        // No geographic restrictions, show all responses for this survey
+        // No ACs assigned (count = 0) - show ALL responses for this survey
+        console.log('getPendingApprovals - ✅ INCLUDING response: No ACs assigned (count = 0), showing all');
         return true;
       });
+      console.log('getPendingApprovals - Quality agent filtering complete, interviews after filter:', interviews.length);
     }
     
     console.log('getPendingApprovals - After company filtering:', interviews.length);

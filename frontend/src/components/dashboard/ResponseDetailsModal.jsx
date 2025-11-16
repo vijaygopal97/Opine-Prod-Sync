@@ -4,7 +4,7 @@ import { surveyResponseAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import assemblyConstituencies from '../../data/assemblyConstituencies.json';
 
-const ResponseDetailsModal = ({ response, survey, onClose }) => {
+const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }) => {
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -541,14 +541,48 @@ const ResponseDetailsModal = ({ response, survey, onClose }) => {
                     </button>
                     <audio
                       data-response-id={response._id}
-                      src={response.audioRecording.audioUrl.startsWith('http') 
-                        ? response.audioRecording.audioUrl 
-                        : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${response.audioRecording.audioUrl}`}
+                      src={(() => {
+                        let audioUrl = response.audioRecording.audioUrl || '';
+                        if (!audioUrl) return '';
+                        
+                        // Handle localhost URLs in production - replace with current origin
+                        if (audioUrl.includes('localhost')) {
+                          // Extract the path from the localhost URL
+                          const urlMatch = audioUrl.match(/https?:\/\/localhost:\d+(.+)/);
+                          if (urlMatch && urlMatch[1]) {
+                            // Use current origin (which is https://opine.exypnossolutions.com in production)
+                            audioUrl = `${window.location.origin}${urlMatch[1]}`;
+                          } else {
+                            // If no path found, try to replace the entire localhost URL
+                            audioUrl = audioUrl.replace(/https?:\/\/localhost:\d+/, window.location.origin);
+                          }
+                        }
+                        // Handle relative paths (starting with /)
+                        else if (audioUrl.startsWith('/')) {
+                          // In production, use current origin; in dev, use API base URL
+                          if (window.location.origin.includes('https://')) {
+                            audioUrl = `${window.location.origin}${audioUrl}`;
+                          } else {
+                            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+                            audioUrl = `${apiBaseUrl}${audioUrl}`;
+                          }
+                        }
+                        // If it's already a full HTTPS URL, use it as is
+                        else if (audioUrl.startsWith('https://')) {
+                          return audioUrl;
+                        }
+                        // If it's HTTP URL in production, convert to HTTPS
+                        else if (audioUrl.startsWith('http://') && window.location.origin.includes('https://')) {
+                          audioUrl = audioUrl.replace('http://', 'https://');
+                        }
+                        
+                        return audioUrl;
+                      })()}
                       onEnded={() => setAudioPlaying(false)}
                       onPause={() => setAudioPlaying(false)}
                       onError={(e) => {
                         console.error('Audio element error:', e);
-                        showError('Failed to load audio file');
+                        showError('Failed to load audio file. The file may have been deleted or moved.');
                         setAudioPlaying(false);
                       }}
                       className="w-full"
@@ -709,27 +743,29 @@ const ResponseDetailsModal = ({ response, survey, onClose }) => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end space-x-4">
-              {response.status !== 'Rejected' && (
-                <button
-                  onClick={() => setShowRejectForm(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-                >
-                  <ThumbsDown className="w-4 h-4" />
-                  <span>Reject Response</span>
-                </button>
-              )}
-              {response.status === 'Pending_Approval' && (
-                <button
-                  onClick={handleApproveResponse}
-                  disabled={isSubmitting}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50"
-                >
-                  <ThumbsUp className="w-4 h-4" />
-                  <span>{isSubmitting ? 'Approving...' : 'Approve Response'}</span>
-                </button>
-              )}
-            </div>
+            {!hideActions && (
+              <div className="flex items-center justify-end space-x-4">
+                {response.status !== 'Rejected' && (
+                  <button
+                    onClick={() => setShowRejectForm(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                  >
+                    <ThumbsDown className="w-4 h-4" />
+                    <span>Reject Response</span>
+                  </button>
+                )}
+                {response.status === 'Pending_Approval' && (
+                  <button
+                    onClick={handleApproveResponse}
+                    disabled={isSubmitting}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50"
+                  >
+                    <ThumbsUp className="w-4 h-4" />
+                    <span>{isSubmitting ? 'Approving...' : 'Approve Response'}</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Reject Form */}
             {showRejectForm && (

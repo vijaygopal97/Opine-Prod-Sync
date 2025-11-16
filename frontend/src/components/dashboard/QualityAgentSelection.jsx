@@ -117,6 +117,17 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
     }
   }, [assignACs, selectedCountry, selectedState]); // Removed onACSettingsUpdate from dependencies
 
+  // Clear ACs from selected quality agents when assignACs is unchecked
+  useEffect(() => {
+    if (!assignACs) {
+      // Clear ACs from all selected quality agents
+      setSelectedQualityAgents(prev => prev.map(agent => ({
+        ...agent,
+        assignedACs: []
+      })));
+    }
+  }, [assignACs]);
+
   // Fetch quality agents based on mode
   useEffect(() => {
     const fetchQualityAgents = async () => {
