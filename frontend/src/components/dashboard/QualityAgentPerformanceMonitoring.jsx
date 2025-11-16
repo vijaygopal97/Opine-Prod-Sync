@@ -12,7 +12,6 @@ import {
   Target,
   Award,
   Users,
-  Timer,
   Star,
   Activity,
   ChevronDown,
@@ -118,8 +117,7 @@ const QualityAgentPerformanceMonitoring = () => {
           totalReviewed: 0,
           totalApproved: 0,
           totalRejected: 0,
-          totalPending: 0,
-          averageReviewTime: 0
+          totalPending: 0
         },
         dailyPerformance: [],
         surveyPerformance: [],
@@ -301,8 +299,7 @@ const QualityAgentPerformanceMonitoring = () => {
     totalReviewed: 0,
     totalApproved: 0,
     totalRejected: 0,
-    totalPending: 0,
-    averageReviewTime: 0
+    totalPending: 0
   };
 
   return (
@@ -482,22 +479,6 @@ const QualityAgentPerformanceMonitoring = () => {
             </div>
           </div>
 
-          {/* Average Review Time */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avg Review Time</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">
-                  {overview.averageReviewTime 
-                    ? formatDuration(Math.round(overview.averageReviewTime / 1000))
-                    : '0m'}
-                </p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Timer className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
         </div>
       )}
 

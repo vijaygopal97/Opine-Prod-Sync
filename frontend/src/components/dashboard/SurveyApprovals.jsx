@@ -143,12 +143,16 @@ const SurveyApprovals = () => {
     }
   };
 
-  // Fetch all responses for stats (no longer fetching pending approvals list)
+  // Fetch all responses for stats and pending approvals list (for company admins)
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
         await fetchAllResponses();
+        // For company admins, also fetch the pending approvals list
+        if (user?.userType !== 'quality_agent') {
+          await fetchPendingApprovals();
+        }
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -156,7 +160,14 @@ const SurveyApprovals = () => {
       }
     };
     loadData();
-  }, []);
+  }, [user?.userType]);
+
+  // Fetch pending approvals when filters change (for company admins only)
+  useEffect(() => {
+    if (user?.userType !== 'quality_agent') {
+    fetchPendingApprovals();
+    }
+  }, [searchTerm, filterGender, filterMode, ageRange, sortBy, sortOrder, user?.userType]);
 
   // Timer for assignment expiration
   useEffect(() => {
@@ -250,8 +261,32 @@ const SurveyApprovals = () => {
   };
 
   const fetchPendingApprovals = async () => {
-    // This function is kept for compatibility but no longer used
-    // Queue-based system doesn't need to fetch all pending approvals
+    // Only fetch list for company admins
+    if (user?.userType === 'quality_agent') {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const params = {
+        search: searchTerm,
+        gender: filterGender,
+        mode: filterMode,
+        ageMin: ageRange.min,
+        ageMax: ageRange.max,
+        sortBy,
+        sortOrder
+      };
+      
+      const response = await surveyResponseAPI.getPendingApprovals(params);
+      
+      setInterviews(response.data.interviews || []);
+    } catch (error) {
+      console.error('Error fetching pending approvals:', error);
+      showError('Failed to fetch pending approvals');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle verification form input changes
@@ -805,8 +840,8 @@ const SurveyApprovals = () => {
         };
         audioEl.onerror = (e) => {
           console.error('Audio element error:', e);
-          showError('Failed to load audio file');
-          setAudioPlaying(null);
+        showError('Failed to load audio file');
+        setAudioPlaying(null);
         };
         
         document.body.appendChild(audioEl);
@@ -815,11 +850,11 @@ const SurveyApprovals = () => {
       // Play the audio
       if (audioEl) {
         audioEl.play().catch(error => {
-          console.error('Audio play error:', error);
-          showError('Failed to play audio');
-          setAudioPlaying(null);
-        });
-        setAudioPlaying(interviewId);
+        console.error('Audio play error:', error);
+        showError('Failed to play audio');
+        setAudioPlaying(null);
+      });
+      setAudioPlaying(interviewId);
       }
     }
   };
@@ -865,7 +900,7 @@ const SurveyApprovals = () => {
             </div>
           )}
           {!currentAssignment && (
-            <button
+        <button
               onClick={handleStartQualityCheck}
               disabled={isGettingNextAssignment}
               className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -881,12 +916,13 @@ const SurveyApprovals = () => {
                   Start Quality Check
                 </>
               )}
-            </button>
+        </button>
           )}
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards - Only show for Company Admins */}
+      {user?.userType !== 'quality_agent' && (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center">
@@ -936,8 +972,10 @@ const SurveyApprovals = () => {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Filters */}
+      {/* Filters - Only show for Company Admins */}
+      {user?.userType !== 'quality_agent' && (
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1">
@@ -1082,47 +1120,44 @@ const SurveyApprovals = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Queue-based Assignment UI */}
-      {!currentAssignment ? (
-        <div className="bg-white rounded-xl p-12 shadow-sm border border-gray-100 text-center">
-          <div className="max-w-md mx-auto">
-            <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 mb-4">
-                <CheckSquare className="w-10 h-10 text-blue-600" />
+      {user?.userType === 'quality_agent' ? (
+        // Quality Agent: Queue-based only (no list)
+        !currentAssignment ? (
+          <div className="bg-white rounded-xl p-12 shadow-sm border border-gray-100 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="mb-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 mb-4">
+                  <CheckSquare className="w-10 h-10 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Ready to Review?</h3>
+                <p className="text-gray-600 mb-6">
+                  Click "Start Quality Check" to get the next available response from the queue. 
+                  You'll have 30 minutes to complete the review.
+                </p>
+                <button
+                  onClick={handleStartQualityCheck}
+                  disabled={isGettingNextAssignment}
+                  className="inline-flex items-center px-8 py-4 bg-blue-600 text-white rounded-lg shadow-sm text-base font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isGettingNextAssignment ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 mr-3 animate-spin" />
+                      Getting Next Response...
+                    </>
+                  ) : (
+                    <>
+                      <CheckSquare className="w-5 h-5 mr-3" />
+                      Start Quality Check
+                    </>
+                  )}
+                </button>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Ready to Review?</h3>
-              <p className="text-gray-600 mb-6">
-                Click "Start Quality Check" to get the next available response from the queue. 
-                You'll have 30 minutes to complete the review.
-              </p>
-              <button
-                onClick={handleStartQualityCheck}
-                disabled={isGettingNextAssignment}
-                className="inline-flex items-center px-8 py-4 bg-blue-600 text-white rounded-lg shadow-sm text-base font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isGettingNextAssignment ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 mr-3 animate-spin" />
-                    Getting Next Response...
-                  </>
-                ) : (
-                  <>
-                    <CheckSquare className="w-5 h-5 mr-3" />
-                    Start Quality Check
-                  </>
-                )}
-              </button>
-            </div>
-            <div className="mt-8 pt-8 border-t border-gray-200">
-              <p className="text-sm text-gray-500">
-                <strong>How it works:</strong> Each reviewer gets assigned one response at a time from the queue. 
-                This ensures fair distribution and prevents duplicate reviews.
-              </p>
             </div>
           </div>
-        </div>
-      ) : (
+        ) : (
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -1177,10 +1212,81 @@ const SurveyApprovals = () => {
             </div>
           </div>
         </div>
-      )}
+        )
+      ) : (
+        // Company Admin: Show both queue button and list view
+        <>
+          {/* Current Assignment Card (if any) */}
+          {currentAssignment && (
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Current Assignment</h3>
+                  <p className="text-sm text-gray-600">Review this response and submit your verification</p>
+                </div>
+                {timeRemaining && (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <Clock className="w-4 h-4 text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-800">
+                      {timeRemaining} remaining
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                   onClick={() => setShowResponseDetails(true)}>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="text-base font-medium text-gray-900">
+                        {currentAssignment.survey?.surveyName || 'Survey'}
+                      </h4>
+                      <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                        {currentAssignment.responseId}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <User className="w-4 h-4" />
+                        {getRespondentInfo(currentAssignment.responses).name}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {formatDuration(currentAssignment.totalTimeSpent)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Target className="w-4 h-4" />
+                        {currentAssignment.completionPercentage}% Complete
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowResponseDetails(true);
+                    }}
+                    className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Review Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
-      {/* Legacy list view - hidden but kept for reference */}
-      {false && sortedInterviews.length > 0 && (
+          {/* Pending Approvals List */}
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-gray-600">Loading pending approvals...</span>
+        </div>
+      ) : sortedInterviews.length === 0 ? (
+        <div className="text-center py-12">
+          <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Pending Approvals</h3>
+          <p className="text-gray-600">All survey responses have been reviewed and approved.</p>
+        </div>
+      ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -1213,142 +1319,144 @@ const SurveyApprovals = () => {
                 const respondentInfo = getRespondentInfo(interview.responses);
                 return (
                   <tr key={interview._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4" style={{width: '240px'}}>
-                      <div className="max-w-none">
-                        <div 
-                          className="text-sm font-medium text-gray-900 cursor-help"
-                          style={{width: '200px', wordWrap: 'break-word'}}
-                          title={interview.survey?.surveyName || 'Unknown Survey'}
-                        >
-                          {interview.survey?.surveyName 
-                            ? (interview.survey.surveyName.length > 60 
-                                ? `${interview.survey.surveyName.substring(0, 60)}...` 
-                                : interview.survey.surveyName)
-                            : 'Unknown Survey'
-                          }
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          ID: {interview.responseId}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {formatDate(interview.endTime)}
-                        </div>
-                        {interview.interviewMode && (
-                          <div className="text-xs mt-1">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              interview.interviewMode === 'capi' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : interview.interviewMode === 'cati' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-purple-100 text-purple-800'
-                            }`}>
-                              {interview.interviewMode.toUpperCase()}
-                            </span>
+                        <td className="px-6 py-4" style={{width: '240px'}}>
+                          <div className="max-w-none">
+                            <div 
+                              className="text-sm font-medium text-gray-900 cursor-help"
+                              style={{width: '200px', wordWrap: 'break-word'}}
+                              title={interview.survey?.surveyName || 'Unknown Survey'}
+                            >
+                              {interview.survey?.surveyName 
+                                ? (interview.survey.surveyName.length > 60 
+                                    ? `${interview.survey.surveyName.substring(0, 60)}...` 
+                                    : interview.survey.surveyName)
+                                : 'Unknown Survey'
+                              }
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              ID: {interview.responseId}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {formatDate(interview.endTime)}
+                            </div>
+                            {interview.interviewMode && (
+                              <div className="text-xs mt-1">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  interview.interviewMode === 'capi' 
+                                    ? 'bg-blue-100 text-blue-800' 
+                                    : interview.interviewMode === 'cati' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-purple-100 text-purple-800'
+                                }`}>
+                                  {interview.interviewMode.toUpperCase()}
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        <div className="flex items-center mb-1">
-                          <User className="w-4 h-4 mr-1 text-gray-400" />
-                          <span className="font-medium">{respondentInfo.name}</span>
-                        </div>
-                        <div className="flex items-center mb-1">
-                          <Users className="w-4 h-4 mr-1 text-gray-400" />
-                          <span className="capitalize">{respondentInfo.gender}</span>
-                        </div>
-                        <div className="flex items-center mb-1">
-                          <Calendar className="w-4 h-4 mr-1 text-gray-400" />
-                          <span>{respondentInfo.age}</span>
-                        </div>
-                        {interview.selectedAC && (
-                          <div className="flex items-center mb-1">
-                            <Target className="w-4 h-4 mr-1 text-blue-400" />
-                            <span className="text-blue-600 font-medium">{interview.selectedAC}</span>
+                        </td>
+                        
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            <div className="flex items-center mb-1">
+                              <User className="w-4 h-4 mr-1 text-gray-400" />
+                              <span className="font-medium">{respondentInfo.name}</span>
+                            </div>
+                            <div className="flex items-center mb-1">
+                              <Users className="w-4 h-4 mr-1 text-gray-400" />
+                              <span className="capitalize">{respondentInfo.gender}</span>
+                            </div>
+                            <div className="flex items-center mb-1">
+                              <Calendar className="w-4 h-4 mr-1 text-gray-400" />
+                              <span>{respondentInfo.age}</span>
+                            </div>
+                            {interview.selectedAC && (
+                              <div className="flex items-center mb-1">
+                                <Target className="w-4 h-4 mr-1 text-blue-400" />
+                                <span className="text-blue-600 font-medium">{interview.selectedAC}</span>
+                              </div>
+                            )}
+                            {interview.location && (
+                              <div className="flex items-center">
+                                <MapPin className="w-4 h-4 mr-1 text-green-400" />
+                                <span className="text-green-600 font-medium text-xs">
+                                  {interview.location.city}, {interview.location.state}
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {interview.location && (
-                          <div className="flex items-center">
-                            <MapPin className="w-4 h-4 mr-1 text-green-400" />
-                            <span className="text-green-600 font-medium text-xs">
-                              {interview.location.city}, {interview.location.state}
-                            </span>
+                        </td>
+                        
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            <div className="flex items-center mb-1">
+                              <BarChart3 className="w-4 h-4 mr-1 text-gray-400" />
+                              <span>{interview.answeredQuestions}/{calculateEffectiveQuestions(interview.responses, interview.survey)}</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Target className="w-4 h-4 mr-1 text-gray-400" />
+                              <span>{interview.completionPercentage}% complete</span>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        <div className="flex items-center mb-1">
-                          <BarChart3 className="w-4 h-4 mr-1 text-gray-400" />
-                          <span>{interview.answeredQuestions}/{calculateEffectiveQuestions(interview.responses, interview.survey)}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <Target className="w-4 h-4 mr-1 text-gray-400" />
-                          <span>{interview.completionPercentage}% complete</span>
-                        </div>
-                      </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <Clock className="w-4 h-4 mr-1 text-gray-400" />
-                        <span>{formatDuration(interview.totalTimeSpent)}</span>
-                      </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(interview.status)}`}>
-                        {getStatusIcon(interview.status)}
-                        <span className="ml-1">{interview.status}</span>
-                      </span>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {interview.audioRecording?.hasAudio ? (
-                        <button
-                          onClick={() => handlePlayAudio(interview.audioRecording.audioUrl, interview._id)}
-                          className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                          {audioPlaying === interview._id ? (
-                            <Pause className="w-4 h-4 mr-1" />
+                        </td>
+                        
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-gray-900">
+                            <Clock className="w-4 h-4 mr-1 text-gray-400" />
+                            <span>{formatDuration(interview.totalTimeSpent)}</span>
+                          </div>
+                        </td>
+                        
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(interview.status)}`}>
+                            {getStatusIcon(interview.status)}
+                            <span className="ml-1">{interview.status}</span>
+                          </span>
+                        </td>
+                        
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {interview.audioRecording?.hasAudio ? (
+                            <button
+                              onClick={() => handlePlayAudio(interview.audioRecording.audioUrl, interview._id)}
+                              className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                              {audioPlaying === interview._id ? (
+                                <Pause className="w-4 h-4 mr-1" />
+                              ) : (
+                                <Play className="w-4 h-4 mr-1" />
+                              )}
+                              {audioPlaying === interview._id ? 'Pause' : 'Play'}
+                            </button>
                           ) : (
-                            <Play className="w-4 h-4 mr-1" />
+                            <span className="text-sm text-gray-400">No Audio</span>
                           )}
-                          {audioPlaying === interview._id ? 'Pause' : 'Play'}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-gray-400">No Audio</span>
-                      )}
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => {
-                          setSelectedInterview(interview);
-                          resetVerificationForm();
-                          setShowResponseDetails(true);
-                          // Fetch full survey data to get target audience
-                          // Pass the survey data already in the interview object
-                          if (interview?.survey?._id) {
-                            fetchFullSurveyData(interview.survey._id, interview.survey);
-                          }
-                        }}
-                        className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Verify Details
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        </td>
+                        
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => {
+                              setSelectedInterview(interview);
+                              resetVerificationForm();
+                              setShowResponseDetails(true);
+                              // Fetch full survey data to get target audience
+                              // Pass the survey data already in the interview object
+                              if (interview?.survey?._id) {
+                                fetchFullSurveyData(interview.survey._id, interview.survey);
+                              }
+                            }}
+                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            Verify Details
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
         </div>
+          )}
+        </>
       )}
     </div>
 
