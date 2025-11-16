@@ -375,7 +375,7 @@ const surveySchema = new mongoose.Schema({
       id: { type: String, required: true },
       type: {
         type: String,
-        enum: ['text', 'textarea', 'multiple_choice', 'single_choice', 'single_select', 'rating', 'rating_scale', 'yes_no', 'file_upload', 'date', 'dropdown'],
+        enum: ['text', 'textarea', 'numeric', 'multiple_choice', 'single_choice', 'single_select', 'rating', 'rating_scale', 'yes_no', 'file_upload', 'date', 'dropdown'],
         required: true
       },
       text: { type: String, required: true },

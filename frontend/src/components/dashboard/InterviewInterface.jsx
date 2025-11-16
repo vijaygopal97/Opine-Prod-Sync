@@ -818,7 +818,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     if (response === null || response === undefined) return false;
     if (typeof response === 'string') return response.trim().length > 0;
     if (Array.isArray(response)) return response.length > 0;
-    if (typeof response === 'number') return response > 0;
+    if (typeof response === 'number') return !isNaN(response) && isFinite(response); // Allow 0 and negative numbers
     if (typeof response === 'boolean') return true;
     return true;
   };
@@ -1681,6 +1681,30 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
             className="w-full p-6 text-lg border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all duration-200"
             rows={type === 'textarea' ? 6 : 3}
             required={required}
+          />
+        );
+
+      case 'numeric':
+        return (
+          <input
+            type="number"
+            value={currentResponse !== null && currentResponse !== undefined ? currentResponse : ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty string or valid number (including 0 and negative numbers)
+              if (value === '') {
+                handleResponseChange(currentVisibleQuestion.id, '');
+              } else {
+                const numValue = parseFloat(value);
+                if (!isNaN(numValue) && isFinite(numValue)) {
+                  handleResponseChange(currentVisibleQuestion.id, numValue);
+                }
+              }
+            }}
+            placeholder="Enter a number..."
+            className="w-full p-6 text-lg border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+            required={required}
+            step="any"
           />
         );
 

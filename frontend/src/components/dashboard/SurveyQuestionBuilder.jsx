@@ -26,7 +26,8 @@ import {
   Clock,
   Zap,
   Lock,
-  Shield
+  Shield,
+  Hash
 } from 'lucide-react';
 import ConditionalLogic from './ConditionalLogic';
 import SurveyResponse from './SurveyResponse';
@@ -127,6 +128,13 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
       icon: Type,
       description: 'Open-ended text response',
       color: 'green'
+    },
+    {
+      id: 'numeric',
+      name: 'Numeric',
+      icon: Hash,
+      description: 'Numeric input only',
+      color: 'cyan'
     },
     {
       id: 'rating',
