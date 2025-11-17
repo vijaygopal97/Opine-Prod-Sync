@@ -38,7 +38,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 500 * 1024 * 1024 // 500MB limit for large Excel files
+    fileSize: 800 * 1024 * 1024 // 800MB limit for large Excel files
   },
   fileFilter: fileFilter
 });
@@ -52,6 +52,10 @@ const TEMPLATE_EXCEL_PATH = path.join(REPORT_UTILS_DIR, 'template.xlsx');
 // @route   POST /api/reports/generate
 // @access  Private (Company Admin only)
 const generateReport = async (req, res) => {
+  // Set timeout for this request to 2 hours for very large files
+  req.setTimeout(7200000);
+  res.setTimeout(7200000);
+  
   try {
     const { referenceDate } = req.body;
     
@@ -61,6 +65,8 @@ const generateReport = async (req, res) => {
         message: 'Excel file is required' 
       });
     }
+    
+    console.log(`📤 Received file: ${req.file.originalname} (${(req.file.size / 1024 / 1024).toFixed(2)} MB)`);
 
     const excelPath = req.file.path;
     const excelFileName = req.file.filename; // Store the filename for audit trail
@@ -89,12 +95,18 @@ const generateReport = async (req, res) => {
     }
 
     console.log(`Executing: ${command}`);
+    console.log(`⏱️  Starting report generation for file: ${req.file.originalname}`);
 
-    // Execute Python script
+    // Execute Python script with increased buffer and timeout for very large files
+    const startTime = Date.now();
     const { stdout, stderr } = await execPromise(command, {
       cwd: REPORT_UTILS_DIR,
-      maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+      maxBuffer: 500 * 1024 * 1024, // 500MB buffer for very large file processing
+      timeout: 7200000 // 2 hours timeout for very large files
     });
+    
+    const executionTime = ((Date.now() - startTime) / 1000 / 60).toFixed(2);
+    console.log(`✅ Report generation completed in ${executionTime} minutes`);
 
     if (stderr && !stderr.includes('Warning')) {
       console.error('Python script stderr:', stderr);
@@ -179,12 +191,18 @@ const generateAuditTrail = async (req, res) => {
     }
 
     console.log(`Executing: ${command}`);
+    console.log(`⏱️  Starting audit trail generation for file: ${excelPath}`);
 
-    // Execute Python script
+    // Execute Python script with increased buffer and timeout for very large files
+    const startTime = Date.now();
     const { stdout, stderr } = await execPromise(command, {
       cwd: REPORT_UTILS_DIR,
-      maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+      maxBuffer: 500 * 1024 * 1024, // 500MB buffer for very large file processing
+      timeout: 7200000 // 2 hours timeout for very large files
     });
+    
+    const executionTime = ((Date.now() - startTime) / 1000 / 60).toFixed(2);
+    console.log(`✅ Audit trail generation completed in ${executionTime} minutes`);
 
     if (stderr && !stderr.includes('Warning')) {
       console.error('Python script stderr:', stderr);
@@ -300,7 +318,8 @@ const downloadTemplate = async (req, res) => {
       try {
         const { stdout, stderr } = await execPromise(command, {
           cwd: REPORT_UTILS_DIR,
-          maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+          maxBuffer: 100 * 1024 * 1024, // 100MB buffer for template creation
+          timeout: 300000 // 5 minutes timeout for template creation
         });
 
         if (stderr && !stderr.includes('Warning')) {

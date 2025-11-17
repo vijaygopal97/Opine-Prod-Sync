@@ -52,11 +52,11 @@ const GenerateReport = () => {
         return;
       }
 
-      // Validate file size (500MB max)
-      if (file.size > 500 * 1024 * 1024) {
+      // Validate file size (800MB max)
+      if (file.size > 800 * 1024 * 1024) {
         showError(
           'File Too Large',
-          'File size must be less than 500MB',
+          'File size must be less than 800MB',
           5000
         );
         return;
@@ -304,7 +304,7 @@ const GenerateReport = () => {
                     {excelFile ? excelFile.name : 'Click to upload Excel file'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {excelFile ? 'Click to change file' : 'Supports .xlsx and .xls files (max 500MB)'}
+                    {excelFile ? 'Click to change file' : 'Supports .xlsx and .xls files (max 800MB)'}
                   </p>
                 </label>
               </div>

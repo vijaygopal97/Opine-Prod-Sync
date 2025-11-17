@@ -918,7 +918,7 @@ export const reportAPI = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 600000, // 10 minutes timeout for large file uploads and report generation
+        timeout: 7200000, // 2 hours timeout for very large file uploads and report generation (up to 800MB)
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
       });
@@ -935,7 +935,7 @@ export const reportAPI = {
         excelPath,
         referenceDate
       }, {
-        timeout: 600000, // 10 minutes timeout
+        timeout: 7200000, // 2 hours timeout for large file processing
       });
       return response.data;
     } catch (error) {
