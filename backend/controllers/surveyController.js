@@ -2,6 +2,9 @@ const Survey = require('../models/Survey');
 const User = require('../models/User');
 const Company = require('../models/Company');
 const SurveyResponse = require('../models/SurveyResponse');
+const XLSX = require('xlsx');
+const multer = require('multer');
+const path = require('path');
 
 // @desc    Create a new survey
 // @route   POST /api/surveys
@@ -35,7 +38,8 @@ exports.createSurvey = async (req, res) => {
       modes,
       modeAllocation,
       modeQuotas,
-      modeGigWorkers
+      modeGigWorkers,
+      respondentContacts
     } = req.body;
 
     console.log('🔍 Backend received mode:', mode, 'type:', typeof mode);
@@ -148,7 +152,8 @@ exports.createSurvey = async (req, res) => {
       status: status || 'draft', // Use provided status or default to draft
       assignACs: assignACs || false,
       acAssignmentCountry: acAssignmentCountry || '',
-      acAssignmentState: acAssignmentState || ''
+      acAssignmentState: acAssignmentState || '',
+      respondentContacts: respondentContacts || []
     };
 
     // Create the survey
@@ -942,7 +947,8 @@ exports.updateSurvey = async (req, res) => {
       modes,
       modeAllocation,
       modeQuotas,
-      modeGigWorkers
+      modeGigWorkers,
+      respondentContacts
     } = req.body;
 
     // Find the survey
@@ -1080,6 +1086,7 @@ exports.updateSurvey = async (req, res) => {
       assignACs,
       acAssignmentCountry: assignACs ? acAssignmentCountry : '',
       acAssignmentState: assignACs ? acAssignmentState : '',
+      respondentContacts: respondentContacts !== undefined ? respondentContacts : survey.respondentContacts,
       updatedAt: new Date()
     };
 
@@ -1387,3 +1394,272 @@ exports.debugSurveyResponses = async (req, res) => {
     });
   }
 };
+
+// Configure multer for Excel file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.ms-excel.sheet.macroEnabled.12' // .xlsm
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only Excel files (.xlsx, .xls) are allowed.'));
+    }
+  }
+});
+
+// @desc    Download Excel template for respondent contacts
+// @route   GET /api/surveys/respondent-contacts/template
+// @access  Private (Company Admin, Project Manager)
+exports.downloadRespondentTemplate = async (req, res) => {
+  try {
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    
+    // Define column headers - Country Code is optional and comes before Phone
+    const headers = ['Name', 'Country Code', 'Phone', 'Email', 'Address', 'City', 'AC', 'PC', 'PS'];
+    
+    // Create worksheet with headers
+    const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+    
+    // Set column widths
+    worksheet['!cols'] = [
+      { wch: 20 }, // Name
+      { wch: 12 }, // Country Code
+      { wch: 15 }, // Phone
+      { wch: 30 }, // Email
+      { wch: 40 }, // Address
+      { wch: 20 }, // City
+      { wch: 15 }, // AC
+      { wch: 15 }, // PC
+      { wch: 15 }  // PS
+    ];
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Respondents');
+    
+    // Generate Excel file buffer
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    
+    // Set response headers
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="CATI_Respondent_Template.xlsx"');
+    
+    // Send file
+    res.send(excelBuffer);
+  } catch (error) {
+    console.error('Error generating Excel template:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating template',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Upload and parse Excel file with respondent contacts
+// @route   POST /api/surveys/respondent-contacts/upload
+// @access  Private (Company Admin, Project Manager)
+exports.uploadRespondentContacts = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    // Parse Excel file
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    
+    // Convert to JSON - use raw: true to preserve phone numbers as they are
+    const data = XLSX.utils.sheet_to_json(worksheet, { 
+      header: ['name', 'countryCode', 'phone', 'email', 'address', 'city', 'ac', 'pc', 'ps'],
+      defval: '',
+      raw: true  // Get raw values to preserve phone numbers exactly as entered
+    });
+    
+    // Filter out header rows - check if row contains header values
+    const headerValues = ['name', 'country code', 'phone', 'email', 'address', 'city', 'ac', 'pc', 'ps'];
+    const filteredData = data.filter(row => {
+      // Skip rows where name or phone matches header values (case-insensitive)
+      const nameStr = row.name ? row.name.toString().toLowerCase().trim() : '';
+      const phoneStr = row.phone ? row.phone.toString().toLowerCase().trim() : '';
+      
+      // Skip if name or phone is a header value
+      if (headerValues.includes(nameStr) || headerValues.includes(phoneStr)) {
+        return false;
+      }
+      
+      // Skip if name is exactly "Name" or phone is exactly "Phone"
+      if (nameStr === 'name' || phoneStr === 'phone') {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Debug: Log first few rows to see what we're getting
+    console.log('📊 Total rows from Excel (before filter):', data.length);
+    console.log('📊 Filtered rows (after removing headers):', filteredData.length);
+    console.log('📊 First 3 rows from Excel:', JSON.stringify(filteredData.slice(0, 3), null, 2));
+
+    // Validate and process contacts
+    const contacts = [];
+    const errors = [];
+
+    // Use filtered data (with headers removed)
+    filteredData.forEach((row, index) => {
+      // Skip empty rows
+      if (!row.name && !row.phone && !row.countryCode) {
+        return;
+      }
+
+      // Validate required fields
+      if (!row.name || (typeof row.name === 'string' && row.name.trim() === '')) {
+        errors.push(`Row ${index + 2}: Name is required`);
+        return;
+      }
+      
+      // Check if phone is provided (handle 0, empty string, null, undefined, and dash)
+      const phoneValue = row.phone;
+      if (phoneValue === null || phoneValue === undefined || phoneValue === '' || 
+          (typeof phoneValue === 'string' && phoneValue.trim() === '') ||
+          (typeof phoneValue === 'string' && phoneValue.trim() === '-')) {
+        errors.push(`Row ${index + 2}: Phone number is required (received: ${JSON.stringify(phoneValue)})`);
+        return;
+      }
+
+      // Convert phone to string and handle various formats
+      let phoneStr = '';
+      
+      // Debug logging for phone number
+      console.log(`📱 Row ${index + 2} - Phone raw value:`, row.phone, 'Type:', typeof row.phone);
+      
+      if (row.phone === null || row.phone === undefined) {
+        errors.push(`Row ${index + 2}: Phone number is required`);
+        return;
+      }
+      
+      // Handle different phone number formats
+      if (typeof row.phone === 'number') {
+        // If it's a number, convert to string without scientific notation
+        // Handle large numbers that might be in scientific notation
+        const numStr = row.phone.toString();
+        if (numStr.includes('e') || numStr.includes('E')) {
+          // Convert from scientific notation (e.g., 9.958011332e+9 -> 9958011332)
+          phoneStr = row.phone.toFixed(0);
+        } else {
+          // Regular number, convert to string
+          phoneStr = numStr;
+        }
+      } else if (typeof row.phone === 'string') {
+        phoneStr = row.phone;
+      } else if (row.phone !== null && row.phone !== undefined) {
+        // Try to convert to string
+        phoneStr = String(row.phone);
+      } else {
+        errors.push(`Row ${index + 2}: Phone number is empty or invalid (type: ${typeof row.phone})`);
+        return;
+      }
+
+      // Clean phone number (remove spaces, dashes, parentheses, plus signs, dots, etc.)
+      let cleanPhone = phoneStr.trim();
+      
+      // Remove leading + if present (we'll validate length separately)
+      if (cleanPhone.startsWith('+')) {
+        cleanPhone = cleanPhone.substring(1);
+      }
+      
+      // Remove all non-digit characters
+      cleanPhone = cleanPhone.replace(/[^\d]/g, '');
+      
+      console.log(`📱 Row ${index + 2} - Phone after cleaning:`, cleanPhone, 'Length:', cleanPhone.length);
+
+      // Validate phone number format (should be numeric and 10-15 digits)
+      // Also check if it's not empty after cleaning
+      if (!cleanPhone || cleanPhone.length === 0) {
+        errors.push(`Row ${index + 2}: Phone number is empty or invalid (original: "${phoneStr}", cleaned: "${cleanPhone}")`);
+        return;
+      }
+      
+      if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+        errors.push(`Row ${index + 2}: Invalid phone number format. Phone must be 10-15 digits (got ${cleanPhone.length} digits: "${cleanPhone}")`);
+        return;
+      }
+      
+      if (!/^\d+$/.test(cleanPhone)) {
+        errors.push(`Row ${index + 2}: Phone number contains non-numeric characters`);
+        return;
+      }
+
+      // Handle country code (optional)
+      let countryCode = '';
+      if (row.countryCode !== null && row.countryCode !== undefined && row.countryCode !== '') {
+        const countryCodeStr = String(row.countryCode).trim();
+        // Remove + if present
+        countryCode = countryCodeStr.startsWith('+') ? countryCodeStr.substring(1) : countryCodeStr;
+        // Remove non-digit characters
+        countryCode = countryCode.replace(/[^\d]/g, '');
+      }
+
+      // Create contact object
+      const contact = {
+        name: row.name.toString().trim(),
+        countryCode: countryCode || undefined, // Store only if provided
+        phone: cleanPhone,
+        email: row.email ? row.email.toString().trim() : '',
+        address: row.address ? row.address.toString().trim() : '',
+        city: row.city ? row.city.toString().trim() : '',
+        ac: row.ac ? row.ac.toString().trim() : '',
+        pc: row.pc ? row.pc.toString().trim() : '',
+        ps: row.ps ? row.ps.toString().trim() : '',
+        addedAt: new Date(),
+        addedBy: req.user.id
+      };
+
+      contacts.push(contact);
+    });
+
+    if (errors.length > 0 && contacts.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid contacts found in file',
+        errors: errors
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully parsed ${contacts.length} contact(s)`,
+      data: {
+        contacts: contacts,
+        errors: errors.length > 0 ? errors : undefined,
+        totalRows: data.length,
+        validContacts: contacts.length,
+        invalidRows: errors.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error parsing Excel file:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error parsing Excel file',
+      error: error.message
+    });
+  }
+};
+
+// Export multer middleware for use in routes
+exports.uploadRespondentContactsMiddleware = upload.single('file');

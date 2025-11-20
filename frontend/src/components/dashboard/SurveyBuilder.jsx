@@ -20,6 +20,7 @@ import InterviewerSelection from './InterviewerSelection';
 import QualityAgentSelection from './QualityAgentSelection';
 import SurveyTemplateSuggestions from './SurveyTemplateSuggestions';
 import SurveyQuestionBuilder from './SurveyQuestionBuilder';
+import RespondentUpload from './RespondentUpload';
 import { useToast } from '../../contexts/ToastContext';
 
 const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
@@ -40,6 +41,7 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
     qualityAgents: [],
     template: null,
     questions: [],
+    respondentContacts: [],
     // Separate AC settings for each step
     interviewerACSettings: {
       assignACs: false,
@@ -269,6 +271,7 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             }) : [],
         template: editingSurvey.template || null,
         questions: editingSurvey.sections || editingSurvey.questions || [],
+        respondentContacts: editingSurvey.respondentContacts || [],
         // Initialize separate AC settings for each step
         // For backward compatibility, check if any interviewer has ACs assigned
         interviewerACSettings: {
@@ -307,9 +310,10 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
     const selectedModes = surveyData.modes || [];
     const isOnlyCAPI = (surveyData.mode === 'capi') || (selectedModes.length === 1 && selectedModes.includes('capi'));
     const isOnlyCATI = (surveyData.mode === 'cati') || (selectedModes.length === 1 && selectedModes.includes('cati'));
+    const hasCATI = isOnlyCATI || isMultiMode || (selectedModes.includes('cati'));
     
     if (editingSurvey) {
-      return [
+      const baseSteps = [
         { id: 1, title: 'Survey Mode', description: 'Choose how you want to conduct your survey' },
         { id: 2, title: 'Survey Details', description: 'Define your survey specifications' },
         { 
@@ -319,10 +323,18 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
         },
         ...(isMultiMode ? [{ id: 4, title: 'Select CATI Interviewers', description: 'Choose who will conduct telephone interviews' }] : []),
         { id: isMultiMode ? 5 : 4, title: 'Select Quality Agents', description: 'Choose quality agents to review survey responses' },
-        { id: isMultiMode ? 6 : 5, title: 'Build Survey', description: 'Edit your survey questions' }
       ];
+      
+      // Add Upload Respondents step if CATI is selected (before Build Survey)
+      if (hasCATI) {
+        baseSteps.push({ id: (isMultiMode ? 6 : 5), title: 'Upload Respondents', description: 'Add contacts for CATI interviews' });
+      }
+      
+      baseSteps.push({ id: (isMultiMode ? (hasCATI ? 7 : 6) : (hasCATI ? 6 : 5)), title: 'Build Survey', description: 'Edit your survey questions' });
+      
+      return baseSteps;
     } else {
-      return [
+      const baseSteps = [
         { id: 1, title: 'Survey Mode', description: 'Choose how you want to conduct your survey' },
         { id: 2, title: 'Survey Details', description: 'Define your survey specifications' },
         { 
@@ -332,9 +344,19 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
         },
         ...(isMultiMode ? [{ id: 4, title: 'Select CATI Interviewers', description: 'Choose who will conduct telephone interviews' }] : []),
         { id: isMultiMode ? 5 : 4, title: 'Select Quality Agents', description: 'Choose quality agents to review survey responses' },
-        { id: isMultiMode ? 6 : 5, title: 'Templates', description: 'Select or create survey questions' },
-        { id: isMultiMode ? 7 : 6, title: 'Build Survey', description: 'Create your survey questions' }
       ];
+      
+      // Add Upload Respondents step if CATI is selected (before Templates)
+      if (hasCATI) {
+        baseSteps.push({ id: (isMultiMode ? 6 : 5), title: 'Upload Respondents', description: 'Add contacts for CATI interviews' });
+      }
+      
+      baseSteps.push(
+        { id: (isMultiMode ? (hasCATI ? 7 : 6) : (hasCATI ? 6 : 5)), title: 'Templates', description: 'Select or create survey questions' },
+        { id: (isMultiMode ? (hasCATI ? 8 : 7) : (hasCATI ? 7 : 6)), title: 'Build Survey', description: 'Create your survey questions' }
+      );
+      
+      return baseSteps;
     }
   };
   
@@ -648,7 +670,8 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
         acAssignmentState: surveyData.interviewerACSettings?.selectedState || 
                            surveyData.capiACSettings?.selectedState || 
                            surveyData.catiACSettings?.selectedState || 
-                           surveyData.qualityAgentACSettings?.selectedState || ''
+                           surveyData.qualityAgentACSettings?.selectedState || '',
+        respondentContacts: surveyData.respondentContacts || []
       };
 
       // Only add fields if they have values (for draft)
@@ -1036,7 +1059,8 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
         acAssignmentState: surveyData.interviewerACSettings?.selectedState || 
                            surveyData.capiACSettings?.selectedState || 
                            surveyData.catiACSettings?.selectedState || 
-                           surveyData.qualityAgentACSettings?.selectedState || ''
+                           surveyData.qualityAgentACSettings?.selectedState || '',
+        respondentContacts: surveyData.respondentContacts || []
       };
 
       // Debug: Log the survey payload
@@ -1362,8 +1386,11 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
               />
             );
           }
-        case 5:
+        case 5: {
           const isMultiModeEditStep5 = surveyData.mode === 'multi_mode' || (surveyData.modes && surveyData.modes.length > 1);
+          const selectedModesEdit = surveyData.modes || [];
+          const isOnlyCATIEdit = (surveyData.mode === 'cati') || (selectedModesEdit.length === 1 && selectedModesEdit.includes('cati'));
+          const hasCATIEdit = isOnlyCATIEdit || isMultiModeEditStep5 || (selectedModesEdit.includes('cati'));
           
           if (isMultiModeEditStep5) {
             // Multi-mode: Quality Agent Selection step
@@ -1378,6 +1405,14 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
                 acSettings={surveyData.qualityAgentACSettings}
               />
             );
+          } else if (hasCATIEdit) {
+            // Single CATI mode: Upload Respondents step
+            return (
+              <RespondentUpload 
+                onUpdate={(data) => updateSurveyData('respondentContacts', data)}
+                initialData={surveyData.respondentContacts}
+              />
+            );
           } else {
             // Single mode: Build Survey step
             return (
@@ -1388,7 +1423,33 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
               />
             );
           }
-        case 6:
+        }
+        case 6: {
+          const isMultiModeEditStep6 = surveyData.mode === 'multi_mode' || (surveyData.modes && surveyData.modes.length > 1);
+          const selectedModesEditStep6 = surveyData.modes || [];
+          const isOnlyCATIEditStep6 = (surveyData.mode === 'cati') || (selectedModesEditStep6.length === 1 && selectedModesEditStep6.includes('cati'));
+          const hasCATIEditStep6 = isOnlyCATIEditStep6 || isMultiModeEditStep6 || (selectedModesEditStep6.includes('cati'));
+          
+          if (isMultiModeEditStep6 && hasCATIEditStep6) {
+            // Multi-mode with CATI: Upload Respondents step
+            return (
+              <RespondentUpload 
+                onUpdate={(data) => updateSurveyData('respondentContacts', data)}
+                initialData={surveyData.respondentContacts}
+              />
+            );
+          } else {
+            // Multi-mode: Build Survey step (for edit mode)
+            return (
+              <SurveyQuestionBuilder 
+                onUpdate={(data) => updateSurveyData('questions', data)}
+                initialData={surveyData.questions}
+                surveyData={surveyData}
+              />
+            );
+          }
+        }
+        case 7:
           // Multi-mode: Build Survey step (for edit mode)
           return (
             <SurveyQuestionBuilder 
@@ -1525,8 +1586,11 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             />
           );
         }
-      case 5:
+      case 5: {
+        const selectedModesStep5 = surveyData.modes || [];
+        const isOnlyCATIStep5 = (surveyData.mode === 'cati') || (selectedModesStep5.length === 1 && selectedModesStep5.includes('cati'));
         const isMultiModeStep5 = surveyData.mode === 'multi_mode' || (surveyData.modes && surveyData.modes.length > 1);
+        const hasCATIStep5 = isOnlyCATIStep5 || isMultiModeStep5 || (selectedModesStep5.includes('cati'));
         
         if (isMultiModeStep5) {
           // Multi-mode: Quality Agent Selection step
@@ -1540,8 +1604,16 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
               acSettings={surveyData.qualityAgentACSettings}
             />
           );
+        } else if (hasCATIStep5) {
+          // Single CATI mode: Upload Respondents step
+          return (
+            <RespondentUpload 
+              onUpdate={(data) => updateSurveyData('respondentContacts', data)}
+              initialData={surveyData.respondentContacts}
+            />
+          );
         } else {
-          // Single mode: Templates step
+          // Single mode (non-CATI): Templates step
           return (
             <SurveyTemplateSuggestions 
               onUpdate={(data) => updateSurveyData('template', data)}
@@ -1550,11 +1622,33 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             />
           );
         }
-      case 6:
+      }
+      case 6: {
+        const selectedModesStep6 = surveyData.modes || [];
+        const isOnlyCATIStep6 = (surveyData.mode === 'cati') || (selectedModesStep6.length === 1 && selectedModesStep6.includes('cati'));
         const isMultiModeStep6 = surveyData.mode === 'multi_mode' || (surveyData.modes && surveyData.modes.length > 1);
+        const hasCATIStep6 = isOnlyCATIStep6 || isMultiModeStep6 || (selectedModesStep6.includes('cati'));
         
         if (isMultiModeStep6) {
-          // Multi-mode: Templates step
+          // Multi-mode: Upload Respondents step (if CATI) or Templates step
+          if (hasCATIStep6) {
+            return (
+              <RespondentUpload 
+                onUpdate={(data) => updateSurveyData('respondentContacts', data)}
+                initialData={surveyData.respondentContacts}
+              />
+            );
+          } else {
+            return (
+              <SurveyTemplateSuggestions 
+                onUpdate={(data) => updateSurveyData('template', data)}
+                initialData={surveyData.template}
+                specifications={surveyData.specifications}
+              />
+            );
+          }
+        } else if (hasCATIStep6) {
+          // Single CATI mode: Templates step
           return (
             <SurveyTemplateSuggestions 
               onUpdate={(data) => updateSurveyData('template', data)}
@@ -1563,7 +1657,7 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             />
           );
         } else {
-          // Single mode: Build Survey step
+          // Single mode (non-CATI): Build Survey step
           return (
             <SurveyQuestionBuilder 
               onUpdate={(data) => updateSurveyData('questions', data)}
@@ -1572,7 +1666,34 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             />
           );
         }
-      case 7:
+      }
+      case 7: {
+        const selectedModesStep7 = surveyData.modes || [];
+        const isOnlyCATIStep7 = (surveyData.mode === 'cati') || (selectedModesStep7.length === 1 && selectedModesStep7.includes('cati'));
+        const isMultiModeStep7 = surveyData.mode === 'multi_mode' || (surveyData.modes && surveyData.modes.length > 1);
+        const hasCATIStep7 = isOnlyCATIStep7 || isMultiModeStep7 || (selectedModesStep7.includes('cati'));
+        
+        if (isMultiModeStep7 && hasCATIStep7) {
+          // Multi-mode with CATI: Templates step
+          return (
+            <SurveyTemplateSuggestions 
+              onUpdate={(data) => updateSurveyData('template', data)}
+              initialData={surveyData.template}
+              specifications={surveyData.specifications}
+            />
+          );
+        } else {
+          // Multi-mode: Build Survey step
+          return (
+            <SurveyQuestionBuilder 
+              onUpdate={(data) => updateSurveyData('questions', data)}
+              initialData={surveyData.questions}
+              surveyData={surveyData}
+            />
+          );
+        }
+      }
+      case 8:
         // Multi-mode: Build Survey step
         return (
           <SurveyQuestionBuilder 
@@ -1605,39 +1726,37 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           </button>
         </div>
 
-        {/* Progress Steps */}
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+        {/* Compact Progress Steps */}
+        <div className="px-6 py-2 bg-gray-50 border-b border-gray-200">
+          <div className="flex items-center justify-center gap-1 flex-wrap">
             {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
+              <React.Fragment key={step.id}>
                 <button
                   onClick={() => handleStepClick(step.id)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
                     currentStep === step.id
-                      ? 'bg-blue-600 text-white shadow-lg'
+                      ? 'bg-blue-600 text-white shadow-sm'
                       : currentStep > step.id
-                      ? 'bg-green-600 text-white'
+                      ? 'bg-green-500 text-white'
                       : editingSurvey
                       ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 cursor-pointer'
                       : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                   }`}
+                  title={step.description}
                 >
                   {currentStep > step.id ? (
-                    <Check className="w-4 h-4" />
+                    <Check className="w-3 h-3" />
                   ) : (
-                    <span className="w-4 h-4 rounded-full bg-current flex items-center justify-center text-xs font-bold">
+                    <span className="w-4 h-4 rounded-full bg-current/20 flex items-center justify-center text-[10px] font-bold">
                       {step.id}
                     </span>
                   )}
-                  <div className="text-left">
-                    <div className="text-sm font-medium">{step.title}</div>
-                    <div className="text-xs opacity-75">{step.description}</div>
-                  </div>
+                  <span className="whitespace-nowrap">{step.title}</span>
                 </button>
                 {index < steps.length - 1 && (
-                  <div className="w-8 h-0.5 bg-gray-300 mx-2"></div>
+                  <div className="w-2 h-0.5 bg-gray-300"></div>
                 )}
-              </div>
+              </React.Fragment>
             ))}
           </div>
         </div>

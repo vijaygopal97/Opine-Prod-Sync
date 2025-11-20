@@ -473,6 +473,27 @@ const surveySchema = new mongoose.Schema({
     templateCategory: { type: String }
   },
 
+  // CATI Respondent Contacts (for CATI interviews)
+  respondentContacts: {
+    type: [{
+      name: { type: String, required: true },
+      countryCode: { type: String }, // Optional country code (e.g., "91" for India)
+      phone: { type: String, required: true },
+      email: { type: String },
+      address: { type: String },
+      city: { type: String },
+      ac: { type: String }, // Assembly Constituency
+      pc: { type: String }, // Parliamentary Constituency
+      ps: { type: String }, // Polling Station
+      addedAt: { type: Date, default: Date.now },
+      addedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      }
+    }],
+    default: []
+  },
+
   // Company and Ownership
   company: {
     type: mongoose.Schema.Types.ObjectId,

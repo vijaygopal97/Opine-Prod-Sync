@@ -12,7 +12,10 @@ const {
   getSurveyStats,
   getAvailableSurveys,
   rejectInterview,
-  debugSurveyResponses
+  debugSurveyResponses,
+  downloadRespondentTemplate,
+  uploadRespondentContacts,
+  uploadRespondentContactsMiddleware
 } = require('../controllers/surveyController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -23,6 +26,13 @@ router.route('/')
 
 router.route('/stats')
   .get(protect, authorize('company_admin', 'project_manager'), getSurveyStats);
+
+// Respondent contacts routes
+router.route('/respondent-contacts/template')
+  .get(protect, authorize('company_admin', 'project_manager'), downloadRespondentTemplate);
+
+router.route('/respondent-contacts/upload')
+  .post(protect, authorize('company_admin', 'project_manager'), uploadRespondentContactsMiddleware, uploadRespondentContacts);
 
 // Interviewer-specific routes (must come before /:id routes)
 router.route('/available')
