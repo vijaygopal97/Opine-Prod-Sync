@@ -59,6 +59,7 @@ const ViewResponsesPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedResponse, setSelectedResponse] = useState(null);
   const [showResponseDetails, setShowResponseDetails] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const { showError, showSuccess } = useToast();
 
   // Load assembly constituencies data
@@ -203,6 +204,38 @@ const ViewResponsesPage = () => {
       }
     }
     return 'N/A';
+  };
+
+  // Helper function to check if an option is "Others" (same as InterviewInterface)
+  const isOthersOption = (optText) => {
+    if (!optText) return false;
+    const normalized = optText.toLowerCase().trim();
+    return normalized === 'other' || 
+           normalized === 'others' || 
+           normalized === 'others (specify)';
+  };
+
+  // Helper function to extract "Others" text from response
+  const extractOthersText = (responseValue) => {
+    if (!responseValue) return null;
+    const responseStr = String(responseValue);
+    if (responseStr.startsWith('Others: ')) {
+      return responseStr.substring(8); // Remove "Others: " prefix
+    }
+    return null;
+  };
+
+  // Helper function to check if response contains "Others"
+  const responseContainsOthers = (responseValue) => {
+    if (!responseValue) return false;
+    if (Array.isArray(responseValue)) {
+      return responseValue.some(val => {
+        const str = String(val);
+        return str.startsWith('Others: ') || isOthersOption(str);
+      });
+    }
+    const str = String(responseValue);
+    return str.startsWith('Others: ') || isOthersOption(str);
   };
 
   // Helper function to format response display text (same as ResponseDetailsModal)
@@ -606,6 +639,24 @@ const ViewResponsesPage = () => {
       return;
     }
 
+    // Show modal to choose download mode
+    setShowDownloadModal(true);
+  };
+
+  // Generate CSV with selected mode
+  const generateCSV = (downloadMode) => {
+    setShowDownloadModal(false);
+
+    if (filteredResponses.length === 0) {
+      showError('No responses to download');
+      return;
+    }
+
+    if (!survey) {
+      showError('Survey data not available');
+      return;
+    }
+
     // Get ALL questions from the survey itself (not from responses)
     // This ensures we have a complete template that works for both CAPI and CATI
     const allSurveyQuestions = getAllSurveyQuestions(survey);
@@ -615,10 +666,33 @@ const ViewResponsesPage = () => {
       return;
     }
 
-    // Create headers from survey questions with question numbers
-    const questionHeaders = allSurveyQuestions.map((question, index) => 
-      `Q${index + 1}: ${question.text || question.questionText || `Question ${index + 1}`}`
-    );
+    // Detect questions with "Others" option and create headers with "Others" columns
+    const questionHeaders = [];
+    const questionOthersMap = new Map(); // Map question index to whether it has "Others"
+    
+    allSurveyQuestions.forEach((question, index) => {
+      const questionText = question.text || question.questionText || `Question ${index + 1}`;
+      const questionHeader = `Q${index + 1}: ${questionText}`;
+      questionHeaders.push(questionHeader);
+      
+      // Check if question has "Others" option (for MCQ questions)
+      if ((question.type === 'multiple_choice' || question.type === 'single_choice') && question.options) {
+        const hasOthersOption = question.options.some(opt => {
+          const optText = typeof opt === 'object' ? opt.text : opt;
+          return isOthersOption(optText);
+        });
+        
+        if (hasOthersOption) {
+          questionOthersMap.set(index, true);
+          // Add "Others" column header right after the question
+          questionHeaders.push(`Q${index + 1}: ${questionText} - Other`);
+        } else {
+          questionOthersMap.set(index, false);
+        }
+      } else {
+        questionOthersMap.set(index, false);
+      }
+    });
     
     // Add metadata headers (common columns for both CAPI and CATI)
     const metadataHeaders = [
@@ -656,7 +730,9 @@ const ViewResponsesPage = () => {
 
       // Extract answers for each question in the survey
       // Match by questionId first (most reliable), then by questionText
-      const answers = allSurveyQuestions.map(surveyQuestion => {
+      const answers = [];
+      
+      allSurveyQuestions.forEach((surveyQuestion, questionIndex) => {
         // Try to find matching answer by questionId first
         let matchingAnswer = null;
         
@@ -674,42 +750,171 @@ const ViewResponsesPage = () => {
           );
         }
         
+        let questionResponse = '';
+        let othersText = '';
+        
         if (matchingAnswer) {
           // Check if the question was actually skipped
           if (matchingAnswer.isSkipped) {
-            return 'Skipped';
-          }
-          
-          // Check if response has content
-          const hasResponseContent = (responseValue) => {
-            if (!responseValue && responseValue !== 0) return false;
-            if (Array.isArray(responseValue)) return responseValue.length > 0;
-            if (typeof responseValue === 'object') return Object.keys(responseValue).length > 0;
-            return responseValue !== '' && responseValue !== null && responseValue !== undefined;
-          };
-          
-          if (!hasResponseContent(matchingAnswer.response)) {
-            return 'No response';
-          }
-          
-          // Format the response to show option text instead of values
-          let formattedResponse;
-          if (surveyQuestion.options) {
-            // Use survey question options if available
-            formattedResponse = formatResponseDisplay(matchingAnswer.response, surveyQuestion);
+            questionResponse = 'Skipped';
           } else {
-            // Use hardcoded mappings as fallback
-            formattedResponse = getHardcodedOptionMapping(
-              surveyQuestion.text || surveyQuestion.questionText, 
-              matchingAnswer.response
-            );
+            // Check if response has content
+            const hasResponseContent = (responseValue) => {
+              if (!responseValue && responseValue !== 0) return false;
+              if (Array.isArray(responseValue)) return responseValue.length > 0;
+              if (typeof responseValue === 'object') return Object.keys(responseValue).length > 0;
+              return responseValue !== '' && responseValue !== null && responseValue !== undefined;
+            };
+            
+            if (!hasResponseContent(matchingAnswer.response)) {
+              questionResponse = 'No response';
+            } else {
+              const responseValue = matchingAnswer.response;
+              
+              // Check if this question has "Others" option
+              const hasOthersOption = questionOthersMap.get(questionIndex);
+              
+              if (hasOthersOption && (surveyQuestion.type === 'multiple_choice' || surveyQuestion.type === 'single_choice')) {
+                // Extract "Others" text if present
+                if (Array.isArray(responseValue)) {
+                  // Multiple selection - check each value for "Others" text
+                  let foundOthersText = '';
+                  const processedValues = responseValue.map(val => {
+                    const othersTextValue = extractOthersText(val);
+                    if (othersTextValue) {
+                      foundOthersText = othersTextValue; // Store the "Others" text
+                      // Return "Others" or the option code/text
+                      if (downloadMode === 'codes') {
+                        // Find the "Others" option code
+                        const othersOpt = surveyQuestion.options.find(opt => {
+                          const optText = typeof opt === 'object' ? opt.text : opt;
+                          return isOthersOption(optText);
+                        });
+                        return typeof othersOpt === 'object' ? (othersOpt.code || othersOpt.value || 'Others') : 'Others';
+                      } else {
+                        return 'Others';
+                      }
+                    }
+                    // Check if value itself is "Others" option
+                    const othersOpt = surveyQuestion.options.find(opt => {
+                      const optText = typeof opt === 'object' ? opt.text : opt;
+                      const optValue = typeof opt === 'object' ? (opt.value || opt.text) : opt;
+                      return isOthersOption(optText) && (optValue === val || String(optValue) === String(val));
+                    });
+                    if (othersOpt) {
+                      if (downloadMode === 'codes') {
+                        return typeof othersOpt === 'object' ? (othersOpt.code || othersOpt.value || 'Others') : 'Others';
+                      } else {
+                        return 'Others';
+                      }
+                    }
+                    return val;
+                  });
+                  othersText = foundOthersText;
+                  
+                  // Format the response based on mode
+                  if (downloadMode === 'codes') {
+                    // Convert to option codes
+                    questionResponse = processedValues.map(val => {
+                      if (val === 'Others' || isOthersOption(String(val))) {
+                        const othersOpt = surveyQuestion.options.find(opt => {
+                          const optText = typeof opt === 'object' ? opt.text : opt;
+                          return isOthersOption(optText);
+                        });
+                        return typeof othersOpt === 'object' ? (othersOpt.code || othersOpt.value || 'Others') : 'Others';
+                      }
+                      // Find option code
+                      const option = surveyQuestion.options.find(opt => {
+                        const optValue = typeof opt === 'object' ? (opt.value || opt.text) : opt;
+                        return optValue === val || String(optValue) === String(val);
+                      });
+                      return typeof option === 'object' ? (option.code || option.value || val) : val;
+                    }).join(', ');
+                  } else {
+                    // Use text format
+                    questionResponse = formatResponseDisplay(processedValues, surveyQuestion);
+                  }
+                } else {
+                  // Single selection
+                  const othersTextValue = extractOthersText(responseValue);
+                  if (othersTextValue) {
+                    othersText = othersTextValue;
+                    if (downloadMode === 'codes') {
+                      const othersOpt = surveyQuestion.options.find(opt => {
+                        const optText = typeof opt === 'object' ? opt.text : opt;
+                        return isOthersOption(optText);
+                      });
+                      questionResponse = typeof othersOpt === 'object' ? (othersOpt.code || othersOpt.value || 'Others') : 'Others';
+                    } else {
+                      questionResponse = 'Others';
+                    }
+                  } else {
+                    // Format the response based on mode
+                    if (downloadMode === 'codes' && (surveyQuestion.type === 'multiple_choice' || surveyQuestion.type === 'single_choice')) {
+                      // Find option code
+                      const option = surveyQuestion.options.find(opt => {
+                        const optValue = typeof opt === 'object' ? (opt.value || opt.text) : opt;
+                        return optValue === responseValue || String(optValue) === String(responseValue);
+                      });
+                      questionResponse = typeof option === 'object' ? (option.code || option.value || responseValue) : responseValue;
+                    } else {
+                      // Use text format
+                      if (surveyQuestion.options) {
+                        questionResponse = formatResponseDisplay(responseValue, surveyQuestion);
+                      } else {
+                        questionResponse = getHardcodedOptionMapping(
+                          surveyQuestion.text || surveyQuestion.questionText, 
+                          responseValue
+                        );
+                      }
+                    }
+                  }
+                }
+              } else {
+                // No "Others" option - format normally
+                if (downloadMode === 'codes' && (surveyQuestion.type === 'multiple_choice' || surveyQuestion.type === 'single_choice') && surveyQuestion.options) {
+                  // Convert to option codes
+                  if (Array.isArray(responseValue)) {
+                    questionResponse = responseValue.map(val => {
+                      const option = surveyQuestion.options.find(opt => {
+                        const optValue = typeof opt === 'object' ? (opt.value || opt.text) : opt;
+                        return optValue === val || String(optValue) === String(val);
+                      });
+                      return typeof option === 'object' ? (option.code || option.value || val) : val;
+                    }).join(', ');
+                  } else {
+                    const option = surveyQuestion.options.find(opt => {
+                      const optValue = typeof opt === 'object' ? (opt.value || opt.text) : opt;
+                      return optValue === responseValue || String(optValue) === String(responseValue);
+                    });
+                    questionResponse = typeof option === 'object' ? (option.code || option.value || responseValue) : responseValue;
+                  }
+                } else {
+                  // Use text format
+                  if (surveyQuestion.options) {
+                    questionResponse = formatResponseDisplay(responseValue, surveyQuestion);
+                  } else {
+                    questionResponse = getHardcodedOptionMapping(
+                      surveyQuestion.text || surveyQuestion.questionText, 
+                      responseValue
+                    );
+                  }
+                }
+              }
+            }
           }
-          
-          return formattedResponse;
         } else {
           // Question not found in this response - could be due to conditional logic
           // Return empty string instead of 'Skipped' to distinguish from actually skipped questions
-          return '';
+          questionResponse = '';
+        }
+        
+        // Add question response
+        answers.push(questionResponse);
+        
+        // Add "Others" text column if this question has "Others" option
+        if (questionOthersMap.get(questionIndex)) {
+          answers.push(othersText || '');
         }
       });
 
@@ -728,7 +933,8 @@ const ViewResponsesPage = () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${survey?.surveyName || survey?.title || 'survey'}_responses_${new Date().toISOString().split('T')[0]}.csv`;
+    const modeSuffix = downloadMode === 'codes' ? '_codes' : '_responses';
+    link.download = `${survey?.surveyName || survey?.title || 'survey'}${modeSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1240,6 +1446,47 @@ const ViewResponsesPage = () => {
             setSelectedResponse(null);
           }}
         />
+      )}
+
+      {/* Download Mode Selection Modal */}
+      {showDownloadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 shadow-xl max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Choose Download Format</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Select how you want to download the responses:
+            </p>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => generateCSV('responses')}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-left"
+              >
+                <div className="font-medium">Download Responses</div>
+                <div className="text-sm text-blue-100 mt-1">
+                  Download with full response text (e.g., "Male", "Female", "Others")
+                </div>
+              </button>
+              
+              <button
+                onClick={() => generateCSV('codes')}
+                className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-left"
+              >
+                <div className="font-medium">Download Response Codes</div>
+                <div className="text-sm text-green-100 mt-1">
+                  Download with option codes for MCQ questions (e.g., "1", "2", "3")
+                </div>
+              </button>
+            </div>
+            
+            <button
+              onClick={() => setShowDownloadModal(false)}
+              className="mt-4 w-full px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </>
   );
