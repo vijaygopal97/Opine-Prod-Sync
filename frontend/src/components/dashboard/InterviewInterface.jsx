@@ -1282,13 +1282,25 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         setCallStatus('calling');
         showSuccess('Call initiated. Waiting for connection...');
       } else {
+        // Call failed - close interface and show message
         setCallStatus('failed');
-        showError(response.message || 'Failed to initiate call');
+        showError('Call failed. The contact has been moved to the end of the queue and can be tried later.');
+        // Close the interview interface after a short delay
+        setTimeout(() => {
+          if (onClose) onClose();
+          if (onComplete) onComplete({ callFailed: true });
+        }, 2000);
       }
     } catch (error) {
       console.error('Error making call:', error);
       setCallStatus('failed');
-      showError('Failed to make call');
+      // Call failed - close interface and show message
+      showError('Call failed. The contact has been moved to the end of the queue and can be tried later.');
+      // Close the interview interface after a short delay
+      setTimeout(() => {
+        if (onClose) onClose();
+        if (onComplete) onComplete({ callFailed: true });
+      }, 2000);
     } finally {
       setIsLoading(false);
     }
@@ -1653,6 +1665,45 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     }
   };
 
+  // Prevent navigation during active interview
+  useEffect(() => {
+    if (!isInterviewActive) return;
+
+    // Push a state to prevent back button navigation
+    window.history.pushState(null, '', window.location.href);
+
+    // Handle browser back/forward button
+    const handlePopState = (event) => {
+      event.preventDefault();
+      // Show abandon modal
+      if (isCatiMode) {
+        setShowAbandonModal(true);
+      } else {
+        setShowAbandonConfirm(true);
+      }
+      // Push state again to prevent navigation
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    // Handle page refresh/close
+    const handleBeforeUnload = (event) => {
+      // Show browser's default confirmation dialog
+      event.preventDefault();
+      event.returnValue = 'Are you sure you want to leave? Your interview progress will be lost.';
+      return event.returnValue;
+    };
+
+    // Add event listeners
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isInterviewActive, isCatiMode]);
+  
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -2685,6 +2736,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                   setAbandonReason('');
                   setAbandonNotes('');
                   setCallLaterDate('');
+                  // Restore navigation protection
+                  if (isInterviewActive) {
+                    window.history.pushState(null, '', window.location.href);
+                  }
                 }}
                 className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
               >
@@ -2712,7 +2767,13 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
             </p>
             <div className="flex space-x-3">
               <button
-                onClick={() => setShowAbandonConfirm(false)}
+                onClick={() => {
+                  setShowAbandonConfirm(false);
+                  // Restore navigation protection
+                  if (isInterviewActive) {
+                    window.history.pushState(null, '', window.location.href);
+                  }
+                }}
                 className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
               >
                 Cancel

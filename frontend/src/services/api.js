@@ -1082,6 +1082,10 @@ export const catiInterviewAPI = {
       const response = await api.post(`/api/cati-interview/make-call/${queueId}`);
       return response.data;
     } catch (error) {
+      // Return error response if available
+      if (error.response && error.response.data) {
+        return error.response.data;
+      }
       throw error;
     }
   },

@@ -270,12 +270,13 @@ const startCatiInterview = async (req, res) => {
 // @route   POST /api/cati-interview/make-call/:queueId
 // @access  Private (Interviewer)
 const makeCallToRespondent = async (req, res) => {
+  let queueEntry = null;
   try {
     const { queueId } = req.params;
     const interviewerId = req.user._id;
 
     // Get queue entry
-    const queueEntry = await CatiRespondentQueue.findById(queueId)
+    queueEntry = await CatiRespondentQueue.findById(queueId)
       .populate('survey', 'surveyName')
       .populate('assignedTo', 'phone firstName lastName');
 
@@ -310,8 +311,11 @@ const makeCallToRespondent = async (req, res) => {
     const callResult = await initiateDeepCall(fromNumber, toNumber, 'Number', 'Number', 30, 30);
 
     if (!callResult.success) {
-      // Update queue entry status
-      queueEntry.status = 'call_failed';
+      // Update queue entry status and move to end of queue
+      queueEntry.status = 'pending'; // Reset to pending so it can be retried
+      queueEntry.priority = -1; // Set to lowest priority to move to end
+      queueEntry.assignedTo = null; // Unassign so it can be picked up later
+      queueEntry.assignedAt = null;
       queueEntry.currentAttemptNumber += 1;
       queueEntry.callAttempts.push({
         attemptNumber: queueEntry.currentAttemptNumber,
@@ -320,6 +324,8 @@ const makeCallToRespondent = async (req, res) => {
         status: 'failed',
         reason: callResult.message || 'Call initiation failed'
       });
+      // Update createdAt to move to end of queue (for sorting by createdAt)
+      queueEntry.createdAt = new Date();
       await queueEntry.save();
 
       return res.status(500).json({
@@ -383,6 +389,21 @@ const makeCallToRespondent = async (req, res) => {
 
   } catch (error) {
     console.error('Error making call to respondent:', error);
+    
+    // If we have a queueEntry, move it to end of queue
+    try {
+      if (queueEntry) {
+        queueEntry.status = 'pending';
+        queueEntry.priority = -1;
+        queueEntry.assignedTo = null;
+        queueEntry.assignedAt = null;
+        queueEntry.createdAt = new Date();
+        await queueEntry.save();
+      }
+    } catch (queueError) {
+      console.error('Error updating queue entry on failure:', queueError);
+    }
+    
     res.status(500).json({
       success: false,
       message: 'Failed to make call',
