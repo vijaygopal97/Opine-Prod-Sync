@@ -222,40 +222,76 @@ const SurveyReportsPage = () => {
           targetSampleSize: surveyResponse.data?.targetSampleSize,
           specifications: surveyResponse.data?.specifications
         });
-        setSurvey(surveyResponse.data);
-      }
-      
-      // Fetch all responses for analytics - always fetch all (Approved + Rejected) for comprehensive analytics
-      // Client-side filtering will handle status filtering
-      const params = {
-        page: 1,
-        limit: 10000, // Get all responses for comprehensive analytics
-        status: 'all' // Always fetch all (Approved + Rejected) for comprehensive analytics
-      };
-      
-      const response = await surveyResponseAPI.getSurveyResponses(surveyId, params);
-      console.log('🔍 SurveyReportsPage - API Response:', response);
-      console.log('🔍 SurveyReportsPage - Responses count:', response.data?.responses?.length);
-      console.log('🔍 SurveyReportsPage - Response statuses:', response.data?.responses?.map(r => r.status));
-      
-      if (response.success) {
-        setResponses(response.data.responses);
-      }
+        // Survey data might be nested under 'survey' property
+        const surveyData = surveyResponse.data?.survey || surveyResponse.data;
+        console.log('🔍🔍🔍 Extracted surveyData:', surveyData);
+        console.log('🔍🔍🔍 surveyData.mode:', surveyData?.mode);
+        console.log('🔍🔍🔍 surveyData.modes:', surveyData?.modes);
+        setSurvey(surveyData);
+        
+        // Fetch all responses for analytics - always fetch all (Approved + Rejected) for comprehensive analytics
+        // Client-side filtering will handle status filtering
+        const params = {
+          page: 1,
+          limit: 10000, // Get all responses for comprehensive analytics
+          status: 'all' // Always fetch all (Approved + Rejected) for comprehensive analytics
+        };
+        
+        const response = await surveyResponseAPI.getSurveyResponses(surveyId, params);
+        console.log('🔍 SurveyReportsPage - API Response:', response);
+        console.log('🔍 SurveyReportsPage - Responses count:', response.data?.responses?.length);
+        console.log('🔍 SurveyReportsPage - Response statuses:', response.data?.responses?.map(r => r.status));
+        
+        if (response.success) {
+          setResponses(response.data.responses);
+        }
 
-      // Fetch CATI stats if survey has CATI mode
-      const isCatiSurvey = surveyResponse.data?.mode === 'cati' || 
-                          surveyResponse.data?.mode === 'multi_mode' ||
-                          (surveyResponse.data?.modes && surveyResponse.data.modes.includes('cati'));
-      
-      if (isCatiSurvey) {
-        try {
-          const catiStatsResponse = await surveyAPI.getCatiStats(surveyId);
-          if (catiStatsResponse.success) {
-            setCatiStats(catiStatsResponse.data);
+        // Fetch CATI stats if survey has CATI mode
+        // Check both nested and direct structure
+        const surveyMode = surveyData?.mode || surveyResponse.data?.mode;
+        const surveyModes = surveyData?.modes || surveyResponse.data?.modes;
+        
+        // Also check if there are any CATI responses (fallback if mode field is missing)
+        const hasCatiResponses = response.success && response.data?.responses?.some(r => 
+          r.interviewMode?.toUpperCase() === 'CATI'
+        );
+        
+        const isCatiSurvey = surveyMode === 'cati' || 
+                            surveyMode === 'multi_mode' ||
+                            (surveyModes && Array.isArray(surveyModes) && surveyModes.includes('cati')) ||
+                            hasCatiResponses; // Fallback: if there are CATI responses, fetch stats
+        
+        console.log('🔍🔍🔍 Survey mode check:', {
+          surveyData: surveyData,
+          mode: surveyMode,
+          modes: surveyModes,
+          hasCatiResponses: hasCatiResponses,
+          isCatiSurvey: isCatiSurvey,
+          surveyId: surveyId
+        });
+        
+        if (isCatiSurvey) {
+          try {
+            console.log('🔍🔍🔍 Fetching CATI stats for survey:', surveyId);
+            const catiStatsResponse = await surveyAPI.getCatiStats(surveyId);
+            console.log('🔍🔍🔍 CATI stats response:', catiStatsResponse);
+            console.log('🔍🔍🔍 CATI stats response success:', catiStatsResponse?.success);
+            console.log('🔍🔍🔍 CATI stats response data:', catiStatsResponse?.data);
+            if (catiStatsResponse && catiStatsResponse.success) {
+              console.log('🔍🔍🔍 Setting CATI stats:', catiStatsResponse.data);
+              console.log('🔍🔍🔍 Calls made in response:', catiStatsResponse.data?.callerPerformance?.callsMade);
+              setCatiStats(catiStatsResponse.data);
+            } else {
+              console.warn('⚠️⚠️⚠️ CATI stats response not successful:', catiStatsResponse);
+            }
+          } catch (catiError) {
+            console.error('❌❌❌ Error fetching CATI stats:', catiError);
+            console.error('❌❌❌ Error details:', catiError.response?.data || catiError.message);
+            console.error('❌❌❌ Error status:', catiError.response?.status);
+            // Don't show error, just log it - CATI stats are optional
           }
-        } catch (catiError) {
-          console.error('Error fetching CATI stats:', catiError);
-          // Don't show error, just log it - CATI stats are optional
+        } else {
+          console.log('⚠️⚠️⚠️ Survey is not CATI, skipping CATI stats fetch');
         }
       }
     } catch (error) {
@@ -792,6 +828,8 @@ const SurveyReportsPage = () => {
     const capiRejected = capiResponsesForStats.filter(r => r.status?.toLowerCase() === 'rejected').length;
 
     // CATI Performance stats - use real data if available
+    console.log('🔍🔍🔍 Analytics calculation - catiStats:', catiStats);
+    console.log('🔍🔍🔍 Analytics calculation - catiStats?.callerPerformance:', catiStats?.callerPerformance);
     const catiPerformanceData = catiStats || {
       callerPerformance: {
         callsMade: 0,
@@ -839,7 +877,7 @@ const SurveyReportsPage = () => {
       },
       catiPerformance: catiPerformanceData
     };
-  }, [filteredResponses, survey]);
+  }, [filteredResponses, survey, catiStats]);
 
   // Filter options
   const filterOptions = useMemo(() => {

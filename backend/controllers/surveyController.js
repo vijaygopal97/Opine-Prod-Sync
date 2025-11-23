@@ -1670,6 +1670,9 @@ exports.getCatiStats = async (req, res) => {
   try {
     const { id } = req.params;
     
+    console.log(`🔍🔍🔍 getCatiStats - START - Request for survey ID: ${id}`);
+    console.log(`🔍🔍🔍 getCatiStats - User:`, req.user?.email, req.user?.userType);
+    
     // Get current user and their company
     const currentUser = await User.findById(req.user.id).populate('company');
     if (!currentUser || !currentUser.company) {
@@ -1682,11 +1685,14 @@ exports.getCatiStats = async (req, res) => {
     // Find survey
     const survey = await Survey.findById(id);
     if (!survey) {
+      console.log(`❌ getCatiStats - Survey not found: ${id}`);
       return res.status(404).json({
         success: false,
         message: 'Survey not found'
       });
     }
+
+    console.log(`✅ getCatiStats - Survey found: ${survey.surveyName || survey.title}`);
 
     // Check access
     if (survey.company.toString() !== currentUser.company._id.toString()) {
@@ -1696,45 +1702,261 @@ exports.getCatiStats = async (req, res) => {
       });
     }
 
-    // Get all queue entries for this survey
-    const queueEntries = await CatiRespondentQueue.find({
-      survey: id
-    }).populate('callRecord').populate('assignedTo', 'firstName lastName email');
+    // Convert survey ID to ObjectId if needed
+    const mongoose = require('mongoose');
+    const surveyObjectId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
 
-    // Get call records from queue entries and also directly by survey
-    const callRecordIds = queueEntries
+    console.log(`🔍 getCatiStats - Survey ID: ${id}, ObjectId: ${surveyObjectId}`);
+
+    // Get queue entries first to find all related call records
+    const queueEntries = await CatiRespondentQueue.find({
+      survey: surveyObjectId
+    }).select('_id callRecord');
+
+    console.log(`🔍 getCatiStats - Found ${queueEntries.length} queue entries for survey`);
+
+    const queueEntryIds = queueEntries.map(q => q._id);
+    const callRecordIdsFromQueue = queueEntries
       .filter(q => q.callRecord)
-      .map(q => {
-        if (q.callRecord && q.callRecord._id) {
-          return q.callRecord._id;
-        }
-        return q.callRecord;
-      })
-      .filter(id => id); // Remove null/undefined
+      .map(q => q.callRecord._id || q.callRecord)
+      .filter(id => id);
+
+    console.log(`🔍 getCatiStats - Queue entry IDs: ${queueEntryIds.length}, Call record IDs from queue: ${callRecordIdsFromQueue.length}`);
+
+    // Get ALL call records linked to this survey (directly via survey field)
+    // Try multiple query approaches to ensure we find all calls
+    let callRecords = [];
     
-    // Also get calls directly linked to this survey
-    const directCallRecords = await CatiCall.find({
-      survey: id,
-      webhookReceived: true
+    // Approach 1: Query by ObjectId (primary method - should find all calls)
+    console.log(`🔍🔍🔍 getCatiStats - Querying CatiCall with survey: ${surveyObjectId}`);
+    const callsByObjectId = await CatiCall.find({
+      survey: surveyObjectId
+    })
+      .populate('createdBy', 'firstName lastName email')
+      .populate('queueEntry');
+
+    console.log(`🔍🔍🔍 getCatiStats - Calls found by ObjectId: ${callsByObjectId.length}`);
+    if (callsByObjectId.length > 0) {
+      console.log(`🔍🔍🔍 getCatiStats - Sample call:`, {
+        _id: callsByObjectId[0]._id,
+        callId: callsByObjectId[0].callId,
+        survey: String(callsByObjectId[0].survey),
+        callStatus: callsByObjectId[0].callStatus,
+        originalStatusCode: callsByObjectId[0].originalStatusCode
+      });
+    }
+    // Convert Mongoose documents to plain objects for processing
+    callRecords = callsByObjectId.map(c => {
+      if (c.toObject) {
+        return c.toObject();
+      } else if (c.toJSON) {
+        return c.toJSON();
+      }
+      return c;
     });
     
-    // Combine both sources
-    const allCallRecordIds = [
-      ...callRecordIds,
-      ...directCallRecords.map(c => c._id)
-    ];
+    // Approach 2: Get calls linked via queueEntry (in case some don't have survey field set)
+    if (queueEntryIds.length > 0) {
+      const callsViaQueue = await CatiCall.find({
+        queueEntry: { $in: queueEntryIds },
+        _id: { $nin: callRecords.map(c => c._id) }  // Exclude already found calls
+      })
+        .populate('createdBy', 'firstName lastName email')
+        .populate('queueEntry');
+      
+      console.log(`🔍 getCatiStats - Calls found via queueEntry: ${callsViaQueue.length}`);
+      
+      // Add calls not already in the list
+      const existingCallIds = new Set(callRecords.map(c => c._id.toString()));
+      callsViaQueue.forEach(call => {
+        let callObj;
+        if (call.toObject) {
+          callObj = call.toObject();
+        } else if (call.toJSON) {
+          callObj = call.toJSON();
+        } else {
+          callObj = call;
+        }
+        if (!existingCallIds.has(callObj._id.toString())) {
+          callRecords.push(callObj);
+        }
+      });
+    }
     
-    // Get unique call records
-    const uniqueCallRecordIds = [...new Set(allCallRecordIds.map(id => id.toString()))];
+    console.log(`🔍 getCatiStats - Total unique call records found: ${callRecords.length}`);
     
-    const callRecords = await CatiCall.find({
-      _id: { $in: uniqueCallRecordIds },
-      webhookReceived: true
-    }).populate('createdBy', 'firstName lastName email');
+    // Log sample call records to understand the data structure
+    if (callRecords.length > 0) {
+      console.log(`🔍 getCatiStats - Sample call record structure:`, {
+        _id: callRecords[0]._id,
+        callId: callRecords[0].callId,
+        survey: callRecords[0].survey,
+        surveyType: typeof callRecords[0].survey,
+        surveyString: String(callRecords[0].survey),
+        queueEntry: callRecords[0].queueEntry,
+        callStatus: callRecords[0].callStatus,
+        originalStatusCode: callRecords[0].originalStatusCode,
+        webhookReceived: callRecords[0].webhookReceived,
+        hasWebhookData: !!callRecords[0].webhookData,
+        webhookDataKeys: callRecords[0].webhookData ? Object.keys(callRecords[0].webhookData) : []
+      });
+    } else {
+      // If no calls found, try a broader search to debug
+      const allCallsCount = await CatiCall.countDocuments({});
+      const callsWithSurveyCount = await CatiCall.countDocuments({ survey: { $exists: true, $ne: null } });
+      console.log(`⚠️ getCatiStats - No calls found. Total calls in DB: ${allCallsCount}, Calls with survey field: ${callsWithSurveyCount}`);
+      
+      // Try to find any calls with similar survey IDs
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        const sampleCalls = await CatiCall.find({ survey: { $exists: true } }).limit(5).select('survey callId').lean();
+        console.log(`🔍 getCatiStats - Sample survey IDs from other calls:`, sampleCalls.map(c => ({ survey: String(c.survey), callId: c.callId })));
+      }
+    }
+    
+    // Count calls with webhook data for reference
+    const callsWithWebhook = callRecords.filter(c => c.webhookReceived === true || (c.webhookData && Object.keys(c.webhookData).length > 0));
+    console.log(`🔍 getCatiStats - Calls with webhook data: ${callsWithWebhook.length} out of ${callRecords.length} total`);
+    
+    // Use ALL call records for counting (not just those with webhook)
+    // For status determination, prioritize webhook data but fall back to stored callStatus
+    
+    // Helper functions defined here (before use)
+    // Helper function to get call status from status code
+    // Priority: originalStatusCode field > webhookData.callStatus > webhookData.status > stored callStatus
+    const getCallStatus = (call) => {
+      const webhookData = call.webhookData || {};
+      
+      // Try to get status code from multiple sources
+      let statusCode = call.originalStatusCode;
+      if (!statusCode && webhookData) {
+        statusCode = webhookData.callStatus || webhookData.status;
+      }
+      
+      // Convert to number if it's a string
+      const statusCodeNum = typeof statusCode === 'number' ? statusCode : parseInt(statusCode);
+      
+      if (!isNaN(statusCodeNum)) {
+        // Map DeepCall status codes (CTC - Click to Call)
+        // Status 3: Both Answered -> completed
+        if (statusCodeNum === 3) return 'completed';
+        // Status 4, 5, 10: Answered -> answered
+        // 4: To Ans. - From Unans., 5: To Ans, 10: From Ans.
+        if (statusCodeNum === 4 || statusCodeNum === 5 || statusCodeNum === 10) return 'answered';
+        // Status 6, 7, 8, 9: Unanswered -> no-answer
+        // 6: To Unans - From Ans., 7: From Unanswered, 8: To Unans., 9: Both Unanswered
+        if (statusCodeNum === 6 || statusCodeNum === 7 || statusCodeNum === 8 || statusCodeNum === 9) return 'no-answer';
+        // Status 11, 12, 20, 21: Rejected/Skipped/Hangup -> cancelled
+        // 11: Rejected Call, 12: Skipped, 20: To Hangup in Queue, 21: To Hangup
+        if (statusCodeNum === 11 || statusCodeNum === 12 || statusCodeNum === 20 || statusCodeNum === 21) return 'cancelled';
+        // Status 13, 14, 15, 16: Failed -> failed
+        // 13: From Failed, 14: To Failed - From Ans., 15: To Failed, 16: To Ans - From Failed
+        if (statusCodeNum === 13 || statusCodeNum === 14 || statusCodeNum === 15 || statusCodeNum === 16) return 'failed';
+        // Status 18: To Ans. - From Not Found -> failed (but mark as "does not exist" separately)
+        if (statusCodeNum === 18) return 'failed';
+        // Status 17, 19: Busy -> busy
+        // 17: From Busy, 19: To Unans. - From Busy
+        if (statusCodeNum === 17 || statusCodeNum === 19) return 'busy';
+      }
+      
+      // Fallback to stored callStatus
+      return call.callStatus || 'initiated';
+    };
+    
+    // Helper function to check if "From" is answered (interviewer/agent answered)
+    // Status codes where "From" is answered: 3, 6, 10, 14, 16
+    const isFromAnswered = (call) => {
+      const webhookData = call.webhookData || {};
+      let statusCode = call.originalStatusCode;
+      if (!statusCode && webhookData) {
+        statusCode = webhookData.callStatus || webhookData.status;
+      }
+      const statusCodeNum = typeof statusCode === 'number' ? statusCode : parseInt(statusCode);
+      
+      if (!isNaN(statusCodeNum)) {
+        // Status codes where "From" (interviewer/agent) is answered:
+        // 3: Both Answered, 6: To Unans - From Ans., 10: From Ans., 14: To Failed - From Ans., 16: To Ans - From Failed
+        return statusCodeNum === 3 || statusCodeNum === 6 || statusCodeNum === 10 || statusCodeNum === 14 || statusCodeNum === 16;
+      }
+      return false;
+    };
+    
+    if (callRecords.length > 0) {
+      console.log(`🔍 getCatiStats - Sample call record:`, {
+        callId: callRecords[0].callId,
+        callStatus: callRecords[0].callStatus,
+        originalStatusCode: callRecords[0].originalStatusCode,
+        talkDuration: callRecords[0].talkDuration,
+        callDuration: callRecords[0].callDuration,
+        hasWebhookData: !!callRecords[0].webhookData,
+        webhookReceived: callRecords[0].webhookReceived,
+        webhookDataStatus: callRecords[0].webhookData?.callStatus || callRecords[0].webhookData?.status
+      });
+      
+      // Show breakdown using getCallStatus helper
+      const statusBreakdown = {
+        completed: callRecords.filter(c => getCallStatus(c) === 'completed').length,
+        answered: callRecords.filter(c => getCallStatus(c) === 'answered').length,
+        no_answer: callRecords.filter(c => getCallStatus(c) === 'no-answer').length,
+        busy: callRecords.filter(c => getCallStatus(c) === 'busy').length,
+        failed: callRecords.filter(c => getCallStatus(c) === 'failed').length,
+        cancelled: callRecords.filter(c => getCallStatus(c) === 'cancelled').length,
+        ringing: callRecords.filter(c => getCallStatus(c) === 'ringing').length,
+        initiated: callRecords.filter(c => getCallStatus(c) === 'initiated').length
+      };
+      console.log(`🔍 getCatiStats - Call statuses breakdown (using status codes):`, statusBreakdown);
+      console.log(`🔍 getCatiStats - Calls where From is answered: ${callRecords.filter(c => isFromAnswered(c)).length}`);
+    } else {
+      console.log(`⚠️ getCatiStats - No call records found for survey ${id}`);
+      console.log(`⚠️ getCatiStats - Survey ObjectId used: ${surveyObjectId}`);
+    }
 
-    // Get queue stats
+    // Get queue entries for additional context (status breakdowns) - already fetched above
+    const queueEntriesWithDetails = await CatiRespondentQueue.find({
+      survey: surveyObjectId
+    })
+      .populate('assignedTo', 'firstName lastName email');
+
+    console.log(`🔍 getCatiStats - Found ${queueEntriesWithDetails.length} queue entries for survey ${id}`);
+
+    // Calculate total calls made = total call records (each record = one call attempt)
+    const totalCallsMade = callRecords.length;
+
+    // Dials attempted = total calls made (same thing)
+    const dialsAttempted = totalCallsMade;
+
+    // Calls attended = calls where "From" is answered (interviewer/agent answered)
+    // Status codes 3, 6, 10, 14, 16 indicate "From" is answered
+    const callsAttended = callRecords.filter(c => {
+      return isFromAnswered(c);
+    }).length;
+
+    // Calls connected = calls where status is 'answered' or 'completed' (successful connections)
+    // Status codes 3, 4, 5, 10 indicate successful connection
+    const callsConnected = callRecords.filter(c => {
+      const status = getCallStatus(c);
+      return status === 'answered' || status === 'completed';
+    }).length;
+
+    console.log(`🔍 getCatiStats - Calls attended: ${callsAttended}, Calls connected: ${callsConnected}`);
+    
+    // Calculate total talk duration from call records (in seconds)
+    // Use talkDuration field which is extracted from webhookData
+    const totalTalkDuration = callRecords.reduce((sum, c) => {
+      // talkDuration is already in seconds from webhook processing
+      return sum + (c.talkDuration || 0);
+    }, 0);
+    
+    console.log(`🔍 getCatiStats - Total talk duration: ${totalTalkDuration} seconds`);
+    const formatDuration = (seconds) => {
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Get queue status breakdown for additional context
     const queueStats = await CatiRespondentQueue.aggregate([
-      { $match: { survey: survey._id } },
+      { $match: { survey: surveyObjectId } },
       {
         $group: {
           _id: '$status',
@@ -1743,25 +1965,10 @@ exports.getCatiStats = async (req, res) => {
       }
     ]);
 
-    // Calculate stats
-    const totalCalls = callRecords.length;
-    const callsConnected = callRecords.filter(c => 
-      c.callStatus === 'answered' || c.callStatus === 'completed'
-    ).length;
-    const callsAttended = callRecords.filter(c => 
-      c.callStatus === 'answered'
-    ).length;
-    
-    // Calculate total talk duration
-    const totalTalkDuration = callRecords.reduce((sum, c) => sum + (c.talkDuration || 0), 0);
-    const formatDuration = (seconds) => {
-      const hrs = Math.floor(seconds / 3600);
-      const mins = Math.floor((seconds % 3600) / 60);
-      const secs = seconds % 60;
-      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
+    console.log(`🔍 getCatiStats - Queue stats:`, queueStats);
+    console.log(`🔍 getCatiStats - Total call records found: ${callRecords.length}`);
 
-    // Status breakdowns
+    // Status breakdowns from queue entries (for reference, but primary source is call records)
     const statusCounts = {
       interview_success: 0,
       call_failed: 0,
@@ -1781,103 +1988,233 @@ exports.getCatiStats = async (req, res) => {
       }
     });
 
-    // Call status breakdown from call records
+    // Call status breakdown from call records (webhook data) - PRIMARY SOURCE
+    // Use getCallStatus helper function to map DeepCall status codes correctly
     const callStatusBreakdown = {
-      answered: callRecords.filter(c => c.callStatus === 'answered').length,
-      completed: callRecords.filter(c => c.callStatus === 'completed').length,
-      no_answer: callRecords.filter(c => c.callStatus === 'no-answer').length,
-      busy: callRecords.filter(c => c.callStatus === 'busy').length,
-      failed: callRecords.filter(c => c.callStatus === 'failed').length,
-      cancelled: callRecords.filter(c => c.callStatus === 'cancelled').length
+      answered: callRecords.filter(c => getCallStatus(c) === 'answered').length,
+      completed: callRecords.filter(c => getCallStatus(c) === 'completed').length,
+      no_answer: callRecords.filter(c => getCallStatus(c) === 'no-answer').length,
+      busy: callRecords.filter(c => getCallStatus(c) === 'busy').length,
+      failed: callRecords.filter(c => getCallStatus(c) === 'failed').length,
+      cancelled: callRecords.filter(c => getCallStatus(c) === 'cancelled').length,
+      ringing: callRecords.filter(c => getCallStatus(c) === 'ringing' || c.callStatus === 'ringing').length,
+      initiated: callRecords.filter(c => getCallStatus(c) === 'initiated' || c.callStatus === 'initiated').length
+    };
+    
+    console.log(`🔍 getCatiStats - Call status breakdown:`, callStatusBreakdown);
+
+    // Extract additional details from webhookData and originalStatusCode for number status
+    // Use DeepCall status codes to correctly categorize calls
+    let switchOffCount = 0;
+    let numberNotReachableCount = 0;
+    let numberDoesNotExistCount = 0;
+    
+    // DeepCall Status Code Mapping (CTC - Click to Call)
+    // Status codes: 3=Both Answered, 4=To Ans-From Unans, 5=To Ans, 6=To Unans-From Ans,
+    // 7=From Unanswered, 8=To Unans, 9=Both Unanswered, 10=From Ans,
+    // 11=Rejected, 12=Skipped, 13=From Failed, 14=To Failed-From Ans, 15=To Failed,
+    // 16=To Ans-From Failed, 17=From Busy, 18=To Ans-From Not Found, 19=To Unans-From Busy,
+    // 20=To Hangup in Queue, 21=To Hangup
+    
+    callRecords.forEach(call => {
+      const webhookData = call.webhookData || {};
+      const originalStatusCode = call.originalStatusCode || webhookData.callStatus || webhookData.status;
+      const statusCode = typeof originalStatusCode === 'number' ? originalStatusCode : parseInt(originalStatusCode);
+      
+      // Map status codes to number status categories
+      if (statusCode === 13 || statusCode === 15 || statusCode === 16) {
+        // Status 13: From Failed, 15: To Failed, 16: To Ans - From Failed
+        // These indicate the number failed - could be switch off or not reachable
+        // Check webhookData for more details
+        const exitCode = webhookData.exitCode || call.hangupCause || '';
+        const hangupReason = webhookData.hangupReason || call.hangupReason || '';
+        const statusDesc = call.statusDescription || '';
+        
+        const exitCodeStr = String(exitCode).toLowerCase();
+        const reasonStr = String(hangupReason).toLowerCase();
+        const descStr = String(statusDesc).toLowerCase();
+        
+        if (exitCodeStr.includes('switch') || reasonStr.includes('switch') || descStr.includes('switch')) {
+          switchOffCount++;
+        } else if (exitCodeStr.includes('not reachable') || reasonStr.includes('not reachable') || descStr.includes('not reachable')) {
+          numberNotReachableCount++;
+        } else {
+          // Default to not reachable for failed calls
+          numberNotReachableCount++;
+        }
+      } else if (statusCode === 18) {
+        // Status 18: To Ans. - From Not Found (Number does not exist)
+        numberDoesNotExistCount++;
+      } else if (statusCode === 7 || statusCode === 8 || statusCode === 9) {
+        // Status 7: From Unanswered, 8: To Unans., 9: Both Unanswered
+        // These could be switch off - check webhookData
+        const exitCode = webhookData.exitCode || call.hangupCause || '';
+        const hangupReason = webhookData.hangupReason || call.hangupReason || '';
+        const statusDesc = call.statusDescription || '';
+        
+        const exitCodeStr = String(exitCode).toLowerCase();
+        const reasonStr = String(hangupReason).toLowerCase();
+        const descStr = String(statusDesc).toLowerCase();
+        
+        if (exitCodeStr.includes('switch') || reasonStr.includes('switch') || descStr.includes('switch')) {
+          switchOffCount++;
+        } else {
+          // Default: no answer (not switch off)
+          // This will be counted in "Call Not Received" but not in "Switch Off"
+        }
+      }
+    });
+
+    // Calculate number stats based on DeepCall status codes
+    // Call Not Received = no_answer (status 6,7,8,9) + failed (status 13,14,15,16,18) that didn't connect
+    const callNotReceived = callStatusBreakdown.no_answer + 
+                            callRecords.filter(c => {
+                              const status = getCallStatus(c);
+                              return status === 'failed' && status !== 'answered' && status !== 'completed';
+                            }).length;
+    
+    // Ringing = calls that reached ringing status (status 1, 2, or ringing status)
+    const ringing = callStatusBreakdown.ringing;
+    
+    // Not Ringing = switch off + not reachable + does not exist (from status code analysis)
+    // Status 18 = does not exist, Status 13/15/16 = failed (could be switch off or not reachable)
+    const notRinging = switchOffCount + numberNotReachableCount + numberDoesNotExistCount;
+    
+    // No Response by Telecaller = 0 (not tracked currently)
+    const noResponseByTelecaller = 0;
+
+    // Call Not Ring Status breakdown (from webhook data analysis)
+    const callNotRingStatus = {
+      switchOff: switchOffCount,
+      numberNotReachable: numberNotReachableCount,
+      numberDoesNotExist: numberDoesNotExistCount,
+      noResponseByTelecaller: 0
     };
 
-    // Interviewer performance - get from queue entries
+    // Call Ring Status breakdown (from call records)
+    // Calls that rang but didn't connect = no_answer status
+    const callsNotConnected = callRecords.filter(c => {
+      const status = getCallStatus(c);
+      return status === 'no-answer';
+    }).length;
+    
+    const callRingStatus = {
+      callsConnected: callsConnected,
+      callsNotConnected: callsNotConnected,
+      noResponseByTelecaller: 0
+    };
+
+    // Interviewer performance - aggregate from call records (primary source)
     const interviewerStatsMap = new Map();
-    queueEntries.forEach(entry => {
-      if (entry.assignedTo && entry.callRecord) {
-        const interviewerId = entry.assignedTo._id.toString();
+    
+    // Count calls by interviewer from call records
+    callRecords.forEach(call => {
+      if (call.createdBy) {
+        const interviewerId = call.createdBy._id.toString();
         if (!interviewerStatsMap.has(interviewerId)) {
           interviewerStatsMap.set(interviewerId, {
-            interviewerId: entry.assignedTo._id,
-            interviewerName: `${entry.assignedTo.firstName} ${entry.assignedTo.lastName}`,
+            interviewerId: call.createdBy._id,
+            interviewerName: `${call.createdBy.firstName} ${call.createdBy.lastName}`,
             callsMade: 0,
             callsConnected: 0,
             totalTalkDuration: 0
           });
         }
         const stat = interviewerStatsMap.get(interviewerId);
+        
+        // Count this call
         stat.callsMade += 1;
-        if (entry.status === 'interview_success') {
+        
+        // Count connected calls (using status code mapping)
+        const callStatus = getCallStatus(call);
+        if (callStatus === 'answered' || callStatus === 'completed') {
           stat.callsConnected += 1;
         }
-        // Get talk duration from call record if available
-        const callRecord = callRecords.find(c => 
-          c._id.toString() === (entry.callRecord._id?.toString() || entry.callRecord.toString())
-        );
-        if (callRecord && callRecord.talkDuration) {
-          stat.totalTalkDuration += callRecord.talkDuration;
+        
+        // Add talk duration
+        if (call.talkDuration) {
+          stat.totalTalkDuration += call.talkDuration;
         }
       }
     });
+    
     const interviewerStats = Array.from(interviewerStatsMap.values());
+    
+    console.log(`🔍 getCatiStats - Interviewer stats:`, interviewerStats.length, 'interviewers');
+
+    console.log(`🔍 getCatiStats - Final stats:`, {
+      callsMade: totalCallsMade,
+      callsAttended: callsAttended,
+      dialsAttempted: dialsAttempted,
+      callsConnected: callsConnected,
+      totalTalkDuration: formatDuration(totalTalkDuration),
+      callNotReceived,
+      ringing,
+      notRinging,
+      switchOff: switchOffCount,
+      numberNotReachable: numberNotReachableCount,
+      numberDoesNotExist: numberDoesNotExistCount
+    });
+
+    const responseData = {
+      callerPerformance: {
+        callsMade: totalCallsMade,
+        callsAttended: callsAttended,
+        dialsAttempted: dialsAttempted,
+        callsConnected: callsConnected,
+        totalTalkDuration: formatDuration(totalTalkDuration)
+      },
+      numberStats: {
+        callNotReceived: callNotReceived,
+        ringing: ringing,
+        notRinging: notRinging,
+        noResponseByTelecaller: noResponseByTelecaller
+      },
+      callNotRingStatus: callNotRingStatus,
+      callRingStatus: callRingStatus,
+      statusBreakdown: statusCounts,
+      callStatusBreakdown: callStatusBreakdown,
+      interviewerStats: interviewerStats.map(stat => ({
+        interviewerId: stat.interviewerId,
+        interviewerName: stat.interviewerName,
+        callsMade: stat.callsMade,
+        callsConnected: stat.callsConnected,
+        totalTalkDuration: formatDuration(stat.totalTalkDuration || 0)
+      })),
+      callRecords: callRecords.map(call => ({
+        _id: call._id,
+        callId: call.callId,
+        fromNumber: call.fromNumber,
+        toNumber: call.toNumber,
+        callStatus: call.callStatus,
+        callStatusDescription: call.callStatusDescription,
+        callStartTime: call.callStartTime,
+        callEndTime: call.callEndTime,
+        callDuration: call.callDuration,
+        talkDuration: call.talkDuration,
+        recordingUrl: call.recordingUrl,
+        interviewer: call.createdBy ? {
+          _id: call.createdBy._id,
+          name: `${call.createdBy.firstName} ${call.createdBy.lastName}`,
+          email: call.createdBy.email
+        } : null,
+        createdAt: call.createdAt
+      }))
+    };
+
+    console.log(`🔍🔍🔍 getCatiStats - Sending response with ${callRecords.length} call records`);
+    console.log(`🔍🔍🔍 getCatiStats - Response callerPerformance:`, {
+      callsMade: responseData.callerPerformance.callsMade,
+      callsAttended: responseData.callerPerformance.callsAttended,
+      callsConnected: responseData.callerPerformance.callsConnected
+    });
+    console.log(`🔍🔍🔍 getCatiStats - Response data structure (first 1000 chars):`, JSON.stringify(responseData, null, 2).substring(0, 1000));
 
     res.status(200).json({
       success: true,
-      data: {
-        callerPerformance: {
-          callsMade: totalCalls,
-          callsAttended: callsAttended,
-          dialsAttempted: totalCalls,
-          callsConnected: callsConnected,
-          totalTalkDuration: formatDuration(totalTalkDuration)
-        },
-        numberStats: {
-          callNotReceived: statusCounts.no_answer + statusCounts.switched_off + statusCounts.not_reachable,
-          ringing: callStatusBreakdown.no_answer,
-          notRinging: statusCounts.switched_off + statusCounts.not_reachable + statusCounts.does_not_exist,
-          noResponseByTelecaller: 0
-        },
-        callNotRingStatus: {
-          switchOff: statusCounts.switched_off,
-          numberNotReachable: statusCounts.not_reachable,
-          numberDoesNotExist: statusCounts.does_not_exist,
-          noResponseByTelecaller: 0
-        },
-        callRingStatus: {
-          callsConnected: callsConnected,
-          callsNotConnected: callStatusBreakdown.no_answer,
-          noResponseByTelecaller: 0
-        },
-        statusBreakdown: statusCounts,
-        callStatusBreakdown: callStatusBreakdown,
-        interviewerStats: interviewerStats.map(stat => ({
-          interviewerId: stat.interviewerId,
-          interviewerName: stat.interviewerName,
-          callsMade: stat.callsMade,
-          callsConnected: stat.callsConnected,
-          totalTalkDuration: formatDuration(stat.totalTalkDuration || 0)
-        })),
-        callRecords: callRecords.map(call => ({
-          _id: call._id,
-          callId: call.callId,
-          fromNumber: call.fromNumber,
-          toNumber: call.toNumber,
-          callStatus: call.callStatus,
-          callStatusDescription: call.callStatusDescription,
-          callStartTime: call.callStartTime,
-          callEndTime: call.callEndTime,
-          callDuration: call.callDuration,
-          talkDuration: call.talkDuration,
-          recordingUrl: call.recordingUrl,
-          interviewer: call.createdBy ? {
-            _id: call.createdBy._id,
-            name: `${call.createdBy.firstName} ${call.createdBy.lastName}`,
-            email: call.createdBy.email
-          } : null,
-          createdAt: call.createdAt
-        }))
-      }
+      data: responseData
     });
+    console.log(`🔍🔍🔍 getCatiStats - END - Response sent successfully`);
 
   } catch (error) {
     console.error('Get CATI stats error:', error);
