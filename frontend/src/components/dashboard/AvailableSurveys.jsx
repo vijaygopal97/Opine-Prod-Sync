@@ -37,7 +37,6 @@ const AvailableSurveys = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedSurvey, setSelectedSurvey] = useState(null);
   const [showSurveyDetails, setShowSurveyDetails] = useState(false);
-  const [rejectConfirm, setRejectConfirm] = useState(null);
   const [showInterviewInterface, setShowInterviewInterface] = useState(false);
   const [interviewSurvey, setInterviewSurvey] = useState(null);
   const [showCatiModal, setShowCatiModal] = useState(false);
@@ -210,10 +209,6 @@ const AvailableSurveys = () => {
     }
   };
 
-  const handleRejectInterview = (survey) => {
-    setRejectConfirm(survey);
-  };
-
   const handleInterviewComplete = (completionData) => {
     // Toast message is already shown in InterviewInterface, no need to show another one
     // Refresh the surveys list to update completion status
@@ -240,25 +235,6 @@ const AvailableSurveys = () => {
       setShowInterviewInterface(true);
     } catch (error) {
       showError('Failed to start CATI interview', error.message || 'An error occurred');
-    }
-  };
-
-  const confirmRejectInterview = async () => {
-    if (!rejectConfirm) return;
-
-    try {
-      const response = await surveyAPI.rejectInterview(rejectConfirm._id);
-      
-      if (response.success) {
-        showSuccess('Interview rejected successfully');
-        setRejectConfirm(null);
-        fetchAvailableSurveys(); // Refresh the list
-      } else {
-        showError(response.message || 'Failed to reject interview');
-      }
-    } catch (error) {
-      console.error('Error rejecting interview:', error);
-      showError('Failed to reject interview');
     }
   };
 
@@ -297,8 +273,8 @@ const AvailableSurveys = () => {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <div className="mb-8">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 max-w-xs">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Assigned</p>
@@ -306,48 +282,6 @@ const AvailableSurveys = () => {
             </div>
             <div className="p-3 bg-blue-50 rounded-lg">
               <FileText className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {surveys.filter(s => s.assignmentStatus === 'assigned').length}
-              </p>
-            </div>
-            <div className="p-3 bg-yellow-50 rounded-lg">
-              <Clock className="h-6 w-6 text-yellow-600" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Accepted</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {surveys.filter(s => s.assignmentStatus === 'accepted').length}
-              </p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {surveys.filter(s => s.assignmentStatus === 'completed').length}
-              </p>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <Award className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>
@@ -587,13 +521,6 @@ const AvailableSurveys = () => {
                             </button>
                           )}
                           
-                          <button
-                            onClick={() => handleRejectInterview(survey)}
-                            className="flex items-center space-x-2 px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                            <span>Reject Interview</span>
-                          </button>
                         </div>
                       ) : (survey.mode === 'capi' || survey.assignedMode === 'capi') ? (
                         // Single CAPI mode
@@ -608,13 +535,6 @@ const AvailableSurveys = () => {
                             </p>
                           </div>
                           
-                          <button
-                            onClick={() => handleRejectInterview(survey)}
-                            className="flex items-center space-x-2 px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                            <span>Reject Interview</span>
-                          </button>
                         </div>
                       ) : (
                         // Other modes (CATI, online, etc.)
@@ -627,13 +547,6 @@ const AvailableSurveys = () => {
                             <span>Start Interview</span>
                           </button>
                           
-                          <button
-                            onClick={() => handleRejectInterview(survey)}
-                            className="flex items-center space-x-2 px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                            <span>Reject Interview</span>
-                          </button>
                         </>
                       )}
                     </>
@@ -713,39 +626,6 @@ const AvailableSurveys = () => {
         />
       )}
 
-      {/* Reject Confirmation Modal */}
-      {rejectConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <X className="w-6 h-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">Reject Interview</h3>
-            </div>
-            
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to reject the interview for <strong>"{rejectConfirm.surveyName}"</strong>? 
-              This action cannot be undone.
-            </p>
-            
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setRejectConfirm(null)}
-                className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmRejectInterview}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Reject Interview
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Interview Interface */}
       {showInterviewInterface && interviewSurvey && (
