@@ -1768,7 +1768,42 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
   }, [isInterviewActive, isPaused]);
 
 
-  // Fisher-Yates shuffle algorithm for randomizing options
+  // Helper function to check if an option should not be shuffled
+  const isNonShufflableOption = (option) => {
+    const optionText = typeof option === 'object' ? (option.text || option.value || '').toLowerCase().trim() : String(option).toLowerCase().trim();
+    const optionValue = typeof option === 'object' ? (option.value || option.text || '').toLowerCase().trim() : String(option).toLowerCase().trim();
+    
+    // Check for special options that should not be shuffled
+    // 1. None
+    if (optionText === 'none' || optionValue === 'none') return true;
+    
+    // 2. Others (Specify) and variants - check for "other" or "others" (may include "specify")
+    if (optionText.includes('other') || optionValue.includes('other')) {
+      return true; // Matches "Other", "Others", "Others (specify)", "Others (Specify)", etc.
+    }
+    
+    // 3. NOTA
+    if (optionText === 'nota' || optionValue === 'nota') return true;
+    
+    // 4. Not eligible for voting / Not eligible
+    if (optionText.includes('not eligible') || optionValue.includes('not eligible')) return true;
+    
+    // 5. No response / Refused to answer / Refused
+    if (optionText.includes('no response') || optionValue.includes('no response') ||
+        optionText.includes('refused') || optionValue.includes('refused')) return true;
+    
+    // 6. Independent
+    if (optionText === 'independent' || optionValue === 'independent') return true;
+    
+    // 7. Did not vote / Didn't vote
+    if (optionText.includes('did not vote') || optionValue.includes('did not vote') ||
+        optionText.includes('didn\'t vote') || optionValue.includes('didn\'t vote') ||
+        optionText.includes('didnt vote') || optionValue.includes('didnt vote')) return true;
+    
+    return false;
+  };
+
+  // Fisher-Yates shuffle algorithm for randomizing options (only shufflable ones)
   const shuffleArray = (array) => {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -1780,6 +1815,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
 
   // Get shuffled options for a question (shuffle once, then reuse)
   // ONLY for multiple_choice questions, and only if shuffleOptions is enabled
+  // Special options (None, Others, NOTA, etc.) are kept in their original positions
   const getShuffledOptions = (questionId, originalOptions, question) => {
     if (!originalOptions || originalOptions.length === 0) return originalOptions;
     
@@ -1787,24 +1823,110 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     // Check if shuffling is enabled for this question (default to true if not set for backward compatibility)
     const shouldShuffle = question?.settings?.shuffleOptions !== false;
     
-    // If shuffling is disabled, return original options
+    // If shuffling is disabled, still move "Others" to the end
     if (!shouldShuffle) {
-      return originalOptions;
+      // Separate "Others" options from regular options
+      const othersOptions = [];
+      const regularOptions = [];
+      
+      originalOptions.forEach((option) => {
+        const optionText = typeof option === 'object' ? (option.text || option.value || '') : String(option);
+        if (isOthersOption(optionText)) {
+          othersOptions.push(option);
+        } else {
+          regularOptions.push(option);
+        }
+      });
+      
+      // Return with "Others" at the end
+      return [...regularOptions, ...othersOptions];
     }
     
-    // If already shuffled for this question, return cached shuffled order
+    // If already shuffled for this question, ensure "Others" is at the end and return
     if (shuffledOptions[questionId]) {
-      return shuffledOptions[questionId];
+      const cached = shuffledOptions[questionId];
+      // Always check and ensure "Others" is at the end
+      const othersOptions = [];
+      const regularOptions = [];
+      cached.forEach((option) => {
+        const optionText = typeof option === 'object' ? (option.text || option.value || '') : String(option);
+        if (isOthersOption(optionText)) {
+          othersOptions.push(option);
+        } else {
+          regularOptions.push(option);
+        }
+      });
+      
+      // If "Others" options exist and are not at the end, reorder
+      if (othersOptions.length > 0) {
+        const finalResult = [...regularOptions, ...othersOptions];
+        setShuffledOptions(prev => ({
+          ...prev,
+          [questionId]: finalResult
+        }));
+        return finalResult;
+      }
+      
+      // No "Others" options, return as is
+      return cached;
     }
     
-    // Shuffle options for the first time
-    const shuffled = shuffleArray(originalOptions);
+    // Separate options: shufflable, non-shufflable (except Others), and Others
+    const nonShufflableOptions = []; // Non-shufflable options except "Others"
+    const shufflableOptions = [];
+    const othersOptions = []; // "Others" options - will be placed at the end
+    const originalIndices = new Map(); // Track original indices for non-shufflable options (except Others)
+    
+    originalOptions.forEach((option, index) => {
+      const optionText = typeof option === 'object' ? (option.text || option.value || '') : String(option);
+      if (isOthersOption(optionText)) {
+        // "Others" options - will be placed at the end
+        othersOptions.push(option);
+      } else if (isNonShufflableOption(option)) {
+        // Other non-shufflable options - maintain original position
+        nonShufflableOptions.push({ option, originalIndex: index });
+        originalIndices.set(index, option);
+      } else {
+        // Shufflable options
+        shufflableOptions.push(option);
+      }
+    });
+    
+    // Shuffle only the shufflable options
+    const shuffledShufflable = shuffleArray(shufflableOptions);
+    
+    // Reconstruct the array maintaining original positions of non-shufflable options (except Others)
+    const result = [];
+    let shufflableIndex = 0;
+    let nonShufflableIndex = 0;
+    
+    for (let i = 0; i < originalOptions.length; i++) {
+      const option = originalOptions[i];
+      const optionText = typeof option === 'object' ? (option.text || option.value || '') : String(option);
+      
+      if (isOthersOption(optionText)) {
+        // Skip "Others" options - they'll be added at the end
+        continue;
+      } else if (originalIndices.has(i)) {
+        // Place non-shufflable option in its original position
+        result.push(nonShufflableOptions[nonShufflableIndex].option);
+        nonShufflableIndex++;
+      } else {
+        // Place shuffled option
+        result.push(shuffledShufflable[shufflableIndex]);
+        shufflableIndex++;
+      }
+    }
+    
+    // Combine: regular options first, then "Others" options at the end
+    const finalResult = [...result, ...othersOptions];
+    
     setShuffledOptions(prev => ({
       ...prev,
-      [questionId]: shuffled
+      [questionId]: finalResult
     }));
     
-    return shuffled;
+    return finalResult;
   };
 
   // Render question input based on type
@@ -1816,10 +1938,24 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     const questionId = currentVisibleQuestion.id;
 
     // Get shuffled options ONLY for multiple_choice questions (if shuffleOptions is enabled)
+    // For single_choice and dropdown, move "Others" to the end
     // Dropdown and other question types use original order
     let displayOptions = options;
     if (type === 'multiple_choice') {
       displayOptions = getShuffledOptions(questionId, options, currentVisibleQuestion);
+    } else if (type === 'single_choice' || type === 'dropdown') {
+      // Move "Others" to the end for single_choice and dropdown
+      const othersOptions = [];
+      const regularOptions = [];
+      options.forEach((option) => {
+        const optionText = typeof option === 'object' ? (option.text || option.value || '') : String(option);
+        if (isOthersOption(optionText)) {
+          othersOptions.push(option);
+        } else {
+          regularOptions.push(option);
+        }
+      });
+      displayOptions = [...regularOptions, ...othersOptions];
     }
 
     switch (type) {
@@ -2601,7 +2737,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                         style={{ minHeight: '44px', minWidth: '180px' }}
                       >
                         <CheckCircle className="w-5 h-5" />
-                        <span>Complete Interview</span>
+                        <span>Submit</span>
                       </button>
                     ) : (
                       <button
