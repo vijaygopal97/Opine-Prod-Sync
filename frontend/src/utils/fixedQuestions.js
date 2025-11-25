@@ -41,11 +41,6 @@ export const FIXED_QUESTIONS = [
         id: 'fixed_gender_female', 
         text: 'Female', 
         value: 'female' 
-      },
-      { 
-        id: 'fixed_gender_non_binary', 
-        text: 'Non-Binary', 
-        value: 'non_binary' 
       }
     ],
     settings: {
