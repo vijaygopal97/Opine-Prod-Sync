@@ -357,8 +357,14 @@ const MyInterviews = () => {
 
   // Helper function to find question by text in survey data
   const findQuestionByText = (questionText, survey) => {
-    if (survey?.sections) {
-      for (const section of survey.sections) {
+    if (!survey) return null;
+    
+    // Handle nested survey structure
+    const actualSurvey = survey.survey || survey;
+    
+    // Search in sections
+    if (actualSurvey.sections) {
+      for (const section of actualSurvey.sections) {
         if (section.questions) {
           for (const question of section.questions) {
             if (question.text === questionText) {
@@ -368,7 +374,129 @@ const MyInterviews = () => {
         }
       }
     }
+    
+    // Search in top-level questions
+    if (actualSurvey.questions) {
+      for (const question of actualSurvey.questions) {
+        if (question.text === questionText) {
+          return question;
+        }
+      }
+    }
+    
     return null;
+  };
+
+  // Helper function to find question by keywords in survey
+  const findQuestionByKeywords = (keywords, survey) => {
+    if (!survey) return null;
+    
+    const actualSurvey = survey.survey || survey;
+    const allQuestions = [];
+    
+    // Collect all questions
+    if (actualSurvey.sections) {
+      actualSurvey.sections.forEach(section => {
+        if (section.questions) {
+          allQuestions.push(...section.questions);
+        }
+      });
+    }
+    if (actualSurvey.questions) {
+      allQuestions.push(...actualSurvey.questions);
+    }
+    
+    // Find question matching keywords
+    const keywordsLower = keywords.map(k => k.toLowerCase());
+    return allQuestions.find(q => {
+      const questionText = (q.text || '').toLowerCase();
+      return keywordsLower.some(keyword => questionText.includes(keyword));
+    });
+  };
+
+  // Helper function to get failed questions from verification criteria
+  const getFailedQuestions = (verificationData, survey) => {
+    if (!verificationData || !verificationData.criteria) return [];
+    
+    const criteria = verificationData.criteria;
+    const failedQuestions = [];
+    
+    // Map criteria to question types and check if they failed
+    // Based on getApprovalStatus logic from SurveyApprovals.jsx
+    
+    // Audio Status - fails if not '1', '4', or '7'
+    if (criteria.audioStatus && !['1', '4', '7'].includes(criteria.audioStatus)) {
+      failedQuestions.push({
+        criterion: 'audioStatus',
+        questionText: 'Audio Quality',
+        reason: 'Audio quality did not match'
+      });
+    }
+    
+    // Gender Matching - fails if not '1'
+    if (criteria.genderMatching && criteria.genderMatching !== '1') {
+      const genderQuestion = findQuestionByKeywords(['gender'], survey) || 
+                            findQuestionByText('What is your gender?', survey);
+      failedQuestions.push({
+        criterion: 'genderMatching',
+        questionText: genderQuestion?.text || 'Gender question',
+        reason: 'Gender response did not match'
+      });
+    }
+    
+    // Upcoming Elections Matching - fails if not '1' or '3'
+    if (criteria.upcomingElectionsMatching && !['1', '3'].includes(criteria.upcomingElectionsMatching)) {
+      const upcomingElectionsQuestion = findQuestionByKeywords(['upcoming', 'election', 'tomorrow', 'assembly election'], survey);
+      failedQuestions.push({
+        criterion: 'upcomingElectionsMatching',
+        questionText: upcomingElectionsQuestion?.text || 'Upcoming elections question',
+        reason: 'Upcoming elections response did not match'
+      });
+    }
+    
+    // Previous Elections Matching - fails if not '1' or '3'
+    if (criteria.previousElectionsMatching && !['1', '3'].includes(criteria.previousElectionsMatching)) {
+      const previousElectionsQuestion = findQuestionByKeywords(['previous', 'election', 'last assembly', 'voted'], survey);
+      failedQuestions.push({
+        criterion: 'previousElectionsMatching',
+        questionText: previousElectionsQuestion?.text || 'Previous elections question',
+        reason: 'Previous elections response did not match'
+      });
+    }
+    
+    // Previous Lok Sabha Elections Matching - fails if not '1' or '3'
+    if (criteria.previousLoksabhaElectionsMatching && !['1', '3'].includes(criteria.previousLoksabhaElectionsMatching)) {
+      const loksabhaQuestion = findQuestionByKeywords(['lok sabha', 'loksabha', 'parliamentary'], survey);
+      failedQuestions.push({
+        criterion: 'previousLoksabhaElectionsMatching',
+        questionText: loksabhaQuestion?.text || 'Previous Lok Sabha elections question',
+        reason: 'Previous Lok Sabha elections response did not match'
+      });
+    }
+    
+    // Name Matching - fails if not '1' or '3'
+    if (criteria.nameMatching && !['1', '3'].includes(criteria.nameMatching)) {
+      const nameQuestion = findQuestionByText('What is your full name?', survey) ||
+                           findQuestionByKeywords(['name', 'full name'], survey);
+      failedQuestions.push({
+        criterion: 'nameMatching',
+        questionText: nameQuestion?.text || 'Name question',
+        reason: 'Name response did not match'
+      });
+    }
+    
+    // Age Matching - fails if not '1' or '3'
+    if (criteria.ageMatching && !['1', '3'].includes(criteria.ageMatching)) {
+      const ageQuestion = findQuestionByText('Could you please tell me your age in complete years?', survey) ||
+                          findQuestionByKeywords(['age', 'year'], survey);
+      failedQuestions.push({
+        criterion: 'ageMatching',
+        questionText: ageQuestion?.text || 'Age question',
+        reason: 'Age response did not match'
+      });
+    }
+    
+    return failedQuestions;
   };
 
   // Helper function to check if a question is AC selection or polling station
@@ -1157,6 +1285,42 @@ const MyInterviews = () => {
                           {selectedInterview.status}
                         </span>
                       </div>
+                      {selectedInterview.status === 'Rejected' && selectedInterview.verificationData && (
+                        <div className="col-span-2 mt-3 pt-3 border-t border-gray-300">
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                            <div className="flex items-start">
+                              <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <h5 className="font-medium text-red-900 mb-2">Rejection Reason</h5>
+                                {selectedInterview.verificationData.feedback && (
+                                  <p className="text-sm text-red-800 mb-3">{selectedInterview.verificationData.feedback}</p>
+                                )}
+                                {(() => {
+                                  const failedQuestions = getFailedQuestions(selectedInterview.verificationData, selectedInterview.survey);
+                                  if (failedQuestions.length > 0) {
+                                    return (
+                                      <div>
+                                        <p className="text-sm font-medium text-red-900 mb-2">Questions that failed quality review:</p>
+                                        <ul className="list-disc list-inside space-y-1">
+                                          {failedQuestions.map((failed, index) => (
+                                            <li key={index} className="text-sm text-red-800">
+                                              <span className="font-medium">{failed.questionText}</span>
+                                              {failed.reason && (
+                                                <span className="text-red-700"> - {failed.reason}</span>
+                                              )}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {displayAC && (
                         <div>
                           <span className="text-gray-600">Assembly Constituency:</span>
