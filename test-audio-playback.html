@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Playback Test</title>
+</head>
+<body>
+    <h1>Audio Playback Test</h1>
+    
+    <h2>Test 1: Minimal WAV File (44 bytes)</h2>
+    <audio controls>
+        <source src="https://74.225.250.243:5000/uploads/audio/test-minimal.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    <br>
+    <button onclick="testAudio('https://74.225.250.243:5000/uploads/audio/test-minimal.wav')">Test Minimal WAV</button>
+    
+    <h2>Test 2: Reference WAV File (Working)</h2>
+    <audio controls>
+        <source src="https://74.225.250.243:5000/uploads/audio/test-reference.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    <br>
+    <button onclick="testAudio('https://74.225.250.243:5000/uploads/audio/test-reference.wav')">Test Reference WAV</button>
+    
+    <h2>Test 3: Recent Interview WAV File (88KB)</h2>
+    <audio controls>
+        <source src="https://74.225.250.243:5000/uploads/audio/interview_bb8754ec-1681-48dc-8de6-9b7e9cd03a0c_1761125926969.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    <br>
+    <button onclick="testAudio('https://74.225.250.243:5000/uploads/audio/interview_bb8754ec-1681-48dc-8de6-9b7e9cd03a0c_1761125926969.wav')">Test Interview WAV</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function testAudio(url) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<h3>Testing: ' + url + '</h3>';
+            
+            const audio = new Audio(url);
+            
+            audio.addEventListener('loadstart', () => {
+                resultDiv.innerHTML += '<br>🔄 Audio loading started...';
+            });
+            
+            audio.addEventListener('canplay', () => {
+                resultDiv.innerHTML += '<br>✅ Audio can play!';
+                audio.play();
+            });
+            
+            audio.addEventListener('error', (e) => {
+                resultDiv.innerHTML += '<br>❌ Audio error: ' + e.message;
+                console.error('Audio error:', e);
+            });
+            
+            audio.addEventListener('ended', () => {
+                resultDiv.innerHTML += '<br>🏁 Audio playback ended';
+            });
+            
+            audio.load();
+        }
+    </script>
+</body>
+</html>

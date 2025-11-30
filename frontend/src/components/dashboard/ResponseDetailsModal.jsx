@@ -125,6 +125,143 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
     return 'N/A';
   };
 
+  // Helper function to check if a question is AC selection or polling station
+  const isACOrPollingStationQuestion = (responseItem, surveyQuestion) => {
+    // Check by questionId
+    if (responseItem.questionId === 'ac-selection') return true;
+    // Check by question type
+    if (surveyQuestion?.type === 'polling_station') return true;
+    // Check by question text (fallback)
+    const questionText = responseItem.questionText || surveyQuestion?.text || '';
+    if (questionText.toLowerCase().includes('select assembly constituency') || 
+        questionText.toLowerCase().includes('select polling station')) {
+      return true;
+    }
+    return false;
+  };
+
+  // Helper function to separate AC/polling station questions from regular questions
+  const separateQuestions = (responses, survey) => {
+    if (!responses || !Array.isArray(responses)) {
+      return { interviewInfoQuestions: [], regularQuestions: [] };
+    }
+    
+    const actualSurvey = survey?.survey || survey;
+    const interviewInfoQuestions = [];
+    const regularQuestions = [];
+    
+    responses.forEach((responseItem) => {
+      const surveyQuestion = findQuestionByText(responseItem.questionText, actualSurvey);
+      if (isACOrPollingStationQuestion(responseItem, surveyQuestion)) {
+        interviewInfoQuestions.push(responseItem);
+      } else {
+        regularQuestions.push(responseItem);
+      }
+    });
+    
+    return { interviewInfoQuestions, regularQuestions };
+  };
+
+  // Helper function to extract AC and polling station info from responses
+  const getACAndPollingStationFromResponses = (responses, survey) => {
+    if (!responses || !Array.isArray(responses)) {
+      return { ac: null, pollingStation: null, groupName: null };
+    }
+    
+    const actualSurvey = survey?.survey || survey;
+    let ac = null;
+    let pollingStation = null;
+    let groupName = null;
+    
+    responses.forEach((responseItem) => {
+      const surveyQuestion = findQuestionByText(responseItem.questionText, actualSurvey);
+      
+      // Check if this is AC selection question
+      if (responseItem.questionId === 'ac-selection' || 
+          (surveyQuestion && surveyQuestion.id === 'ac-selection')) {
+        ac = responseItem.response || null;
+      }
+      
+      // Check if this is polling station question
+      if (surveyQuestion?.type === 'polling_station' || 
+          responseItem.questionText?.toLowerCase().includes('select polling station')) {
+        // Polling station response should be in format "Code - Name" (e.g., "40 - Station Name")
+        // or might be stored as "Group - Code - Name" in polling-station-selection
+        const stationResponse = responseItem.response;
+        if (stationResponse) {
+          if (typeof stationResponse === 'string' && stationResponse.includes(' - ')) {
+            const parts = stationResponse.split(' - ');
+            // Check if it's "Group - Station" format (where Station is "Code - Name")
+            if (parts.length >= 3 && parts[0].toLowerCase().startsWith('group')) {
+              // Format: "Group X - Code - Name"
+              groupName = parts[0] || null;
+              pollingStation = parts.slice(1).join(' - '); // Join "Code - Name"
+            } else if (parts.length === 2 && parts[0].toLowerCase().startsWith('group')) {
+              // Format: "Group X - Code" (missing name, but use what we have)
+              groupName = parts[0] || null;
+              pollingStation = parts[1] || stationResponse;
+            } else {
+              // It's already in "Code - Name" format
+              pollingStation = stationResponse;
+            }
+          } else {
+            // Just code or name - use as is, will be formatted in display
+            pollingStation = stationResponse;
+          }
+        }
+      }
+      
+      // Also check for polling station group selection
+      if (responseItem.questionId === 'polling-station-group' ||
+          responseItem.questionText?.toLowerCase().includes('select group')) {
+        groupName = responseItem.response || null;
+      }
+    });
+    
+    return { ac, pollingStation, groupName };
+  };
+
+  // Helper function to format polling station display with code and name
+  const formatPollingStationDisplay = (stationValue, selectedPollingStation) => {
+    // Priority 1: Use selectedPollingStation.stationName (should have full "Code - Name" format)
+    if (selectedPollingStation?.stationName) {
+      // If it already includes " - ", it's in the correct format "Code - Name"
+      if (selectedPollingStation.stationName.includes(' - ')) {
+        return selectedPollingStation.stationName;
+      }
+      // If it's just a code, check if stationValue has the full format
+      if (stationValue && typeof stationValue === 'string' && stationValue.includes(' - ')) {
+        return stationValue;
+      }
+      // If selectedPollingStation.stationName is just a code, return it as is
+      // (In a full implementation, we'd look up the name, but for now show the code)
+      return selectedPollingStation.stationName;
+    }
+    
+    // Priority 2: Use stationValue from response
+    if (stationValue) {
+      // If it already includes " - ", it's in the correct format "Code - Name"
+      if (typeof stationValue === 'string' && stationValue.includes(' - ')) {
+        return stationValue;
+      }
+      // If stationValue is in format "Group - Code", extract just the code part
+      if (typeof stationValue === 'string' && stationValue.includes(' - ')) {
+        const parts = stationValue.split(' - ');
+        // If first part is "Group X", the second part might be the code
+        if (parts[0].toLowerCase().startsWith('group')) {
+          // Return the code (second part)
+          return parts[1] || stationValue;
+        }
+        // Otherwise it's already "Code - Name" format
+        return stationValue;
+      }
+      // If it's just a code (numeric), return as is
+      return stationValue;
+    }
+    
+    return null;
+  };
+
   // Helper function to extract respondent info from responses array
   const getRespondentInfo = (responses, responseData) => {
     if (!responses || !Array.isArray(responses)) {
@@ -613,77 +750,86 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
             {/* Demographics */}
             <div className="bg-blue-50 rounded-lg p-4 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Demographics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Name</p>
-                  <p className="text-sm text-gray-600">{respondentInfo.name}</p>
-                </div>
+              {(() => {
+                // Extract AC and polling station from responses
+                const { ac: acFromResponse, pollingStation: pollingStationFromResponse, groupName: groupNameFromResponse } = getACAndPollingStationFromResponses(response.responses, survey);
+                const displayAC = acFromResponse || response.selectedPollingStation?.acName || response.selectedAC || respondentInfo.ac;
+                // Format polling station to show both code and name
+                const pollingStationValue = pollingStationFromResponse || response.selectedPollingStation?.stationName;
+                const displayPollingStation = formatPollingStationDisplay(pollingStationValue, response.selectedPollingStation);
+                const displayGroupName = groupNameFromResponse || response.selectedPollingStation?.groupName;
+                const displayPC = response.selectedPollingStation?.pcName;
+                const displayDistrict = response.selectedPollingStation?.district || respondentInfo.district;
                 
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Gender</p>
-                  <p className="text-sm text-gray-600">{respondentInfo.gender}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Age</p>
-                  <p className="text-sm text-gray-600">{respondentInfo.age}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-700">City</p>
-                  <p className="text-sm text-gray-600">{respondentInfo.city}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-700">District</p>
-                  <p className="text-sm text-gray-600">{respondentInfo.district}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-700">State</p>
-                  <p className="text-sm text-gray-600">{respondentInfo.state}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Assembly Constituency (AC)</p>
-                  <p className="text-sm text-gray-600">{response.selectedPollingStation?.acName || response.selectedAC || respondentInfo.ac}</p>
-                </div>
-                
-                {response.selectedPollingStation?.pcName && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Parliamentary Constituency (PC)</p>
-                    <p className="text-sm text-gray-600">{response.selectedPollingStation.pcName} ({response.selectedPollingStation.pcNo})</p>
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Name</p>
+                      <p className="text-sm text-gray-600">{respondentInfo.name}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Gender</p>
+                      <p className="text-sm text-gray-600">{respondentInfo.gender}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Age</p>
+                      <p className="text-sm text-gray-600">{respondentInfo.age}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">City</p>
+                      <p className="text-sm text-gray-600">{respondentInfo.city}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">District</p>
+                      <p className="text-sm text-gray-600">{displayDistrict}</p>
+                    </div>
+                    
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">State</p>
+                      <p className="text-sm text-gray-600">{respondentInfo.state}</p>
+                    </div>
+                    
+                    {displayAC && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Assembly Constituency (AC)</p>
+                        <p className="text-sm text-gray-600">{displayAC}</p>
+                      </div>
+                    )}
+                    
+                    {displayPC && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Parliamentary Constituency (PC)</p>
+                        <p className="text-sm text-gray-600">{displayPC} {response.selectedPollingStation?.pcNo ? `(${response.selectedPollingStation.pcNo})` : ''}</p>
+                      </div>
+                    )}
+                    
+                    {displayPollingStation && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Polling Station</p>
+                        <p className="text-sm text-gray-600">{displayPollingStation}</p>
+                      </div>
+                    )}
+                    
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Lok Sabha</p>
+                      <p className="text-sm text-gray-600">{displayPC || respondentInfo.lokSabha}</p>
+                    </div>
+                    
+                    {response.location && (
+                      <div className="md:col-span-2 lg:col-span-3">
+                        <p className="text-sm font-medium text-gray-700">GPS Coordinates</p>
+                        <p className="text-sm text-gray-600 font-mono">
+                          ({response.location.latitude?.toFixed(4)}, {response.location.longitude?.toFixed(4)})
+                        </p>
+                      </div>
+                    )}
                   </div>
-                )}
-                
-                {response.selectedPollingStation?.district && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">District</p>
-                    <p className="text-sm text-gray-600">{response.selectedPollingStation.district}</p>
-                  </div>
-                )}
-                
-                {response.selectedPollingStation?.stationName && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Polling Station</p>
-                    <p className="text-sm text-gray-600">{response.selectedPollingStation.stationName}</p>
-                  </div>
-                )}
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Lok Sabha</p>
-                  <p className="text-sm text-gray-600">{response.selectedPollingStation?.pcName || respondentInfo.lokSabha}</p>
-                </div>
-                
-                {response.location && (
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <p className="text-sm font-medium text-gray-700">GPS Coordinates</p>
-                    <p className="text-sm text-gray-600 font-mono">
-                      ({response.location.latitude?.toFixed(4)}, {response.location.longitude?.toFixed(4)})
-                    </p>
-                  </div>
-                )}
-              </div>
+                );
+              })()}
             </div>
 
             {/* Call Information - Only for CATI interviews */}
@@ -984,22 +1130,24 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
             <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Survey Responses</h3>
               <div className="space-y-4">
-                {response.responses && response.responses.map((responseItem, index) => {
-                  try {
-                    // Find the corresponding question in the survey to get conditional logic
-                    // The survey object has a nested structure: {survey: {...}}
-                    const actualSurvey = survey.survey || survey;
-                    const surveyQuestion = findQuestionByText(responseItem.questionText, actualSurvey);
-                    const hasConditions = surveyQuestion?.conditions && surveyQuestion.conditions.length > 0;
-                    const conditionsMet = hasConditions ? areConditionsMet(surveyQuestion.conditions, response.responses) : true;
-                    
-                    return (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900 mb-1">
-                              Q{index + 1}: {responseItem.questionText || 'Question'}
-                            </h4>
+                {(() => {
+                  const { regularQuestions } = separateQuestions(response.responses, survey);
+                  return regularQuestions.map((responseItem, index) => {
+                    try {
+                      // Find the corresponding question in the survey to get conditional logic
+                      // The survey object has a nested structure: {survey: {...}}
+                      const actualSurvey = survey.survey || survey;
+                      const surveyQuestion = findQuestionByText(responseItem.questionText, actualSurvey);
+                      const hasConditions = surveyQuestion?.conditions && surveyQuestion.conditions.length > 0;
+                      const conditionsMet = hasConditions ? areConditionsMet(surveyQuestion.conditions, response.responses) : true;
+                      
+                      return (
+                        <div key={index} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-900 mb-1">
+                                Q{index + 1}: {responseItem.questionText || 'Question'}
+                              </h4>
                             {responseItem.questionDescription && (
                               <p className="text-sm text-gray-600 mb-2">
                                 {responseItem.questionDescription}
@@ -1097,7 +1245,8 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
                       </div>
                     );
                   }
-                })}
+                });
+                })()}
               </div>
             </div>
 

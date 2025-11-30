@@ -371,6 +371,137 @@ const MyInterviews = () => {
     return null;
   };
 
+  // Helper function to check if a question is AC selection or polling station
+  const isACOrPollingStationQuestion = (responseItem, surveyQuestion) => {
+    // Check by questionId
+    if (responseItem.questionId === 'ac-selection') return true;
+    // Check by question type
+    if (surveyQuestion?.type === 'polling_station') return true;
+    // Check by question text (fallback)
+    const questionText = responseItem.questionText || surveyQuestion?.text || '';
+    if (questionText.toLowerCase().includes('select assembly constituency') || 
+        questionText.toLowerCase().includes('select polling station')) {
+      return true;
+    }
+    return false;
+  };
+
+  // Helper function to separate AC/polling station questions from regular questions
+  const separateQuestions = (responses, survey) => {
+    if (!responses || !Array.isArray(responses)) {
+      return { interviewInfoQuestions: [], regularQuestions: [] };
+    }
+    
+    const interviewInfoQuestions = [];
+    const regularQuestions = [];
+    
+    responses.forEach((responseItem) => {
+      const surveyQuestion = findQuestionByText(responseItem.questionText, survey);
+      if (isACOrPollingStationQuestion(responseItem, surveyQuestion)) {
+        interviewInfoQuestions.push(responseItem);
+      } else {
+        regularQuestions.push(responseItem);
+      }
+    });
+    
+    return { interviewInfoQuestions, regularQuestions };
+  };
+
+  // Helper function to extract AC and polling station info from responses
+  const getACAndPollingStationFromResponses = (responses, survey) => {
+    if (!responses || !Array.isArray(responses)) {
+      return { ac: null, pollingStation: null, groupName: null };
+    }
+    
+    let ac = null;
+    let pollingStation = null;
+    let groupName = null;
+    
+    responses.forEach((responseItem) => {
+      const surveyQuestion = findQuestionByText(responseItem.questionText, survey);
+      
+      // Check if this is AC selection question
+      if (responseItem.questionId === 'ac-selection' || 
+          (surveyQuestion && surveyQuestion.id === 'ac-selection')) {
+        ac = responseItem.response || null;
+      }
+      
+      // Check if this is polling station question
+      if (surveyQuestion?.type === 'polling_station' || 
+          responseItem.questionText?.toLowerCase().includes('select polling station')) {
+        // Polling station response should be in format "Code - Name" (e.g., "40 - Station Name")
+        // or might be stored as "Group - Code - Name" in polling-station-selection
+        const stationResponse = responseItem.response;
+        if (stationResponse) {
+          if (typeof stationResponse === 'string' && stationResponse.includes(' - ')) {
+            const parts = stationResponse.split(' - ');
+            // Check if it's "Group - Station" format (where Station is "Code - Name")
+            if (parts.length >= 3 && parts[0].toLowerCase().startsWith('group')) {
+              // Format: "Group X - Code - Name"
+              groupName = parts[0] || null;
+              pollingStation = parts.slice(1).join(' - '); // Join "Code - Name"
+            } else if (parts.length === 2 && parts[0].toLowerCase().startsWith('group')) {
+              // Format: "Group X - Code" (missing name, but use what we have)
+              groupName = parts[0] || null;
+              pollingStation = parts[1] || stationResponse;
+            } else {
+              // It's already in "Code - Name" format
+              pollingStation = stationResponse;
+            }
+          } else {
+            // Just code or name - use as is
+            pollingStation = stationResponse;
+          }
+        }
+      }
+      
+      // Also check for polling station group selection
+      if (responseItem.questionId === 'polling-station-group' ||
+          responseItem.questionText?.toLowerCase().includes('select group')) {
+        groupName = responseItem.response || null;
+      }
+    });
+    
+    return { ac, pollingStation, groupName };
+  };
+
+  // Helper function to format polling station display with code and name
+  const formatPollingStationDisplay = (stationValue, selectedPollingStation) => {
+    // Priority 1: Use selectedPollingStation.stationName (should have full "Code - Name" format)
+    if (selectedPollingStation?.stationName) {
+      // If it already includes " - ", it's in the correct format "Code - Name"
+      if (selectedPollingStation.stationName.includes(' - ')) {
+        return selectedPollingStation.stationName;
+      }
+      // If it's just a code, check if stationValue has the full format
+      if (stationValue && typeof stationValue === 'string' && stationValue.includes(' - ')) {
+        return stationValue;
+      }
+      // If selectedPollingStation.stationName is just a code, return it as is
+      return selectedPollingStation.stationName;
+    }
+    
+    // Priority 2: Use stationValue from response
+    if (stationValue) {
+      // If it already includes " - ", it's in the correct format "Code - Name"
+      if (typeof stationValue === 'string' && stationValue.includes(' - ')) {
+        return stationValue;
+      }
+      // If stationValue is in format "Group - Code", extract just the code part
+      if (typeof stationValue === 'string' && stationValue.includes(' - ')) {
+        const parts = stationValue.split(' - ');
+        if (parts[0].toLowerCase().startsWith('group')) {
+          return parts[1] || stationValue;
+        }
+        return stationValue;
+      }
+      // If it's just a code (numeric), return as is
+      return stationValue;
+    }
+    
+    return null;
+  };
+
   // Helper function to evaluate if a condition is met
   const evaluateCondition = (condition, responses) => {
     if (!condition.questionId || !condition.operator || condition.value === undefined || condition.value === '__NOVALUE__') {
@@ -992,47 +1123,77 @@ const MyInterviews = () => {
             <div className="lg:col-span-2">
               <div className="bg-gray-50 p-4 rounded-lg flex-shrink-0">
                 <h4 className="font-medium text-gray-900 mb-3">Interview Information</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Duration:</span>
-                    <span className="ml-2 font-medium">{formatDuration(selectedInterview.totalTimeSpent)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Completion:</span>
-                    <span className="ml-2 font-medium">
-                      {(() => {
-                        const effectiveTotal = calculateEffectiveQuestions(selectedInterview.responses, selectedInterview.survey);
-                        return effectiveTotal > 0 ? Math.round((selectedInterview.answeredQuestions / effectiveTotal) * 100) : 0;
-                      })()}%
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Questions:</span>
-                    <span className="ml-2 font-medium">{selectedInterview.answeredQuestions}/{calculateEffectiveQuestions(selectedInterview.responses, selectedInterview.survey)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Status:</span>
-                    <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedInterview.status)}`}>
-                      {selectedInterview.status}
-                    </span>
-                  </div>
-                  {selectedInterview.location && (
-                    <>
+                {(() => {
+                  // Extract AC and polling station from responses
+                  const { ac: acFromResponse, pollingStation: pollingStationFromResponse, groupName: groupNameFromResponse } = getACAndPollingStationFromResponses(selectedInterview.responses, selectedInterview.survey);
+                  const displayAC = acFromResponse || selectedInterview.selectedPollingStation?.acName || selectedInterview.selectedAC;
+                  // Format polling station to show both code and name
+                  const pollingStationValue = pollingStationFromResponse || selectedInterview.selectedPollingStation?.stationName;
+                  const displayPollingStation = formatPollingStationDisplay(pollingStationValue, selectedInterview.selectedPollingStation);
+                  const displayPC = selectedInterview.selectedPollingStation?.pcName;
+                  
+                  return (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-600">Location:</span>
+                        <span className="text-gray-600">Duration:</span>
+                        <span className="ml-2 font-medium">{formatDuration(selectedInterview.totalTimeSpent)}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Completion:</span>
                         <span className="ml-2 font-medium">
-                          {selectedInterview.location.city}, {selectedInterview.location.state}
+                          {(() => {
+                            const effectiveTotal = calculateEffectiveQuestions(selectedInterview.responses, selectedInterview.survey);
+                            return effectiveTotal > 0 ? Math.round((selectedInterview.answeredQuestions / effectiveTotal) * 100) : 0;
+                          })()}%
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-600">Coordinates:</span>
-                        <span className="ml-2 font-medium text-xs">
-                          {selectedInterview.location.latitude.toFixed(6)}, {selectedInterview.location.longitude.toFixed(6)}
+                        <span className="text-gray-600">Questions:</span>
+                        <span className="ml-2 font-medium">{selectedInterview.answeredQuestions}/{calculateEffectiveQuestions(selectedInterview.responses, selectedInterview.survey)}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Status:</span>
+                        <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedInterview.status)}`}>
+                          {selectedInterview.status}
                         </span>
                       </div>
-                    </>
-                  )}
-                </div>
+                      {displayAC && (
+                        <div>
+                          <span className="text-gray-600">Assembly Constituency:</span>
+                          <span className="ml-2 font-medium">{displayAC}</span>
+                        </div>
+                      )}
+                      {displayPC && (
+                        <div>
+                          <span className="text-gray-600">Parliamentary Constituency:</span>
+                          <span className="ml-2 font-medium">{displayPC} {selectedInterview.selectedPollingStation?.pcNo ? `(${selectedInterview.selectedPollingStation.pcNo})` : ''}</span>
+                        </div>
+                      )}
+                      {displayPollingStation && (
+                        <div className="col-span-2">
+                          <span className="text-gray-600">Polling Station:</span>
+                          <span className="ml-2 font-medium">{displayPollingStation}</span>
+                        </div>
+                      )}
+                      {selectedInterview.location && (
+                        <>
+                          <div>
+                            <span className="text-gray-600">Location:</span>
+                            <span className="ml-2 font-medium">
+                              {selectedInterview.location.city}, {selectedInterview.location.state}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Coordinates:</span>
+                            <span className="ml-2 font-medium text-xs">
+                              {selectedInterview.location.latitude.toFixed(6)}, {selectedInterview.location.longitude.toFixed(6)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Call Information - Only for CATI interviews */}
@@ -1188,18 +1349,20 @@ const MyInterviews = () => {
               <div className="mt-6">
                 <h4 className="font-medium text-gray-900 mb-3">Question Responses</h4>
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                  {selectedInterview.responses?.map((response, index) => {
-                    // Find the corresponding question in the survey to get conditional logic
-                    const surveyQuestion = findQuestionByText(response.questionText, selectedInterview.survey);
-                    const hasConditions = surveyQuestion?.conditions && surveyQuestion.conditions.length > 0;
-                    const conditionsMet = hasConditions ? areConditionsMet(surveyQuestion.conditions, selectedInterview.responses) : true;
-                    
-                    return (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <h5 className="font-medium text-gray-900 text-sm">
-                            Q{index + 1}: {response.questionText}
-                          </h5>
+                  {(() => {
+                    const { regularQuestions } = separateQuestions(selectedInterview.responses, selectedInterview.survey);
+                    return regularQuestions.map((response, index) => {
+                      // Find the corresponding question in the survey to get conditional logic
+                      const surveyQuestion = findQuestionByText(response.questionText, selectedInterview.survey);
+                      const hasConditions = surveyQuestion?.conditions && surveyQuestion.conditions.length > 0;
+                      const conditionsMet = hasConditions ? areConditionsMet(surveyQuestion.conditions, selectedInterview.responses) : true;
+                      
+                      return (
+                        <div key={index} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <h5 className="font-medium text-gray-900 text-sm">
+                              Q{index + 1}: {response.questionText}
+                            </h5>
                           <div className="flex items-center space-x-2">
                             {hasConditions && conditionsMet && (
                               <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-800 rounded-md">
@@ -1259,7 +1422,8 @@ const MyInterviews = () => {
                         )}
                       </div>
                     );
-                  })}
+                  });
+                  })()}
                 </div>
               </div>
             </div>

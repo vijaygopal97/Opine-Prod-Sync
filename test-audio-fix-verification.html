@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Fix Verification</title>
+</head>
+<body>
+    <h1>Audio Fix Verification</h1>
+    
+    <h2>Test 1: Existing WebM File (Should Work)</h2>
+    <video controls style="width: 100%; max-width: 500px;">
+        <source src="https://opine.exypnossolutions.com/uploads/audio/interview_909b92b9-63b1-4eaa-aeca-826d6175e78a_1760788703663.webm" type="video/webm">
+        Your browser does not support the video element.
+    </video>
+    <br>
+    <button onclick="testAudio('https://opine.exypnossolutions.com/uploads/audio/interview_909b92b9-63b1-4eaa-aeca-826d6175e78a_1760788703663.webm')">Test WebM Audio</button>
+    
+    <h2>Test 2: Another WebM File</h2>
+    <video controls style="width: 100%; max-width: 500px;">
+        <source src="https://opine.exypnossolutions.com/uploads/audio/interview_a61a4fb9-6109-4e5f-99ca-27a9af632335_1760787177221.webm" type="video/webm">
+        Your browser does not support the video element.
+    </video>
+    <br>
+    <button onclick="testAudio('https://opine.exypnossolutions.com/uploads/audio/interview_a61a4fb9-6109-4e5f-99ca-27a9af632335_1760787177221.webm')">Test Another WebM Audio</button>
+    
+    <h2>Test 3: WAV File (React Native)</h2>
+    <video controls style="width: 100%; max-width: 500px;">
+        <source src="https://opine.exypnossolutions.com/uploads/audio/interview_0a98f9c2-88d3-4eb7-8a46-0245b253b043_1761125705834.wav" type="audio/wav">
+        Your browser does not support the video element.
+    </video>
+    <br>
+    <button onclick="testAudio('https://opine.exypnossolutions.com/uploads/audio/interview_0a98f9c2-88d3-4eb7-8a46-0245b253b043_1761125705834.wav')">Test WAV Audio</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function testAudio(url) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<h3>Testing: ' + url + '</h3>';
+            
+            const video = document.createElement('video');
+            video.style.display = 'none';
+            
+            video.addEventListener('loadstart', () => {
+                resultDiv.innerHTML += '<br>🔄 Audio loading started...';
+            });
+            
+            video.addEventListener('canplay', () => {
+                resultDiv.innerHTML += '<br>✅ Audio can play!';
+                video.play();
+            });
+            
+            video.addEventListener('error', (e) => {
+                resultDiv.innerHTML += '<br>❌ Audio error: ' + e.message;
+                console.error('Audio error:', e);
+            });
+            
+            video.addEventListener('ended', () => {
+                resultDiv.innerHTML += '<br>🏁 Audio playback ended';
+            });
+            
+            video.src = url;
+            video.load();
+        }
+    </script>
+</body>
+</html>

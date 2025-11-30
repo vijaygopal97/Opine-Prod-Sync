@@ -171,6 +171,97 @@ const ViewResponsesModal = ({ survey, onClose }) => {
     }
   };
 
+  // Helper function to check if a question is AC selection or polling station
+  const isACOrPollingStationQuestion = (question) => {
+    // Check by questionId
+    if (question.id === 'ac-selection') return true;
+    // Check by question type
+    if (question.type === 'polling_station') return true;
+    // Check by question text (fallback)
+    const questionText = question.text || question.questionText || '';
+    if (questionText.toLowerCase().includes('select assembly constituency') || 
+        questionText.toLowerCase().includes('select polling station')) {
+      return true;
+    }
+    return false;
+  };
+
+  // Helper function to extract AC and polling station from responses
+  const getACAndPollingStationFromResponses = (responses) => {
+    if (!responses || !Array.isArray(responses)) {
+      return { ac: null, pollingStation: null, groupName: null };
+    }
+    
+    let ac = null;
+    let pollingStation = null;
+    let groupName = null;
+    
+    responses.forEach((responseItem) => {
+      // Check if this is AC selection question
+      if (responseItem.questionId === 'ac-selection') {
+        ac = responseItem.response || null;
+      }
+      
+      // Check if this is polling station question
+      if (responseItem.questionText?.toLowerCase().includes('select polling station') ||
+          responseItem.questionType === 'polling_station') {
+        const stationResponse = responseItem.response;
+        if (stationResponse) {
+          if (typeof stationResponse === 'string' && stationResponse.includes(' - ')) {
+            const parts = stationResponse.split(' - ');
+            if (parts.length >= 3 && parts[0].toLowerCase().startsWith('group')) {
+              groupName = parts[0] || null;
+              pollingStation = parts.slice(1).join(' - ');
+            } else if (parts.length === 2 && parts[0].toLowerCase().startsWith('group')) {
+              groupName = parts[0] || null;
+              pollingStation = parts[1] || stationResponse;
+            } else {
+              pollingStation = stationResponse;
+            }
+          } else {
+            pollingStation = stationResponse;
+          }
+        }
+      }
+      
+      // Check for polling station group selection
+      if (responseItem.questionId === 'polling-station-group' ||
+          responseItem.questionText?.toLowerCase().includes('select group')) {
+        groupName = responseItem.response || null;
+      }
+    });
+    
+    return { ac, pollingStation, groupName };
+  };
+
+  // Helper function to extract polling station code and name
+  const extractPollingStationCodeAndName = (stationValue, selectedPollingStation) => {
+    let stationCode = 'N/A';
+    let stationName = 'N/A';
+    
+    // Priority: Use selectedPollingStation.stationName (should have "Code - Name" format)
+    const fullStationValue = selectedPollingStation?.stationName || stationValue;
+    
+    if (fullStationValue) {
+      if (typeof fullStationValue === 'string' && fullStationValue.includes(' - ')) {
+        const parts = fullStationValue.split(' - ');
+        if (parts.length >= 2) {
+          stationCode = parts[0].trim();
+          stationName = parts.slice(1).join(' - ').trim();
+        } else {
+          stationCode = fullStationValue;
+          stationName = fullStationValue;
+        }
+      } else {
+        // If it's just a code or name, use as code
+        stationCode = fullStationValue;
+        stationName = fullStationValue;
+      }
+    }
+    
+    return { stationCode, stationName };
+  };
+
   // Create CSV content
   const createCSVContent = (responses, survey) => {
     const headers = [
@@ -182,19 +273,22 @@ const ViewResponsesModal = ({ survey, onClose }) => {
       'District',
       'State',
       'Assembly Constituency',
-      'Lok Sabha',
+      'Parliamentary Constituency (PC)',
+      'Polling Station Code',
+      'Polling Station Name',
       'GPS Coordinates',
       'Interviewer', 
       'Date', 
       'Status'
     ];
     
-    // Add survey questions as headers
-    if (survey.questions) {
-      survey.questions.forEach(question => {
-        headers.push(question.text);
-      });
-    }
+    // Filter out AC selection and polling station questions
+    const regularQuestions = survey.questions ? survey.questions.filter(q => !isACOrPollingStationQuestion(q)) : [];
+    
+    // Add regular survey questions as headers (excluding AC and polling station)
+    regularQuestions.forEach((question, index) => {
+      headers.push(`Q${index + 1}: ${question.text}`);
+    });
     
     const rows = responses.map(response => {
       const respondentInfo = getRespondentInfo(response.responses, response);
@@ -202,25 +296,51 @@ const ViewResponsesModal = ({ survey, onClose }) => {
         ? `${response.location.coordinates.latitude?.toFixed(4)}, ${response.location.coordinates.longitude?.toFixed(4)}`
         : 'N/A';
       
+      // Extract AC and polling station from responses
+      const { ac: acFromResponse, pollingStation: pollingStationFromResponse } = getACAndPollingStationFromResponses(response.responses);
+      
+      // Get AC, PC, and District
+      const displayAC = acFromResponse || response.selectedPollingStation?.acName || response.selectedAC || respondentInfo.ac || 'N/A';
+      
+      // Get PC: Priority 1 - selectedPollingStation.pcName, Priority 2 - getLokSabhaFromAC
+      let displayPC = response.selectedPollingStation?.pcName || 'N/A';
+      if (displayPC === 'N/A' && displayAC !== 'N/A') {
+        displayPC = getLokSabhaFromAC(displayAC);
+      }
+      
+      // Get District: Priority 1 - selectedPollingStation.district, Priority 2 - getDistrictFromAC, Priority 3 - respondentInfo.district
+      let displayDistrict = response.selectedPollingStation?.district || 'N/A';
+      if (displayDistrict === 'N/A' && displayAC !== 'N/A') {
+        displayDistrict = getDistrictFromAC(displayAC);
+      }
+      if (displayDistrict === 'N/A') {
+        displayDistrict = respondentInfo.district || 'N/A';
+      }
+      
+      // Extract polling station code and name
+      const pollingStationValue = pollingStationFromResponse || response.selectedPollingStation?.stationName;
+      const { stationCode, stationName } = extractPollingStationCodeAndName(pollingStationValue, response.selectedPollingStation);
+      
       const row = [
         response._id,
         respondentInfo.name,
         respondentInfo.gender,
         respondentInfo.age,
         response.location?.city || respondentInfo.city,
-        respondentInfo.district,
+        displayDistrict,
         getStateFromGPS(response.location),
-        respondentInfo.ac,
-        getLokSabhaFromAC(respondentInfo.ac),
+        displayAC,
+        displayPC,
+        stationCode,
+        stationName,
         gpsCoords,
         response.interviewer ? `${response.interviewer.firstName} ${response.interviewer.lastName}` : 'N/A',
         new Date(response.createdAt).toLocaleDateString(),
         response.status
       ];
       
-      // Add response data
-      if (survey.questions) {
-        survey.questions.forEach(question => {
+      // Add response data for regular questions only
+      regularQuestions.forEach(question => {
           const questionResponse = response.responses[question.id];
           if (questionResponse) {
             if (question.type === 'multiple_choice' && question.options) {
@@ -259,8 +379,7 @@ const ViewResponsesModal = ({ survey, onClose }) => {
           } else {
             row.push('');
           }
-        });
-      }
+      });
       
       return row;
     });

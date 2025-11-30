@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct Audio Test</title>
+</head>
+<body>
+    <h1>Direct Audio Test</h1>
+    
+    <h2>Test 1: WebM Audio (Direct URL)</h2>
+    <audio controls>
+        <source src="https://opine.exypnossolutions.com/uploads/audio/interview_909b92b9-63b1-4eaa-aeca-826d6175e78a_1760788703663.webm" type="audio/webm">
+        Your browser does not support the audio element.
+    </audio>
+    
+    <h2>Test 2: WAV Audio (Direct URL)</h2>
+    <audio controls>
+        <source src="https://opine.exypnossolutions.com/uploads/audio/interview_0a98f9c2-88d3-4eb7-8a46-0245b253b043_1761125705834.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    
+    <h2>Test 3: Working Reference Audio</h2>
+    <audio controls>
+        <source src="https://opine.exypnossolutions.com/uploads/audio/test-working.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    
+    <div id="result"></div>
+    
+    <script>
+        // Test each audio element
+        document.querySelectorAll('audio').forEach((audio, index) => {
+            audio.addEventListener('loadstart', () => {
+                console.log(`Audio ${index + 1}: Loading started`);
+            });
+            
+            audio.addEventListener('canplay', () => {
+                console.log(`Audio ${index + 1}: Can play`);
+                document.getElementById('result').innerHTML += `<br>Audio ${index + 1}: ✅ Can play`;
+            });
+            
+            audio.addEventListener('error', (e) => {
+                console.error(`Audio ${index + 1}: Error`, e);
+                document.getElementById('result').innerHTML += `<br>Audio ${index + 1}: ❌ Error: ${e.message}`;
+            });
+        });
+    </script>
+</body>
+</html>

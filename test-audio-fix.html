@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Fix Test</title>
+</head>
+<body>
+    <h1>Audio Fix Test</h1>
+    
+    <h2>Test 1: WebM Audio File (Previously Working)</h2>
+    <audio controls>
+        <source src="https://opine.exypnossolutions.com/uploads/audio/interview_909b92b9-63b1-4eaa-aeca-826d6175e78a_1760788703663.webm" type="audio/webm">
+        Your browser does not support the audio element.
+    </audio>
+    <br>
+    <button onclick="testAudio('https://opine.exypnossolutions.com/uploads/audio/interview_909b92b9-63b1-4eaa-aeca-826d6175e78a_1760788703663.webm')">Test WebM Audio</button>
+    
+    <h2>Test 2: WAV Audio File (React Native)</h2>
+    <audio controls>
+        <source src="https://opine.exypnossolutions.com/uploads/audio/interview_bb8754ec-1681-48dc-8de6-9b7e9cd03a0c_1761125926969.wav" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    <br>
+    <button onclick="testAudio('https://opine.exypnossolutions.com/uploads/audio/interview_bb8754ec-1681-48dc-8de6-9b7e9cd03a0c_1761125926969.wav')">Test WAV Audio</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function testAudio(url) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<h3>Testing: ' + url + '</h3>';
+            
+            const audio = new Audio(url);
+            
+            audio.addEventListener('loadstart', () => {
+                resultDiv.innerHTML += '<br>🔄 Audio loading started...';
+            });
+            
+            audio.addEventListener('canplay', () => {
+                resultDiv.innerHTML += '<br>✅ Audio can play!';
+                audio.play();
+            });
+            
+            audio.addEventListener('error', (e) => {
+                resultDiv.innerHTML += '<br>❌ Audio error: ' + e.message;
+                console.error('Audio error:', e);
+            });
+            
+            audio.addEventListener('ended', () => {
+                resultDiv.innerHTML += '<br>🏁 Audio playback ended';
+            });
+            
+            audio.load();
+        }
+    </script>
+</body>
+</html>

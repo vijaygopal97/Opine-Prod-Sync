@@ -1,0 +1,271 @@
+================================================================================
+COMPLETE CALCULATION AUDIT TRAIL - SLIDE-WISE ORGANIZATION
+================================================================================
+Report Generation Date: 2025-11-19 07:03:17
+Reference Date (for calculations): 2025-11-15
+Excel File: /var/www/opine/uploads/reports/excel-1763535453885-957795463.xlsx
+================================================================================
+
+================================================================================
+SLIDE-WISE CALCULATION AUDIT TRAIL
+================================================================================
+Reference Date: 2025-11-15
+Excel File: /var/www/opine/uploads/reports/excel-1763535453885-957795463.xlsx
+================================================================================
+
+================================================================================
+SLIDE 1: TITLE SLIDE
+================================================================================
+  Content: Title, Reporting Date, Overall Sample Size, Start Date, End Date, Duration
+  Reporting Date: 2025-11-15
+  Overall Sample Size: 95,768
+  Start Date: 2025-10-08
+  End Date: 2025-11-13
+  Duration: 37 days
+
+================================================================================
+SLIDE 2: INTRODUCTION
+================================================================================
+  Content: Sample size, Presentation Date, Daily Average, Gender Breakdown, F2F/CATI, Zones
+  Presentation Date: 2025-11-15
+  Total Sample: 95,768
+  Daily Average: 2,588
+  Male: 68,149
+  Female: 27,616
+  F2F: 47,685
+  CATI: 48,083
+  Zones: 5
+
+================================================================================
+SLIDE 5: STATE LEVEL VOTE SHARE
+================================================================================
+  Content: Raw Vote Share, 7DMA, Normalized Vote Share
+  See detailed calculations in:
+    - Raw Vote Share: AUDIT: RAW VOTE SHARE CALCULATION
+    - 7DMA: AUDIT: 7 DMA CALCULATION
+    - Normalized Vote Share: AUDIT: NORMALIZED VOTE SHARE CALCULATION
+
+================================================================================
+SLIDE 6: OVERALL NORMALIZED VOTE SHARE CHART
+================================================================================
+  Content: Cumulative Overall Normalized Vote Share for last 16 days
+  See detailed calculations in: AUDIT: SLIDE 6 CALCULATION (Overall Normalized Chart)
+
+================================================================================
+SLIDE 7: 7 DMA VOTE SHARE CHART
+================================================================================
+  Content: 7 DMA Normalized Vote Share for last 13 days
+  See detailed calculations in: AUDIT: SLIDE 7 CALCULATION (7 DMA Chart)
+
+================================================================================
+SLIDES 9-12: DEMOGRAPHIC TABLES
+================================================================================
+  Content: Gender, Location, Religion, Social Category, Age breakdowns
+  Metrics: 7DMA, 15DMA, Overall (30DMA left empty)
+  
+  Slide 9: Gender (Male, Female)
+  Slide 10: Social Category (General+OBC, SC, ST) and Age (18-25, 26-34, 36-50, 50+)
+  Slide 11: Social Category (General+OBC, SC, ST) and Age (18-25, 26-34, 36-50, 50+)
+  Slide 12: Age (18-25, 26-34, 36-50, 50+)
+  
+  Calculation Method:
+    - 7DMA: Last 7 days ending one day before reference date
+      Uses 'Weight - with Vote Share - AE 2021 - Region L7D' (if >=50% available, else regular)
+    - 15DMA: Last 15 days ending one day before reference date
+      Uses 'Weight - with Vote Share - AE 2021 - Region L15D' (if >=50% available, else regular)
+    - Overall: All data up to reference date
+      Uses 'Weight - with Vote Share - AE 2021 - Region'
+    - 30DMA: Left empty (as per template)
+  
+  See detailed calculations with actual numbers in: AUDIT: DEMOGRAPHIC BREAKDOWN CALCULATIONS
+  (Includes 15DMA calculations with sample sizes, vote shares, and weight sums)
+
+================================================================================
+SLIDES 14-23: OVERALL NORMALIZED DEMOGRAPHIC CHARTS
+================================================================================
+  Content: Cumulative Overall Normalized Vote Share by demographic
+  See detailed calculations in: AUDIT: DEMOGRAPHIC CHARTS (Slides 14-23)
+
+================================================================================
+SLIDES 24-39: 7 DMA DEMOGRAPHIC CHARTS
+================================================================================
+  Content: 7 DMA Normalized Vote Share by demographic
+  See detailed calculations in: AUDIT: 7 DMA DEMOGRAPHIC CHARTS (Slides 24-39)
+  Note: Uses 'Weight - with Vote Share - AE 2021 - Region L7D'
+
+================================================================================
+SLIDES 41-42: CASTE WISE VOTE SHARES
+================================================================================
+  Content: Caste-wise vote shares (30DMA and Overall)
+  See detailed calculations in: AUDIT: CASTE WISE VOTE SHARES (Slides 41-42)
+
+================================================================================
+SLIDES 44-45: TOP REASONS FOR PARTY CHOICES
+================================================================================
+  Content: Top 3 reasons for voting for AITC (7DMA and Overall)
+  See detailed calculations in: AUDIT: TOP REASONS FOR PARTY CHOICES (Slides 44-45)
+
+================================================================================
+SLIDES 47-61: GAINS AND LOSSES TABLES
+================================================================================
+  Content: Voter movement from 2021 to 2025 by party
+  See detailed calculations in: AUDIT: GAINS AND LOSSES TABLES (Slides 47-61)
+
+================================================================================
+SLIDES 63-64: VOTE TRANSFERABILITY TABLES
+================================================================================
+  Content: Percentage of people who vote for party X as first choice and party Y as second choice
+  See detailed calculations in: AUDIT: VOTE TRANSFERABILITY TABLES (Slides 63-64)
+
+================================================================================
+SLIDE 66: PREFERRED CM CANDIDATE
+================================================================================
+  Content: Preferred Chief Minister candidate percentages (7DMA and Overall)
+  Question: '17. Who do you think is the best leader to be the Chief Minister of West Bengal?'
+  See detailed calculations in: AUDIT: PREFERRED CM CANDIDATE (Slide 66)
+
+================================================================================
+SLIDE 68: STATE GOVERNMENT RATING
+================================================================================
+  Content: Satisfaction rating with state government performance (7DMA and Overall)
+  Question: '14. How satisfied or dissatisfied are you with the performance of the state govt led by Mamata Banerjee?'
+  See detailed calculations in: AUDIT: STATE GOVERNMENT RATING (Slide 68)
+
+================================================================================
+SLIDE 70: KEY ISSUES
+================================================================================
+  Content: Top pressing issues of assembly constituency (Overall)
+  Question: '13. According to you, what are the three most pressing issues of your assembly constituency?'
+  Shows: Count of people who chose each reason (not percentage)
+  See detailed calculations in: AUDIT: KEY ISSUES (Slide 70)
+
+================================================================================
+SLIDE 72: WISDOM OF CROWDS
+================================================================================
+  Content: Which party is likely to win next elections (7DMA and Overall)
+  Question: '19. In your opinion, which party would win the next election in your constituency, when you would elect your MLA?'
+  See detailed calculations in: AUDIT: WISDOM OF CROWDS (Slide 72)
+
+================================================================================
+SLIDE 74: VOTE SHARE BY REGIONS
+================================================================================
+  Content: Vote share percentages by region (2021 AE, 7DMA, and Overall)
+  Question: '8. If assembly elections (MLA) were to be held tomorrow, then which party would you vote for?'
+  Shows: Sample size, vote shares for AITC, BJP, LEFT, INC, Others, N+W+R, and Margin (AITC - BJP)
+  See detailed calculations in: AUDIT: VOTE SHARE BY REGIONS (Slide 74)
+
+================================================================================
+SLIDES 75-84: REGIONAL GRAPHS
+================================================================================
+  Content: Vote share graphs by region (Overall and 7DMA)
+  Question: '8. If assembly elections (MLA) were to be held tomorrow, then which party would you vote for?'
+  Regions: Jalpaiguri, Malda, Murshidabad, Nadia, North 24 Parganas, Purba Bardhaman, Purba Medinipur, South 24 Parganas, Uttar Dinajpur, Hooghly
+  Odd slides (75, 77, 79, ...): Overall cumulative vote share (last 17 days)
+  Even slides (76, 78, 80, ...): 7DMA vote share (last 13 days)
+  Graph starts from first date with actual data for each region
+  Dates displayed in MM/DD/YYYY format, vertically rotated
+  See detailed calculations in: AUDIT: REGIONAL GRAPHS (Slides 75-84)
+
+================================================================================
+SLIDES 86-87: EMPTY SLIDES
+================================================================================
+  Content: Left empty as per template
+  No calculations required
+
+================================================================================
+SLIDES 88-93: DISTRICT TABLES
+================================================================================
+  Content: Vote share tables by district (15DMA, Overall, and 7DMA)
+  Question: '8. If assembly elections (MLA) were to be held tomorrow, then which party would you vote for?'
+  Slides 88-89: 15DMA districts
+  Slides 90-91: Overall districts
+  Slides 92-93: 7DMA districts
+  Shows: Sample size (actual count, not normalized), vote shares for AITC, BJP, LEFT, INC, Others, N+W+R, and Margin (AITC - BJP)
+  Uses District-level weights: 'Weight - with Vote Share - AE 2021 - District L15D' (15DMA), 'Weight - with Vote Share - AE 2021 - District L7D' (7DMA), 'Weight - with Vote Share - AE 2021 - District' (Overall)
+  Also shows: 2024 GE Winner, 2021 GE Winner (from template)
+  See detailed calculations in: AUDIT: DISTRICT TABLES (Slides 88-93)
+
+================================================================================
+SLIDES 95-136: DISTRICT GRAPHS
+================================================================================
+  Content: Vote share graphs by district (15DMA and Overall)
+  Question: '8. If assembly elections (MLA) were to be held tomorrow, then which party would you vote for?'
+  Odd slides (95, 97, 99, ...): 15DMA vote share (last 13 days, limited to max 9 date points)
+  Even slides (96, 98, 100, ...): Overall cumulative vote share (last 17 days, limited to max 9 date points)
+  Graph starts from first date with actual data for each district
+  Dates displayed in MM/DD/YYYY format, horizontally (not vertical)
+  Maximum 9 date points shown per graph
+  Uses District-level weights: 'Weight - with Vote Share - AE 2021 - District L15D' (15DMA), 'Weight - with Vote Share - AE 2021 - District' (Overall)
+  Legend positioned lower to avoid overlapping with dates
+  See detailed calculations in: AUDIT: DISTRICT GRAPHS (Slides 95-136)
+
+
+================================================================================
+DETAILED CALCULATIONS BY SLIDE
+================================================================================
+
+================================================================================
+SLIDE 5: STATE LEVEL VOTE SHARE - DETAILED CALCULATIONS
+================================================================================
+
+================================================================================
+AUDIT: RAW VOTE SHARE CALCULATION
+================================================================================
+
+Data Source:
+  Question: 8. If assembly elections (MLA) were to be held tomorrow, then which party would you vote for?
+  Date Filter: All data up to 2025-11-15
+  Sample Size: 95,768 records
+  Weights: NOT USED (raw calculation)
+
+Raw Party Code Distribution:
+  Code 1: 48,171 records (50.30%)
+  Code 2: 22,268 records (23.25%)
+  Code 3: 3,366 records (3.51%)
+  Code 4: 3,018 records (3.15%)
+  Code 12: 255 records (0.27%)
+  Code 44: 888 records (0.93%)
+  Code 55: 531 records (0.55%)
+  Code 66: 302 records (0.32%)
+  Code 77: 5,453 records (5.69%)
+  Code 88: 11,513 records (12.02%)
+  Missing/NaN: 3 records → NWR
+
+Party Categorization (After Mapping):
+  AITC: 48,171 records (50.30%)
+  BJP: 22,268 records (23.25%)
+  INC: 3,366 records (3.51%)
+  LEFT: 3,018 records (3.15%)
+  NWR: 17,802 records (18.59%)
+  Others: 1,143 records (1.19%)
+
+Raw Vote Share Calculation:
+  Formula: (Party Count / Total Valid Records) × 100
+  Total Valid Records: 95,765
+
+  Results:
+    AITC: 48,171 / 95,765 × 100 = 50.30%
+    BJP: 22,268 / 95,765 × 100 = 23.25%
+    INC: 3,366 / 95,765 × 100 = 3.51%
+    LEFT: 3,018 / 95,765 × 100 = 3.15%
+    NWR: 17,802 / 95,765 × 100 = 18.59%
+    Others: 1,143 / 95,765 × 100 = 1.19%
+
+  Verification (from VoteShareCalculator):
+    Sample: 95,768
+    AITC: 50.30%
+    BJP: 23.25%
+    LEFT: 3.15%
+    INC: 3.51%
+    Others: 1.19%
+    NWR: 18.59%
+
+================================================================================
+AUDIT: NORMALIZED VOTE SHARE CALCULATION
+================================================================================
+
+Data Source:
+  Question: 8. If assembly elections (MLA) were to be held tomorrow, then which party would you vote for?
+  Date Filter: All data up to 2025-11-15
+  Weight Column: Weight - with Vote Share - AE 2021 - Region
+  Weights: USED for normalization

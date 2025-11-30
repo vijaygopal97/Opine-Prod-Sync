@@ -780,8 +780,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
           isPollingStationSelection: true,
           availableGroups: availableGroups,
           availablePollingStations: availablePollingStations,
-          selectedGroup: selectedPollingStation.groupName,
-          selectedStation: selectedPollingStation.stationName
+          selectedGroup: selectedGroupName,
+          selectedStation: selectedStationName
         };
         allQuestions.push(pollingStationQuestion);
       }
@@ -802,8 +802,19 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     return allQuestions;
   };
 
-  const allQuestions = useMemo(() => getAllQuestions(), [sessionData, survey, selectedAC, availableGroups, availablePollingStations]);
-  const currentQuestion = allQuestions[currentQuestionIndex];
+  // Extract only the values we need from selectedPollingStation to prevent unnecessary recalculations
+  const selectedGroupName = selectedPollingStation?.groupName;
+  const selectedStationName = selectedPollingStation?.stationName;
+  
+  const allQuestions = useMemo(() => getAllQuestions(), [
+    sessionData, 
+    survey, 
+    selectedAC, 
+    availableGroups, 
+    availablePollingStations,
+    selectedGroupName,
+    selectedStationName
+  ]);
 
   // Helper function to check if an option is "Others"
   const isOthersOption = (optText) => {
@@ -987,22 +998,33 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     return !hasResponseContent(response);
   };
 
-  // Evaluate conditional logic for a question
+  // Use ref to access latest responses without causing dependency cycle
+  const responsesRef = useRef(responses);
+  useEffect(() => {
+    responsesRef.current = responses;
+  }, [responses]);
+
+  // Evaluate conditional logic for a question - using ref to break dependency cycle
   const evaluateConditions = useCallback((question) => {
     if (!question.conditions || question.conditions.length === 0) {
-      // console.log(`Question "${question.text}" has no conditions, showing by default`);
       return true;
     }
 
-    // console.log(`Evaluating conditions for question: ${question.text}`, question.conditions);
-
     const results = question.conditions.map((condition, index) => {
-      const response = responses[condition.questionId];
+      const response = responsesRef.current[condition.questionId];
       
-      // console.log(`Condition ${index}: questionId=${condition.questionId}, operator=${condition.operator}, value=${condition.value}, response=`, response);
+      // Debug logging for conditional questions (removed renderCountRef check since it may not exist)
+      if (question.id) {
+        console.log(`🔍 [evaluateConditions] Question: ${question.id}, Condition ${index}:`, {
+          questionId: condition.questionId,
+          operator: condition.operator,
+          conditionValue: condition.value,
+          response: response,
+          responseType: typeof response
+        });
+      }
       
       if (response === undefined || response === null) {
-        // console.log(`Condition ${index}: No response found, returning false`);
         return false;
       }
 
@@ -1010,7 +1032,11 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
 
       switch (condition.operator) {
         case 'equals':
-          met = String(response).toLowerCase() === String(condition.value).toLowerCase();
+          met = String(response).toLowerCase().trim() === String(condition.value).toLowerCase().trim();
+          // Debug logging
+          if (question.id) {
+            console.log(`🔍 [evaluateConditions] equals check: "${String(response).toLowerCase().trim()}" === "${String(condition.value).toLowerCase().trim()}" = ${met}`);
+          }
           break;
         case 'not_equals':
           met = String(response).toLowerCase() !== String(condition.value).toLowerCase();
@@ -1051,14 +1077,11 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
           met = false;
       }
 
-
-      // console.log(`Condition ${index}: Result = ${met}`);
       return met;
     });
 
     // Handle AND/OR logic between conditions
     if (results.length === 1) {
-      // console.log(`Single condition result: ${results[0]}`);
       return results[0];
     }
 
@@ -1072,38 +1095,53 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
       }
     }
 
-    // console.log(`Final condition result for "${question.text}": ${finalResult}`);
     return finalResult;
-  }, [responses]);
+  }, []); // Empty deps - use ref to access responses
 
-  // Get visible questions based on conditional logic - memoized for performance
+  // Get visible questions based on conditional logic
+  // Use responses directly in the filter to trigger recalculation when responses change
+  // IMPORTANT: Use responses directly, not responsesRef, to ensure we have the latest data
   const visibleQuestions = useMemo(() => {
+    // Temporarily update ref before evaluation to ensure latest responses
+    responsesRef.current = responses;
+    
     const visible = allQuestions.filter(question => {
       const shouldShow = evaluateConditions(question);
-      // console.log(`Question "${question.text}" should show: ${shouldShow}`);
+          // Debug logging
+          if (question.conditions && question.conditions.length > 0) {
+            console.log(`🔍 [visibleQuestions] Question ${question.id} shouldShow:`, shouldShow);
+          }
       return shouldShow;
     });
-    // console.log(`Visible questions: ${visible.length} out of ${allQuestions.length}`);
     return visible;
-  }, [allQuestions, responses, evaluateConditions]); // Only recalculate when responses change
+  }, [allQuestions, responses, evaluateConditions]); // responses triggers recalculation, evaluateConditions is stable
 
+  // Get current question from allQuestions - EXACTLY like working commit
+  const currentQuestion = allQuestions[currentQuestionIndex];
+  
   const currentVisibleIndex = visibleQuestions.findIndex(q => q.id === currentQuestion?.id);
   const currentVisibleQuestion = visibleQuestions[currentVisibleIndex];
 
-  // Handle response change
+  // Handle response change - EXACTLY like working commit
   const handleResponseChange = useCallback((questionId, response) => {
-    setResponses(prev => ({
-      ...prev,
-      [questionId]: response
-    }));
+    console.log('🔍 [handleResponseChange] questionId:', questionId, 'response:', response);
+    setResponses(prev => {
+      const updated = {
+        ...prev,
+        [questionId]: response
+      };
+      console.log('🔍 [handleResponseChange] Updated responses:', JSON.stringify(updated));
+      return updated;
+    });
     
-    // Handle AC selection specially
+    // Handle AC selection specially - only check questionId, not currentQuestion to avoid dependency issues
     if (questionId === 'ac-selection') {
       setSelectedAC(response);
       // Reset polling station selection when AC changes
+      // Don't set acName here - let the useEffect handle it to prevent infinite loops
       setSelectedPollingStation({
         state: null,
-        acName: response,
+        acName: null, // Will be set by useEffect
         acNo: null,
         pcNo: null,
         pcName: null,
@@ -1211,16 +1249,34 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         const response = await pollingStationAPI.getGroupsByAC(state, selectedAC);
         
         if (response.success) {
-          setAvailableGroups(response.data.groups || []);
-          setSelectedPollingStation(prev => ({
-            ...prev,
-            state: state,
-            acName: selectedAC,
-            acNo: response.data.ac_no,
-            pcNo: response.data.pc_no,
-            pcName: response.data.pc_name,
-            district: response.data.district
-          }));
+          const newGroups = response.data.groups || [];
+          // Only update if groups actually changed
+          setAvailableGroups(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(newGroups)) {
+              return prev; // Return same reference if no change
+            }
+            return newGroups;
+          });
+          setSelectedPollingStation(prev => {
+            // Only update if values have actually changed to prevent infinite loops
+            if (prev.acName === selectedAC && 
+                prev.state === state &&
+                prev.acNo === response.data.ac_no &&
+                prev.pcNo === response.data.pc_no &&
+                prev.pcName === response.data.pc_name &&
+                prev.district === response.data.district) {
+              return prev; // No change, return same object
+            }
+            return {
+              ...prev,
+              state: state,
+              acName: selectedAC,
+              acNo: response.data.ac_no,
+              pcNo: response.data.pc_no,
+              pcName: response.data.pc_name,
+              district: response.data.district
+            };
+          });
         }
       } catch (error) {
         console.error('Error fetching groups:', error);
@@ -1251,7 +1307,14 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         );
         
         if (response.success) {
-          setAvailablePollingStations(response.data.stations || []);
+          const newStations = response.data.stations || [];
+          // Only update if stations actually changed
+          setAvailablePollingStations(prev => {
+            if (JSON.stringify(prev) === JSON.stringify(newStations)) {
+              return prev; // Return same reference if no change
+            }
+            return newStations;
+          });
         }
       } catch (error) {
         console.error('Error fetching polling stations:', error);
@@ -1281,12 +1344,20 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         );
         
         if (response.success) {
-          setSelectedPollingStation(prev => ({
-            ...prev,
-            gpsLocation: response.data.gps_location,
-            latitude: response.data.latitude,
-            longitude: response.data.longitude
-          }));
+          setSelectedPollingStation(prev => {
+            // Only update if values have actually changed to prevent infinite loops
+            if (prev.gpsLocation === response.data.gps_location &&
+                prev.latitude === response.data.latitude &&
+                prev.longitude === response.data.longitude) {
+              return prev; // No change, return same object
+            }
+            return {
+              ...prev,
+              gpsLocation: response.data.gps_location,
+              latitude: response.data.latitude,
+              longitude: response.data.longitude
+            };
+          });
         }
       } catch (error) {
         console.error('Error fetching polling station GPS:', error);
@@ -1296,7 +1367,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     updateStationGPS();
   }, [selectedPollingStation.stationName, selectedPollingStation.groupName, selectedPollingStation.acName, selectedPollingStation.state, survey?.acAssignmentState]);
 
-  // Navigate to next question
+  // Navigate to next question - EXACTLY like working commit
   const goToNextQuestion = () => {
     if (currentVisibleIndex < visibleQuestions.length - 1) {
       setCurrentQuestionIndex(prev => {
@@ -1309,7 +1380,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     }
   };
 
-  // Navigate to previous question
+  // Navigate to previous question - EXACTLY like working commit
   const goToPreviousQuestion = () => {
     if (currentVisibleIndex > 0) {
       setCurrentQuestionIndex(prev => {
@@ -1319,7 +1390,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     }
   };
 
-  // Navigate to specific question
+  // Navigate to specific question - EXACTLY like working commit
   const navigateToQuestion = (questionId) => {
     const questionIndex = allQuestions.findIndex(q => q.id === questionId);
     if (questionIndex !== -1) {
@@ -1593,7 +1664,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
           setValidationErrors(prev => new Set([...prev, firstUnanswered.id]));
           
           // Navigate to the first unanswered required question
-          const questionIndex = allQuestions.findIndex(q => q.id === firstUnanswered.id);
+          const questionIndex = visibleQuestions.findIndex(q => q.id === firstUnanswered.id);
           if (questionIndex !== -1) {
             setCurrentQuestionIndex(questionIndex);
             const sectionNumber = firstUnanswered.sectionIndex + 1;
@@ -1612,7 +1683,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         const errorMessage = targetAudienceErrors.get(firstErrorQuestionId);
         
         // Navigate to the first question with target audience error
-        const questionIndex = allQuestions.findIndex(q => q.id === firstErrorQuestionId);
+        const questionIndex = visibleQuestions.findIndex(q => q.id === firstErrorQuestionId);
         if (questionIndex !== -1) {
           setCurrentQuestionIndex(questionIndex);
           showError(errorMessage);
@@ -1996,11 +2067,15 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
   }, []); // Empty dependency array - only runs on mount/unmount
 
   // Start question timer when question changes
+  // Use a ref to track the last question ID to prevent unnecessary updates
+  const lastQuestionIdRef = useRef(null);
   useEffect(() => {
-    if (currentQuestion) {
+    const currentQuestionId = currentQuestion?.id;
+    if (currentQuestionId && currentQuestionId !== lastQuestionIdRef.current) {
+      lastQuestionIdRef.current = currentQuestionId;
       setQuestionStartTime(Date.now());
     }
-  }, [currentQuestionIndex]);
+  }, [currentQuestionIndex, currentQuestion?.id]);
 
   // Debug timer state changes
   useEffect(() => {
@@ -2195,18 +2270,18 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
 
   // Render question input based on type
   const renderQuestionInput = () => {
-    if (!currentVisibleQuestion) return null;
+    if (!currentQuestion) return null;
 
-    const { type, options, required } = currentVisibleQuestion;
-    const currentResponse = responses[currentVisibleQuestion.id] || '';
-    const questionId = currentVisibleQuestion.id;
+    const { type, options, required } = currentQuestion;
+    const currentResponse = responses[currentQuestion.id] || '';
+    const questionId = currentQuestion.id;
 
     // Get shuffled options ONLY for multiple_choice questions (if shuffleOptions is enabled)
     // For single_choice and dropdown, move "Others" to the end
     // Dropdown and other question types use original order
     let displayOptions = options;
     if (type === 'multiple_choice') {
-      displayOptions = getShuffledOptions(questionId, options, currentVisibleQuestion);
+      displayOptions = getShuffledOptions(questionId, options, currentQuestion);
     } else if (type === 'single_choice' || type === 'dropdown') {
       // Move "Others" to the end for single_choice and dropdown
       const othersOptions = [];
@@ -2228,7 +2303,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         return (
           <textarea
             value={currentResponse}
-            onChange={(e) => handleResponseChange(currentVisibleQuestion.id, e.target.value)}
+            onChange={(e) => handleResponseChange(currentQuestion.id, e.target.value)}
             placeholder={`Enter your ${type === 'textarea' ? 'detailed ' : ''}response...`}
             className="w-full p-6 text-lg border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 resize-none transition-all duration-200"
             rows={type === 'textarea' ? 6 : 3}
@@ -2246,11 +2321,11 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               const text = e.target.value;
               // Allow empty string or valid number (including 0 and negative numbers)
               if (text === '') {
-                handleResponseChange(currentVisibleQuestion.id, '');
+                handleResponseChange(currentQuestion.id, '');
               } else {
                 const numValue = parseFloat(text);
                 if (!isNaN(numValue) && isFinite(numValue)) {
-                  handleResponseChange(currentVisibleQuestion.id, numValue);
+                  handleResponseChange(currentQuestion.id, numValue);
                 }
               }
             }}
@@ -2261,10 +2336,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         );
 
       case 'multiple_choice':
-        const allowMultiple = currentVisibleQuestion.settings?.allowMultiple || false;
-        const maxSelections = currentVisibleQuestion.settings?.maxSelections;
+        const allowMultiple = currentQuestion.settings?.allowMultiple || false;
+        const maxSelections = currentQuestion.settings?.maxSelections;
         const currentSelections = Array.isArray(currentResponse) ? currentResponse.length : 0;
-        const isGenderQuestion = currentVisibleQuestion.id === 'fixed_respondent_gender';
+        const isGenderQuestion = currentQuestion.id === 'fixed_respondent_gender';
         
         // Check if "None" option exists
         const noneOption = displayOptions.find((opt) => {
@@ -2325,7 +2400,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                   <label className="flex items-center space-x-4 cursor-pointer group">
                   <input
                     type={allowMultiple ? "checkbox" : "radio"}
-                    name={allowMultiple ? undefined : `question-${currentVisibleQuestion.id}`}
+                    name={allowMultiple ? undefined : `question-${currentQuestion.id}`}
                     checked={isSelected}
                     onChange={(e) => {
                       if (allowMultiple) {
@@ -2390,12 +2465,12 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                           }
                         }
                         // The array order now represents the order in which options were selected
-                        handleResponseChange(currentVisibleQuestion.id, currentAnswers);
+                        handleResponseChange(currentQuestion.id, currentAnswers);
                       } else {
                         // Single selection
                         if (isNoneOption) {
                           // "None" selected - just set it
-                        handleResponseChange(currentVisibleQuestion.id, optionValue);
+                        handleResponseChange(currentQuestion.id, optionValue);
                           // Clear "Others" text input if it exists
                           if (othersOptionValue && currentResponse === othersOptionValue) {
                             setOthersTextInputs(prev => {
@@ -2406,13 +2481,13 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                           }
                         } else if (isOthers) {
                           // "Others" selected - just set it
-                          handleResponseChange(currentVisibleQuestion.id, optionValue);
+                          handleResponseChange(currentQuestion.id, optionValue);
                         } else {
                           // Other option selected - clear "None" and "Others" if they were selected
                           if (noneOptionValue && currentResponse === noneOptionValue) {
-                            handleResponseChange(currentVisibleQuestion.id, optionValue);
+                            handleResponseChange(currentQuestion.id, optionValue);
                           } else if (othersOptionValue && currentResponse === othersOptionValue) {
-                            handleResponseChange(currentVisibleQuestion.id, optionValue);
+                            handleResponseChange(currentQuestion.id, optionValue);
                             // Clear "Others" text input
                             setOthersTextInputs(prev => {
                               const updated = { ...prev };
@@ -2420,7 +2495,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                               return updated;
                             });
                           } else {
-                            handleResponseChange(currentVisibleQuestion.id, optionValue);
+                            handleResponseChange(currentQuestion.id, optionValue);
                           }
                         }
                       }
@@ -2486,10 +2561,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                 <label key={optionId} className="flex items-center space-x-4 cursor-pointer group">
                   <input
                     type="radio"
-                    name={`question-${currentVisibleQuestion.id}`}
+                    name={`question-${currentQuestion.id}`}
                     value={optionValue}
                     checked={currentResponse === optionValue}
-                    onChange={(e) => handleResponseChange(currentVisibleQuestion.id, e.target.value)}
+                    onChange={(e) => handleResponseChange(currentQuestion.id, e.target.value)}
                     className="w-6 h-6 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 group-hover:border-blue-400 transition-colors"
                   />
                   <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors">{optionText}</span>
@@ -2501,7 +2576,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
 
       case 'rating':
       case 'rating_scale':
-        const scale = currentVisibleQuestion.scale || { min: 1, max: 5 };
+        const scale = currentQuestion.scale || { min: 1, max: 5 };
         const min = scale.min || 1;
         const max = scale.max || 5;
         const labels = scale.labels || [];
@@ -2519,7 +2594,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                 return (
                   <div key={rating} className="flex flex-col items-center space-y-1">
                 <button
-                  onClick={() => handleResponseChange(currentVisibleQuestion.id, rating)}
+                  onClick={() => handleResponseChange(currentQuestion.id, rating)}
                       className={`w-12 h-12 rounded-full border-2 transition-all duration-200 flex items-center justify-center font-semibold ${
                     currentResponse === rating
                       ? 'bg-yellow-400 border-yellow-500 text-yellow-900'
@@ -2550,10 +2625,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
             <label className="flex items-center space-x-4 cursor-pointer group">
               <input
                 type="radio"
-                name={`question-${currentVisibleQuestion.id}`}
+                name={`question-${currentQuestion.id}`}
                 value="yes"
                 checked={currentResponse === 'yes'}
-                onChange={(e) => handleResponseChange(currentVisibleQuestion.id, e.target.value)}
+                onChange={(e) => handleResponseChange(currentQuestion.id, e.target.value)}
                 className="w-6 h-6 text-green-600 border-2 border-gray-300 focus:ring-green-500 group-hover:border-green-400 transition-colors"
               />
               <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors">Yes</span>
@@ -2561,10 +2636,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
             <label className="flex items-center space-x-4 cursor-pointer group">
               <input
                 type="radio"
-                name={`question-${currentVisibleQuestion.id}`}
+                name={`question-${currentQuestion.id}`}
                 value="no"
                 checked={currentResponse === 'no'}
-                onChange={(e) => handleResponseChange(currentVisibleQuestion.id, e.target.value)}
+                onChange={(e) => handleResponseChange(currentQuestion.id, e.target.value)}
                 className="w-6 h-6 text-red-600 border-2 border-gray-300 focus:ring-red-500 group-hover:border-red-400 transition-colors"
               />
               <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors">No</span>
@@ -2576,7 +2651,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         return (
           <select
             value={currentResponse}
-            onChange={(e) => handleResponseChange(currentVisibleQuestion.id, e.target.value)}
+            onChange={(e) => handleResponseChange(currentQuestion.id, e.target.value)}
             className="w-full p-4 text-lg border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
             required={required}
           >
@@ -2598,7 +2673,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
           <input
             type="date"
             value={currentResponse}
-            onChange={(e) => handleResponseChange(currentVisibleQuestion.id, e.target.value)}
+            onChange={(e) => handleResponseChange(currentQuestion.id, e.target.value)}
             className="w-full p-4 text-lg border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
             required={required}
           />
@@ -2838,7 +2913,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     );
   }
 
-  if (!isInterviewActive || !currentVisibleQuestion) {
+  if (!isInterviewActive || !currentQuestion) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4">
@@ -2993,7 +3068,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               </div>
               <div className="space-y-2">
                 {visibleQuestions.map((question, index) => {
-                  const isCurrent = question.id === currentVisibleQuestion?.id;
+                  const isCurrent = question.id === currentQuestion?.id;
                   const hasResponse = hasResponseContent(responses[question.id]);
                   const hasTargetAudienceError = targetAudienceErrors.has(question.id);
                   
@@ -3038,7 +3113,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                   <div className="flex items-center space-x-3">
                     <button
                       onClick={goToPreviousQuestion}
-                      disabled={currentVisibleIndex === 0}
+                      disabled={currentQuestionIndex === 0}
                       className="group relative px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:border-blue-500 hover:text-blue-600 transition-all duration-200 disabled:bg-gray-100 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 shadow-sm hover:shadow-md disabled:shadow-none"
                       style={{ minHeight: '48px', minWidth: '140px' }}
                     >
@@ -3049,18 +3124,18 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
 
                   <div className="flex items-center space-x-4">
                     <span className="text-sm text-gray-600 font-medium">
-                      Question {currentVisibleIndex + 1} of {visibleQuestions.length}
+                      Question {currentQuestionIndex + 1} of {visibleQuestions.length}
                     </span>
                     <div className="w-32 bg-gray-200 rounded-full h-2">
                       <div 
                         className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${((currentVisibleIndex + 1) / visibleQuestions.length) * 100}%` }}
+                        style={{ width: `${((currentQuestionIndex + 1) / visibleQuestions.length) * 100}%` }}
                       ></div>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    {currentVisibleIndex === visibleQuestions.length - 1 ? (
+                    {currentQuestionIndex === visibleQuestions.length - 1 ? (
                       <button
                         onClick={completeInterview}
                         disabled={isCatiMode && (callStatus === 'failed' || !callId)}
@@ -3091,24 +3166,24 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
 
               <div className="mb-12">
                 <h2 className={`text-3xl font-semibold mb-6 leading-relaxed ${
-                  validationErrors.has(currentVisibleQuestion.id) || targetAudienceErrors.has(currentVisibleQuestion.id)
+                  validationErrors.has(currentQuestion.id) || targetAudienceErrors.has(currentQuestion.id)
                     ? 'text-red-600 border-l-4 border-red-500 pl-4' 
                     : 'text-gray-800'
                 }`}>
-                  {currentVisibleQuestion.text}
-                  {currentVisibleQuestion.required && <span className="text-red-500 ml-2">*</span>}
+                  {currentQuestion.text}
+                  {currentQuestion.required && <span className="text-red-500 ml-2">*</span>}
                 </h2>
-                {currentVisibleQuestion.description && (
-                  <p className="text-xl text-gray-600 leading-relaxed">{currentVisibleQuestion.description}</p>
+                {currentQuestion.description && (
+                  <p className="text-xl text-gray-600 leading-relaxed">{currentQuestion.description}</p>
                 )}
-                {validationErrors.has(currentVisibleQuestion.id) && (
+                {validationErrors.has(currentQuestion.id) && (
                   <p className="text-red-600 text-sm mt-2 font-medium">
                     ⚠️ This question is required and must be answered before completing the interview.
                   </p>
                 )}
-                {targetAudienceErrors.has(currentVisibleQuestion.id) && (
+                {targetAudienceErrors.has(currentQuestion.id) && (
                   <p className="text-red-600 text-sm mt-2 font-medium bg-red-50 p-3 rounded-lg border border-red-200">
-                    🚫 {targetAudienceErrors.get(currentVisibleQuestion.id)}
+                    🚫 {targetAudienceErrors.get(currentQuestion.id)}
                   </p>
                 )}
               </div>
