@@ -1010,19 +1010,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
       return true;
     }
 
-    const results = question.conditions.map((condition, index) => {
+      const results = question.conditions.map((condition, index) => {
       const response = responsesRef.current[condition.questionId];
-      
-      // Debug logging for conditional questions (removed renderCountRef check since it may not exist)
-      if (question.id) {
-        console.log(`🔍 [evaluateConditions] Question: ${question.id}, Condition ${index}:`, {
-          questionId: condition.questionId,
-          operator: condition.operator,
-          conditionValue: condition.value,
-          response: response,
-          responseType: typeof response
-        });
-      }
       
       if (response === undefined || response === null) {
         return false;
@@ -1033,10 +1022,6 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
       switch (condition.operator) {
         case 'equals':
           met = String(response).toLowerCase().trim() === String(condition.value).toLowerCase().trim();
-          // Debug logging
-          if (question.id) {
-            console.log(`🔍 [evaluateConditions] equals check: "${String(response).toLowerCase().trim()}" === "${String(condition.value).toLowerCase().trim()}" = ${met}`);
-          }
           break;
         case 'not_equals':
           met = String(response).toLowerCase() !== String(condition.value).toLowerCase();
@@ -1099,40 +1084,36 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
   }, []); // Empty deps - use ref to access responses
 
   // Get visible questions based on conditional logic
-  // Use responses directly in the filter to trigger recalculation when responses change
-  // IMPORTANT: Use responses directly, not responsesRef, to ensure we have the latest data
+  // Use responsesKey to trigger recalculation only when responses content changes
+  const responsesKey = useMemo(() => {
+    return JSON.stringify(Object.keys(responses).sort().map(key => [key, responses[key]]));
+  }, [responses]);
+
   const visibleQuestions = useMemo(() => {
-    // Temporarily update ref before evaluation to ensure latest responses
+    // Update ref before evaluation to ensure latest responses
     responsesRef.current = responses;
     
     const visible = allQuestions.filter(question => {
-      const shouldShow = evaluateConditions(question);
-          // Debug logging
-          if (question.conditions && question.conditions.length > 0) {
-            console.log(`🔍 [visibleQuestions] Question ${question.id} shouldShow:`, shouldShow);
-          }
-      return shouldShow;
+      return evaluateConditions(question);
     });
     return visible;
-  }, [allQuestions, responses, evaluateConditions]); // responses triggers recalculation, evaluateConditions is stable
+  }, [allQuestions, responsesKey, evaluateConditions]); // Use responsesKey instead of responses to prevent unnecessary recalculations
 
-  // Get current question from allQuestions - EXACTLY like working commit
-  const currentQuestion = allQuestions[currentQuestionIndex];
+  // EXACTLY like React Native - currentQuestionIndex is an index into visibleQuestions
+  // Ensure index is within bounds (but don't update state to avoid loops)
+  const safeQuestionIndex = useMemo(() => {
+    if (visibleQuestions.length === 0) return 0;
+    return Math.min(currentQuestionIndex, Math.max(0, visibleQuestions.length - 1));
+  }, [currentQuestionIndex, visibleQuestions.length]);
   
-  const currentVisibleIndex = visibleQuestions.findIndex(q => q.id === currentQuestion?.id);
-  const currentVisibleQuestion = visibleQuestions[currentVisibleIndex];
+  const currentQuestion = visibleQuestions[safeQuestionIndex];
 
-  // Handle response change - EXACTLY like working commit
+  // Handle response change
   const handleResponseChange = useCallback((questionId, response) => {
-    console.log('🔍 [handleResponseChange] questionId:', questionId, 'response:', response);
-    setResponses(prev => {
-      const updated = {
-        ...prev,
-        [questionId]: response
-      };
-      console.log('🔍 [handleResponseChange] Updated responses:', JSON.stringify(updated));
-      return updated;
-    });
+    setResponses(prev => ({
+      ...prev,
+      [questionId]: response
+    }));
     
     // Handle AC selection specially - only check questionId, not currentQuestion to avoid dependency issues
     if (questionId === 'ac-selection') {
@@ -1369,30 +1350,24 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
 
   // Navigate to next question - EXACTLY like working commit
   const goToNextQuestion = () => {
-    if (currentVisibleIndex < visibleQuestions.length - 1) {
-      setCurrentQuestionIndex(prev => {
-        const nextVisibleQuestion = visibleQuestions[currentVisibleIndex + 1];
-        return allQuestions.findIndex(q => q.id === nextVisibleQuestion.id);
-      });
+    if (currentQuestionIndex < visibleQuestions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       // End of survey
       completeInterview();
     }
   };
 
-  // Navigate to previous question - EXACTLY like working commit
+  // Navigate to previous question - EXACTLY like React Native
   const goToPreviousQuestion = () => {
-    if (currentVisibleIndex > 0) {
-      setCurrentQuestionIndex(prev => {
-        const prevVisibleQuestion = visibleQuestions[currentVisibleIndex - 1];
-        return allQuestions.findIndex(q => q.id === prevVisibleQuestion.id);
-      });
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
   };
 
-  // Navigate to specific question - EXACTLY like working commit
+  // Navigate to specific question - find in visibleQuestions
   const navigateToQuestion = (questionId) => {
-    const questionIndex = allQuestions.findIndex(q => q.id === questionId);
+    const questionIndex = visibleQuestions.findIndex(q => q.id === questionId);
     if (questionIndex !== -1) {
       setCurrentQuestionIndex(questionIndex);
     }
@@ -2066,16 +2041,14 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     };
   }, []); // Empty dependency array - only runs on mount/unmount
 
-  // Start question timer when question changes
-  // Use a ref to track the last question ID to prevent unnecessary updates
-  const lastQuestionIdRef = useRef(null);
+  // Start question timer when question index changes (not question object to avoid loops)
+  const lastQuestionIndexRef = useRef(-1);
   useEffect(() => {
-    const currentQuestionId = currentQuestion?.id;
-    if (currentQuestionId && currentQuestionId !== lastQuestionIdRef.current) {
-      lastQuestionIdRef.current = currentQuestionId;
+    if (currentQuestionIndex !== lastQuestionIndexRef.current && currentQuestion) {
+      lastQuestionIndexRef.current = currentQuestionIndex;
       setQuestionStartTime(Date.now());
     }
-  }, [currentQuestionIndex, currentQuestion?.id]);
+  }, [currentQuestionIndex]); // Only depend on index, not question object
 
   // Debug timer state changes
   useEffect(() => {
@@ -2199,10 +2172,20 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
       // If "Others" options exist and are not at the end, reorder
       if (othersOptions.length > 0) {
         const finalResult = [...regularOptions, ...othersOptions];
-        setShuffledOptions(prev => ({
-          ...prev,
-          [questionId]: finalResult
-        }));
+        // Cache the shuffled order so it doesn't shuffle again
+        // Use setTimeout to defer state update to avoid render loop
+        setTimeout(() => {
+          setShuffledOptions(prev => {
+            // Only update if not already set to avoid unnecessary updates
+            if (!prev[questionId] || JSON.stringify(prev[questionId]) !== JSON.stringify(finalResult)) {
+              return {
+                ...prev,
+                [questionId]: finalResult
+              };
+            }
+            return prev;
+          });
+        }, 0);
         return finalResult;
       }
       
@@ -2260,10 +2243,23 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     // Combine: regular options first, then "Others" options at the end
     const finalResult = [...result, ...othersOptions];
     
-    setShuffledOptions(prev => ({
-      ...prev,
-      [questionId]: finalResult
-    }));
+    // Cache the shuffled order so it doesn't shuffle again
+    // Use a ref check to avoid state update during render if already cached
+    if (!shuffledOptions[questionId]) {
+      // Use setTimeout to defer state update to avoid render loop
+      setTimeout(() => {
+        setShuffledOptions(prev => {
+          // Double-check to avoid race conditions
+          if (!prev[questionId]) {
+            return {
+              ...prev,
+              [questionId]: finalResult
+            };
+          }
+          return prev;
+        });
+      }, 0);
+    }
     
     return finalResult;
   };
@@ -2407,7 +2403,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                         let currentAnswers = Array.isArray(currentResponse) ? [...currentResponse] : [];
                         
                         if (currentAnswers.includes(optionValue)) {
-                          // Deselecting - remove from array while preserving order of remaining items
+                          // Deselecting - remove from array
+                          // TEMPORARILY COMMENTED OUT - Order preservation logic
                           currentAnswers = currentAnswers.filter((a) => a !== optionValue);
                           
                           // Clear "Others" text input if "Others" is deselected
@@ -2419,7 +2416,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                             });
                           }
                         } else {
-                          // Selecting - add to end to preserve selection order
+                          // Selecting - add to array
+                          // TEMPORARILY COMMENTED OUT - Order preservation logic
                           // Handle "None" option - mutual exclusivity
                           if (isNoneOption) {
                             // If "None" is selected, clear all other selections
@@ -2459,12 +2457,12 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                               showError(`Maximum ${maxSelections} selection${maxSelections > 1 ? 's' : ''} allowed`);
                               return;
                             }
-                            // Add to end to preserve selection order (order in which options were first selected)
-                            // If option was previously selected and deselected, it goes to the end (newest selection)
+                            // Add to array
+                            // TEMPORARILY COMMENTED OUT - Order preservation logic
                             currentAnswers.push(optionValue);
                           }
                         }
-                        // The array order now represents the order in which options were selected
+                        // TEMPORARILY COMMENTED OUT - Order tracking comment
                         handleResponseChange(currentQuestion.id, currentAnswers);
                       } else {
                         // Single selection
