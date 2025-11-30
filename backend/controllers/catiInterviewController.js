@@ -728,6 +728,20 @@ const completeCatiInterview = async (req, res) => {
       };
       await surveyResponse.save();
       
+      // Check for auto-rejection conditions
+      const { checkAutoRejection, applyAutoRejection } = require('../utils/autoRejectionHelper');
+      try {
+        const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
+        if (rejectionInfo) {
+          await applyAutoRejection(surveyResponse, rejectionInfo);
+          // Refresh the response to get updated status
+          await surveyResponse.populate('survey');
+        }
+      } catch (autoRejectError) {
+        console.error('Error checking auto-rejection:', autoRejectError);
+        // Continue even if auto-rejection check fails
+      }
+      
       // Add response to QC batch if not already in one
       if (!surveyResponse.qcBatch) {
         try {
@@ -798,6 +812,20 @@ const completeCatiInterview = async (req, res) => {
       }
     }
     
+    // Check for auto-rejection conditions
+    const { checkAutoRejection, applyAutoRejection } = require('../utils/autoRejectionHelper');
+    try {
+      const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
+      if (rejectionInfo) {
+        await applyAutoRejection(surveyResponse, rejectionInfo);
+        // Refresh the response to get updated status
+        await surveyResponse.populate('survey');
+      }
+    } catch (autoRejectError) {
+      console.error('Error checking auto-rejection:', autoRejectError);
+      // Continue even if auto-rejection check fails
+    }
+    
     // Add response to QC batch instead of queuing immediately
     try {
       const { addResponseToBatch } = require('../utils/qcBatchHelper');
@@ -834,7 +862,9 @@ const completeCatiInterview = async (req, res) => {
       message: 'CATI interview completed and submitted for approval',
       data: {
         responseId: surveyResponse.responseId,
-        queueId: queueEntry._id
+        queueId: queueEntry._id,
+        // Always show Pending_Approval to interviewer, even if auto-rejected
+        status: 'Pending_Approval'
       }
     });
 

@@ -485,7 +485,22 @@ const completeInterview = async (req, res) => {
 
     await surveyResponse.save();
     
+    // Check for auto-rejection conditions
+    const { checkAutoRejection, applyAutoRejection } = require('../utils/autoRejectionHelper');
+    try {
+      const rejectionInfo = await checkAutoRejection(surveyResponse, responses, session.survey._id);
+      if (rejectionInfo) {
+        await applyAutoRejection(surveyResponse, rejectionInfo);
+        // Refresh the response to get updated status
+        await surveyResponse.populate('survey');
+      }
+    } catch (autoRejectError) {
+      console.error('Error checking auto-rejection:', autoRejectError);
+      // Continue even if auto-rejection check fails
+    }
+    
     // Add response to QC batch instead of queuing immediately
+    // Note: Even if auto-rejected, we still add to batch for tracking
     try {
       await addResponseToBatch(surveyResponse._id, session.survey._id);
     } catch (batchError) {
@@ -505,7 +520,8 @@ const completeInterview = async (req, res) => {
         mongoId: surveyResponse._id, // Keep MongoDB ID for internal reference
         completionPercentage: surveyResponse.completionPercentage,
         totalTimeSpent: surveyResponse.totalTimeSpent,
-        status: surveyResponse.status,
+        // Always show Pending_Approval to interviewer, even if auto-rejected
+        status: 'Pending_Approval',
         summary: surveyResponse.getResponseSummary()
       }
     });
