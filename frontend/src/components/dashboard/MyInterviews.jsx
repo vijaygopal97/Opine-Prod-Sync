@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
+import { getMainText } from '../../utils/translations';
 import { 
   Search,
   Filter,
@@ -650,15 +651,21 @@ const MyInterviews = () => {
     const responseValue = targetResponse.response;
     const conditionValue = condition.value;
 
+    // Helper function to get main text (without translation) for comparison
+    const getComparisonValue = (val) => {
+      if (val === null || val === undefined) return String(val || '');
+      return getMainText(String(val)).toLowerCase().trim();
+    };
+
     switch (condition.operator) {
       case 'equals':
-        return responseValue === conditionValue;
+        return getComparisonValue(responseValue) === getComparisonValue(conditionValue);
       case 'not_equals':
-        return responseValue !== conditionValue;
+        return getComparisonValue(responseValue) !== getComparisonValue(conditionValue);
       case 'contains':
-        return responseValue.toString().toLowerCase().includes(conditionValue.toString().toLowerCase());
+        return getComparisonValue(responseValue).includes(getComparisonValue(conditionValue));
       case 'not_contains':
-        return !responseValue.toString().toLowerCase().includes(conditionValue.toString().toLowerCase());
+        return !getComparisonValue(responseValue).includes(getComparisonValue(conditionValue));
       case 'greater_than':
         return parseFloat(responseValue) > parseFloat(conditionValue);
       case 'less_than':
@@ -668,9 +675,9 @@ const MyInterviews = () => {
       case 'is_not_empty':
         return responseValue && responseValue.toString().trim() !== '';
       case 'is_selected':
-        return responseValue === conditionValue;
+        return getComparisonValue(responseValue) === getComparisonValue(conditionValue);
       case 'is_not_selected':
-        return responseValue !== conditionValue;
+        return getComparisonValue(responseValue) !== getComparisonValue(conditionValue);
       default:
         return false;
     }

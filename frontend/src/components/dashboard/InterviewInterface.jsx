@@ -14,6 +14,7 @@ import {
 import { useToast } from '../../contexts/ToastContext';
 import { surveyResponseAPI, catiInterviewAPI, pollingStationAPI } from '../../services/api';
 import { getApiUrl } from '../../utils/config';
+import { parseTranslation, renderWithTranslation, getMainText } from '../../utils/translations';
 
 const InterviewInterface = ({ survey, onClose, onComplete }) => {
   const { showSuccess, showError } = useToast();
@@ -50,6 +51,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
   const [questionStartTime, setQuestionStartTime] = useState(null);
   const timerRef = useRef(null);
   const questionTimerRef = useRef(null);
+  const responsesRef = useRef(responses);
+  const allQuestionsRef = useRef([]);
   
   // Session state
   const [sessionData, setSessionData] = useState(null);
@@ -819,7 +822,9 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
   // Helper function to check if an option is "Others"
   const isOthersOption = (optText) => {
     if (!optText) return false;
-    const normalized = optText.toLowerCase().trim();
+    // Strip translations before checking
+    const mainText = getMainText(String(optText));
+    const normalized = mainText.toLowerCase().trim();
     return normalized === 'other' || 
            normalized === 'others' || 
            normalized === 'others (specify)';
@@ -998,8 +1003,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     return !hasResponseContent(response);
   };
 
-  // Use ref to access latest responses without causing dependency cycle
-  const responsesRef = useRef(responses);
+  // Update responsesRef when responses change
   useEffect(() => {
     responsesRef.current = responses;
   }, [responses]);
@@ -1017,20 +1021,72 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         return false;
       }
 
+      // Find the target question to get its options for proper comparison
+      const targetQuestion = allQuestionsRef.current.find(q => q.id === condition.questionId);
+      
+      // Helper function to get main text (without translation) for comparison
+      const getComparisonValue = (val) => {
+        if (val === null || val === undefined) return String(val || '').toLowerCase().trim();
+        const strVal = String(val);
+        
+        // If we have the target question and it has options, try to match the value to an option
+        if (targetQuestion && targetQuestion.options && Array.isArray(targetQuestion.options)) {
+          // Check if val matches any option.value or option.text (after stripping translations)
+          for (const option of targetQuestion.options) {
+            const optionValue = typeof option === 'object' ? (option.value || option.text) : option;
+            const optionText = typeof option === 'object' ? option.text : option;
+            
+            // Check if val matches option.value or option.text (with or without translations)
+            if (strVal === String(optionValue) || strVal === String(optionText)) {
+              // Return the main text of the option (without translation)
+              return getMainText(String(optionText)).toLowerCase().trim();
+            }
+            
+            // Also check if main texts match (in case translations differ)
+            if (getMainText(strVal).toLowerCase().trim() === getMainText(String(optionText)).toLowerCase().trim()) {
+              return getMainText(String(optionText)).toLowerCase().trim();
+            }
+          }
+        }
+        
+        // Fallback: just strip translations from the value itself
+        return getMainText(strVal).toLowerCase().trim();
+      };
+
+      // Get comparison values for both response and condition value
+      const responseComparison = Array.isArray(response) 
+        ? response.map(r => getComparisonValue(r))
+        : getComparisonValue(response);
+      const conditionComparison = getComparisonValue(condition.value);
+
       let met = false;
 
       switch (condition.operator) {
         case 'equals':
-          met = String(response).toLowerCase().trim() === String(condition.value).toLowerCase().trim();
+          if (Array.isArray(responseComparison)) {
+            met = responseComparison.some(r => r === conditionComparison);
+          } else {
+            met = responseComparison === conditionComparison;
+          }
           break;
         case 'not_equals':
-          met = String(response).toLowerCase() !== String(condition.value).toLowerCase();
+          if (Array.isArray(responseComparison)) {
+            met = !responseComparison.some(r => r === conditionComparison);
+          } else {
+            met = responseComparison !== conditionComparison;
+          }
           break;
         case 'contains':
-          met = String(response).toLowerCase().includes(condition.value.toLowerCase());
+          const responseStr = Array.isArray(responseComparison) 
+            ? responseComparison.join(' ') 
+            : String(responseComparison);
+          met = responseStr.includes(conditionComparison);
           break;
         case 'not_contains':
-          met = !String(response).toLowerCase().includes(condition.value.toLowerCase());
+          const responseStr2 = Array.isArray(responseComparison) 
+            ? responseComparison.join(' ') 
+            : String(responseComparison);
+          met = !responseStr2.includes(conditionComparison);
           break;
         case 'greater_than':
           met = parseFloat(response) > parseFloat(condition.value);
@@ -1045,17 +1101,17 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
           met = hasResponseContent(response);
           break;
         case 'is_selected':
-          if (Array.isArray(response)) {
-            met = response.some(r => String(r).toLowerCase() === String(condition.value).toLowerCase());
+          if (Array.isArray(responseComparison)) {
+            met = responseComparison.some(r => r === conditionComparison);
           } else {
-            met = String(response).toLowerCase() === String(condition.value).toLowerCase();
+            met = responseComparison === conditionComparison;
           }
           break;
         case 'is_not_selected':
-          if (Array.isArray(response)) {
-            met = !response.some(r => String(r).toLowerCase() === String(condition.value).toLowerCase());
+          if (Array.isArray(responseComparison)) {
+            met = !responseComparison.some(r => r === conditionComparison);
           } else {
-            met = String(response).toLowerCase() !== String(condition.value).toLowerCase();
+            met = responseComparison !== conditionComparison;
           }
           break;
         default:
@@ -1090,8 +1146,9 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
   }, [responses]);
 
   const visibleQuestions = useMemo(() => {
-    // Update ref before evaluation to ensure latest responses
+    // Update refs before evaluation to ensure latest data
     responsesRef.current = responses;
+    allQuestionsRef.current = allQuestions;
     
     const visible = allQuestions.filter(question => {
       return evaluateConditions(question);
@@ -2082,8 +2139,13 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
 
   // Helper function to check if an option should not be shuffled
   const isNonShufflableOption = (option) => {
-    const optionText = typeof option === 'object' ? (option.text || option.value || '').toLowerCase().trim() : String(option).toLowerCase().trim();
-    const optionValue = typeof option === 'object' ? (option.value || option.text || '').toLowerCase().trim() : String(option).toLowerCase().trim();
+    // Get option text and value, then strip translations
+    const rawOptionText = typeof option === 'object' ? (option.text || option.value || '') : String(option);
+    const rawOptionValue = typeof option === 'object' ? (option.value || option.text || '') : String(option);
+    
+    // Strip translations before checking
+    const optionText = getMainText(rawOptionText).toLowerCase().trim();
+    const optionValue = getMainText(rawOptionValue).toLowerCase().trim();
     
     // Check for special options that should not be shuffled
     // 1. None
@@ -2351,10 +2413,17 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         });
         const othersOptionValue = othersOption ? (typeof othersOption === 'object' ? othersOption.value || othersOption.text : othersOption) : null;
         
-        // Check if "Others" is selected
+        // Helper to normalize option values for comparison (strip translations)
+        const normalizeForComparison = (val) => {
+          if (!val) return val;
+          return getMainText(String(val)).toLowerCase().trim();
+        };
+        
+        // Check if "Others" is selected (normalize both values before comparing)
+        const normalizedOthersValue = othersOptionValue ? normalizeForComparison(othersOptionValue) : null;
         const isOthersSelected = allowMultiple 
-          ? (Array.isArray(currentResponse) && currentResponse.includes(othersOptionValue))
-          : (currentResponse === othersOptionValue);
+          ? (Array.isArray(currentResponse) && currentResponse.some(r => normalizeForComparison(r) === normalizedOthersValue))
+          : (normalizeForComparison(currentResponse) === normalizedOthersValue);
         
         return (
           <div className="space-y-4">
@@ -2369,7 +2438,9 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               const optionValue = typeof option === 'object' ? option.value || option.text : option;
               const optionText = typeof option === 'object' ? option.text : option;
               const optionId = typeof option === 'object' ? option.id : index;
-              const isNoneOption = optionText.toLowerCase().trim() === 'none';
+              // Strip translations before checking for special options
+              const mainText = getMainText(String(optionText));
+              const isNoneOption = mainText.toLowerCase().trim() === 'none';
               const isOthers = isOthersOption(optionText);
               
               // Get quota information for gender question
@@ -2511,7 +2582,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                           ? 'text-gray-400 line-through' 
                           : 'text-gray-700 group-hover:text-gray-900'
                       }`}>
-                        {optionText}
+                        {renderWithTranslation(optionText, {
+                          mainClass: '',
+                          translationClass: 'text-sm text-gray-500 italic font-normal'
+                        })}
                       </span>
                       {quotaInfo && (
                         <div className="text-sm text-gray-500 mt-1">
@@ -2565,7 +2639,12 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     onChange={(e) => handleResponseChange(currentQuestion.id, e.target.value)}
                     className="w-6 h-6 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 group-hover:border-blue-400 transition-colors"
                   />
-                  <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors">{optionText}</span>
+                  <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors">
+                    {renderWithTranslation(optionText, {
+                      mainClass: '',
+                      translationClass: 'text-sm text-gray-500 italic font-normal'
+                    })}
+                  </span>
                 </label>
               );
             })}
@@ -2602,7 +2681,12 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                   {rating}
                 </button>
                     {label && (
-                      <span className="text-xs text-gray-600 text-center max-w-[60px]">{label}</span>
+                      <span className="text-xs text-gray-600 text-center max-w-[60px]">
+                        {renderWithTranslation(label, {
+                          mainClass: '',
+                          translationClass: 'text-xs text-gray-400 italic block'
+                        })}
+                      </span>
                     )}
             </div>
                 );
@@ -2610,8 +2694,18 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
             </div>
             {(minLabel || maxLabel) && (
               <div className="flex justify-between text-sm text-gray-500 px-2">
-                <span>{minLabel}</span>
-                <span>{maxLabel}</span>
+                <span>
+                  {renderWithTranslation(minLabel, {
+                    mainClass: '',
+                    translationClass: 'text-xs text-gray-400 italic'
+                  })}
+                </span>
+                <span>
+                  {renderWithTranslation(maxLabel, {
+                    mainClass: '',
+                    translationClass: 'text-xs text-gray-400 italic'
+                  })}
+                </span>
               </div>
             )}
           </div>
@@ -2659,7 +2753,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               const optionText = typeof option === 'object' ? option.text : option;
               return (
                 <option key={index} value={optionValue}>
-                  {optionText}
+                  {parseTranslation(optionText).mainText}{parseTranslation(optionText).translation ? ` / ${parseTranslation(optionText).translation}` : ''}
                 </option>
               );
             })}
@@ -3091,7 +3185,12 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                         {hasResponse && !hasTargetAudienceError && <CheckCircle className="w-4 h-4" />}
                         {hasTargetAudienceError && <span className="text-red-600 text-lg">⚠️</span>}
                       </div>
-                      <p className="text-sm mt-2 line-clamp-2">{question.text}</p>
+                      <p className="text-sm mt-2 line-clamp-2">
+                        {renderWithTranslation(question.text, {
+                          mainClass: '',
+                          translationClass: 'text-xs text-gray-400 italic'
+                        })}
+                      </p>
                     </button>
                   );
                 })}
@@ -3168,7 +3267,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     ? 'text-red-600 border-l-4 border-red-500 pl-4' 
                     : 'text-gray-800'
                 }`}>
-                  {currentQuestion.text}
+                  {renderWithTranslation(currentQuestion.text, {
+                    mainClass: '',
+                    translationClass: 'text-xl text-gray-500 italic font-normal'
+                  })}
                   {currentQuestion.required && <span className="text-red-500 ml-2">*</span>}
                 </h2>
                 {currentQuestion.description && (

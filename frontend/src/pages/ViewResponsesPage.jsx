@@ -16,6 +16,7 @@ import {
 import { surveyResponseAPI, surveyAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import ResponseDetailsModal from '../components/dashboard/ResponseDetailsModal';
+import { getMainText } from '../utils/translations';
 
 const ViewResponsesPage = () => {
   const { surveyId } = useParams();
@@ -252,7 +253,7 @@ const ViewResponsesPage = () => {
       const displayTexts = response.map(value => {
         if (surveyQuestion && surveyQuestion.options) {
           const option = surveyQuestion.options.find(opt => opt.value === value);
-          return option ? option.text : value;
+          return option ? getMainText(option.text || option.value || value) : value;
         }
         return value;
       });
@@ -265,7 +266,7 @@ const ViewResponsesPage = () => {
       // Map to display text using question options
       if (surveyQuestion && surveyQuestion.options) {
         const option = surveyQuestion.options.find(opt => opt.value === response);
-        return option ? option.text : response.toString();
+        return option ? getMainText(option.text || option.value || response.toString()) : response.toString();
       }
       return response.toString();
     }
@@ -695,7 +696,7 @@ const ViewResponsesPage = () => {
     
     regularQuestions.forEach((question, index) => {
       const questionText = question.text || question.questionText || `Question ${index + 1}`;
-      const questionHeader = `Q${index + 1}: ${questionText}`;
+      const questionHeader = `Q${index + 1}: ${getMainText(questionText)}`;
       questionHeaders.push(questionHeader);
       
       // Check if question has "Others" option (for MCQ questions)

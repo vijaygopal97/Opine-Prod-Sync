@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { getMainText } from '../../utils/translations';
 import { 
   Search,
   Filter,
@@ -915,7 +916,7 @@ const SurveyApprovals = () => {
   };
 
   // Helper function to evaluate if a condition is met
-  const evaluateCondition = (condition, responses) => {
+  const evaluateCondition = (condition, responses, survey) => {
     if (!condition.questionId || !condition.operator || condition.value === undefined || condition.value === '__NOVALUE__') {
       return false;
     }
@@ -933,37 +934,112 @@ const SurveyApprovals = () => {
     const responseValue = targetResponse.response;
     const conditionValue = condition.value;
 
+    // Find the target question to get its options for proper comparison
+    const targetQuestion = findQuestionById(condition.questionId, survey);
+
+    // Helper function to get main text (without translation) for comparison
+    const getComparisonValue = (val) => {
+      if (val === null || val === undefined) return String(val || '').toLowerCase().trim();
+      const strVal = String(val);
+      
+      // If we have the target question and it has options, try to match the value to an option
+      if (targetQuestion && targetQuestion.options && Array.isArray(targetQuestion.options)) {
+        // Check if val matches any option.value or option.text (after stripping translations)
+        for (const option of targetQuestion.options) {
+          const optionValue = typeof option === 'object' ? (option.value || option.text) : option;
+          const optionText = typeof option === 'object' ? option.text : option;
+          
+          // Check if val matches option.value or option.text (with or without translations)
+          if (strVal === String(optionValue) || strVal === String(optionText)) {
+            // Return the main text of the option (without translation)
+            return getMainText(String(optionText)).toLowerCase().trim();
+          }
+          
+          // Also check if main texts match (in case translations differ)
+          if (getMainText(strVal).toLowerCase().trim() === getMainText(String(optionText)).toLowerCase().trim()) {
+            return getMainText(String(optionText)).toLowerCase().trim();
+          }
+        }
+      }
+      
+      // Fallback: just strip translations from the value itself
+      return getMainText(strVal).toLowerCase().trim();
+    };
+
+    // Get comparison values for both response and condition value
+    // Handle arrays properly
+    const responseComparison = Array.isArray(responseValue) 
+      ? responseValue.map(r => getComparisonValue(r))
+      : getComparisonValue(responseValue);
+    const conditionComparison = getComparisonValue(conditionValue);
+
+    let met = false;
+
     switch (condition.operator) {
       case 'equals':
-        return responseValue.toString().toLowerCase() === conditionValue.toString().toLowerCase();
+        if (Array.isArray(responseComparison)) {
+          met = responseComparison.some(r => r === conditionComparison);
+        } else {
+          met = responseComparison === conditionComparison;
+        }
+        break;
       case 'not_equals':
-        return responseValue.toString().toLowerCase() !== conditionValue.toString().toLowerCase();
+        if (Array.isArray(responseComparison)) {
+          met = !responseComparison.some(r => r === conditionComparison);
+        } else {
+          met = responseComparison !== conditionComparison;
+        }
+        break;
       case 'contains':
-        return responseValue.toString().toLowerCase().includes(conditionValue.toString().toLowerCase());
+        const responseStr = Array.isArray(responseComparison) 
+          ? responseComparison.join(' ') 
+          : String(responseComparison);
+        met = responseStr.includes(conditionComparison);
+        break;
       case 'not_contains':
-        return !responseValue.toString().toLowerCase().includes(conditionValue.toString().toLowerCase());
+        const responseStr2 = Array.isArray(responseComparison) 
+          ? responseComparison.join(' ') 
+          : String(responseComparison);
+        met = !responseStr2.includes(conditionComparison);
+        break;
       case 'greater_than':
-        return parseFloat(responseValue) > parseFloat(conditionValue);
+        met = parseFloat(responseValue) > parseFloat(conditionValue);
+        break;
       case 'less_than':
-        return parseFloat(responseValue) < parseFloat(conditionValue);
+        met = parseFloat(responseValue) < parseFloat(conditionValue);
+        break;
       case 'is_empty':
-        return !responseValue || responseValue.toString().trim() === '';
+        met = !responseValue || (Array.isArray(responseValue) ? responseValue.length === 0 : responseValue.toString().trim() === '');
+        break;
       case 'is_not_empty':
-        return responseValue && responseValue.toString().trim() !== '';
+        met = responseValue && (Array.isArray(responseValue) ? responseValue.length > 0 : responseValue.toString().trim() !== '');
+        break;
       case 'is_selected':
-        return responseValue === conditionValue;
+        if (Array.isArray(responseComparison)) {
+          met = responseComparison.some(r => r === conditionComparison);
+        } else {
+          met = responseComparison === conditionComparison;
+        }
+        break;
       case 'is_not_selected':
-        return responseValue !== conditionValue;
+        if (Array.isArray(responseComparison)) {
+          met = !responseComparison.some(r => r === conditionComparison);
+        } else {
+          met = responseComparison !== conditionComparison;
+        }
+        break;
       default:
-        return false;
+        met = false;
     }
+
+    return met;
   };
 
   // Helper function to check if all conditions are met
-  const areConditionsMet = (conditions, responses) => {
+  const areConditionsMet = (conditions, responses, survey) => {
     if (!conditions || conditions.length === 0) return true;
     
-    return conditions.every(condition => evaluateCondition(condition, responses));
+    return conditions.every(condition => evaluateCondition(condition, responses, survey));
   };
 
   // Helper function to calculate effective questions (only questions that were actually shown)
@@ -978,7 +1054,7 @@ const SurveyApprovals = () => {
       
       if (hasConditions) {
         // Check if conditions were met
-        const conditionsMet = areConditionsMet(surveyQuestion.conditions, responses);
+        const conditionsMet = areConditionsMet(surveyQuestion.conditions, responses, survey);
         
         // If conditions were not met, this question was never shown
         if (!conditionsMet) {
@@ -2656,7 +2732,7 @@ const SurveyApprovals = () => {
                       // Find the corresponding question in the survey to get conditional logic
                       const surveyQuestion = findQuestionByText(response.questionText, selectedInterview.survey);
                       const hasConditions = surveyQuestion?.conditions && surveyQuestion.conditions.length > 0;
-                      const conditionsMet = hasConditions ? areConditionsMet(surveyQuestion.conditions, selectedInterview.responses) : true;
+                      const conditionsMet = hasConditions ? areConditionsMet(surveyQuestion.conditions, selectedInterview.responses, selectedInterview.survey) : true;
                       
                       return (
                         <div key={index} className="border border-gray-200 rounded-lg p-4">

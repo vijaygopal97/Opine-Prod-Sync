@@ -36,18 +36,32 @@ const SurveyResponse = ({ survey, onResponseChange, initialResponses = {} }) => 
 
       let met = false;
 
+      // Import getMainText for comparison (strip translations)
+      const getMainText = (text) => {
+        if (!text || typeof text !== 'string') return text || '';
+        const translationRegex = /^(.+?)\s*\{([^}]+)\}\s*$/;
+        const match = text.match(translationRegex);
+        return match ? match[1].trim() : text.trim();
+      };
+
+      // Helper function to get main text (without translation) for comparison
+      const getComparisonValue = (val) => {
+        if (val === null || val === undefined) return val;
+        return getMainText(String(val)).toLowerCase().trim();
+      };
+
       switch (condition.operator) {
         case 'equals':
-          met = response === condition.value;
+          met = getComparisonValue(response) === getComparisonValue(condition.value);
           break;
         case 'not_equals':
-          met = response !== condition.value;
+          met = getComparisonValue(response) !== getComparisonValue(condition.value);
           break;
         case 'contains':
-          met = String(response).toLowerCase().includes(condition.value.toLowerCase());
+          met = getComparisonValue(response).includes(getComparisonValue(condition.value));
           break;
         case 'not_contains':
-          met = !String(response).toLowerCase().includes(condition.value.toLowerCase());
+          met = !getComparisonValue(response).includes(getComparisonValue(condition.value));
           break;
         case 'greater_than':
           met = parseFloat(response) > parseFloat(condition.value);
@@ -63,16 +77,16 @@ const SurveyResponse = ({ survey, onResponseChange, initialResponses = {} }) => 
           break;
         case 'is_selected':
           if (Array.isArray(response)) {
-            met = response.includes(condition.value);
+            met = response.some(r => getComparisonValue(r) === getComparisonValue(condition.value));
           } else {
-            met = response === condition.value;
+            met = getComparisonValue(response) === getComparisonValue(condition.value);
           }
           break;
         case 'is_not_selected':
           if (Array.isArray(response)) {
-            met = !response.includes(condition.value);
+            met = !response.some(r => getComparisonValue(r) === getComparisonValue(condition.value));
           } else {
-            met = response !== condition.value;
+            met = getComparisonValue(response) !== getComparisonValue(condition.value);
           }
           break;
         default:

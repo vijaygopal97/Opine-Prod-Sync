@@ -4,6 +4,7 @@ import { surveyResponseAPI, catiAPI } from '../../services/api';
 import api from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import assemblyConstituencies from '../../data/assemblyConstituencies.json';
+import { renderWithTranslationProfessional, parseTranslation, getMainText } from '../../utils/translations';
 
 const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }) => {
   const [showRejectForm, setShowRejectForm] = useState(false);
@@ -352,7 +353,11 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
         
         if (surveyQuestion && surveyQuestion.options) {
           const option = surveyQuestion.options.find(opt => opt.value === value);
-          return option ? option.text : value;
+          if (option) {
+            const optionText = option.text || option.value || value;
+            const parsed = parseTranslation(optionText);
+            return parsed.translation ? `${parsed.mainText} / ${parsed.translation}` : parsed.mainText;
+          }
         }
         return value;
       });
@@ -374,7 +379,9 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
         const min = scale.min || 1;
         const label = labels[response - min];
         if (label) {
-          return `${response} (${label})`;
+          const parsed = parseTranslation(label);
+          const labelText = parsed.translation ? `${parsed.mainText} / ${parsed.translation}` : parsed.mainText;
+          return `${response} (${labelText})`;
         }
         return response.toString();
       }
@@ -382,7 +389,12 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
       // Map to display text using question options
       if (surveyQuestion && surveyQuestion.options) {
         const option = surveyQuestion.options.find(opt => opt.value === response);
-        return option ? option.text : response.toString();
+        if (option) {
+          const optionText = option.text || option.value || response.toString();
+          const parsed = parseTranslation(optionText);
+          return parsed.translation ? `${parsed.mainText} / ${parsed.translation}` : parsed.mainText;
+        }
+        return response.toString();
       }
       return response.toString();
     }
@@ -487,15 +499,21 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
     const responseValue = targetResponse.response;
     const conditionValue = condition.value;
 
+    // Helper function to get main text (without translation) for comparison
+    const getComparisonValue = (val) => {
+      if (val === null || val === undefined) return String(val || '');
+      return getMainText(String(val)).toLowerCase().trim();
+    };
+
     switch (condition.operator) {
       case 'equals':
-        return responseValue.toString().toLowerCase() === conditionValue.toString().toLowerCase();
+        return getComparisonValue(responseValue) === getComparisonValue(conditionValue);
       case 'not_equals':
-        return responseValue.toString().toLowerCase() !== conditionValue.toString().toLowerCase();
+        return getComparisonValue(responseValue) !== getComparisonValue(conditionValue);
       case 'contains':
-        return responseValue.toString().toLowerCase().includes(conditionValue.toString().toLowerCase());
+        return getComparisonValue(responseValue).includes(getComparisonValue(conditionValue));
       case 'not_contains':
-        return !responseValue.toString().toLowerCase().includes(conditionValue.toString().toLowerCase());
+        return !getComparisonValue(responseValue).includes(getComparisonValue(conditionValue));
       case 'greater_than':
         return parseFloat(responseValue) > parseFloat(conditionValue);
       case 'less_than':
@@ -505,9 +523,9 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
       case 'is_not_empty':
         return responseValue && responseValue.toString().trim() !== '';
       case 'is_selected':
-        return responseValue === conditionValue;
+        return getComparisonValue(responseValue) === getComparisonValue(conditionValue);
       case 'is_not_selected':
-        return responseValue !== conditionValue;
+        return getComparisonValue(responseValue) !== getComparisonValue(conditionValue);
       default:
         return false;
     }
@@ -1146,7 +1164,10 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
                               <h4 className="font-medium text-gray-900 mb-1">
-                                Q{index + 1}: {responseItem.questionText || 'Question'}
+                                Q{index + 1}: {renderWithTranslationProfessional(responseItem.questionText || 'Question', {
+                                  mainClass: 'text-base font-medium text-gray-900',
+                                  translationClass: 'text-sm text-gray-500 italic mt-1'
+                                })}
                               </h4>
                             {responseItem.questionDescription && (
                               <p className="text-sm text-gray-600 mb-2">
@@ -1227,7 +1248,10 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <h4 className="font-medium text-red-900 mb-1">
-                              {responseItem.questionText || 'Question (Error)'}
+                              {renderWithTranslationProfessional(responseItem.questionText || 'Question (Error)', {
+                                mainClass: 'text-base font-medium text-red-900',
+                                translationClass: 'text-sm text-red-500 italic mt-1'
+                              })}
                             </h4>
                           </div>
                           <div className="flex items-center space-x-2 ml-4">
