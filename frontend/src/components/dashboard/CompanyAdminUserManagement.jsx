@@ -150,9 +150,46 @@ const CompanyAdminUserManagement = () => {
   };
 
   // Handle user actions
-  const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setShowEditUser(true);
+  const handleEditUser = async (user) => {
+    // For project managers, fetch full user data with populated assignedTeamMembers
+    if (user.userType === 'project_manager') {
+      try {
+        setLoading(true);
+        // Fetch all project managers to get the one with populated assignedTeamMembers
+        const response = await authAPI.getCompanyUsers({
+          page: 1,
+          limit: 1000, // Get all project managers
+          userType: 'project_manager'
+        });
+        
+        if (response.success && response.data.users && response.data.users.length > 0) {
+          // Find the exact user by ID
+          const fullUser = response.data.users.find(u => u._id === user._id);
+          if (fullUser) {
+            setSelectedUser(fullUser);
+            setShowEditUser(true);
+          } else {
+            // Fallback to using the user from list
+            setSelectedUser(user);
+            setShowEditUser(true);
+          }
+        } else {
+          // Fallback to using the user from list
+          setSelectedUser(user);
+          setShowEditUser(true);
+        }
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+        // Fallback to using the user from list
+        setSelectedUser(user);
+        setShowEditUser(true);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setSelectedUser(user);
+      setShowEditUser(true);
+    }
   };
 
   const handleViewInterviewer = async (user) => {

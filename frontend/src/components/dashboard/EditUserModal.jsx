@@ -65,6 +65,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
 
   useEffect(() => {
     if (user) {
+      
       // Initialize form data with user data
       setFormData({
         firstName: user.firstName || '',
@@ -95,22 +96,68 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
       });
 
       // Initialize team member assignments for project managers
-      if (user.userType === 'project_manager' && user.assignedTeamMembers) {
-        const interviewerIds = user.assignedTeamMembers
-          .filter(member => member.userType === 'interviewer')
-          .map(member => typeof member.user === 'object' ? member.user._id : member.user);
-        const qualityAgentIds = user.assignedTeamMembers
-          .filter(member => member.userType === 'quality_agent')
-          .map(member => typeof member.user === 'object' ? member.user._id : member.user);
-        
-        setSelectedInterviewers(interviewerIds);
-        setSelectedQualityAgents(qualityAgentIds);
-        loadTeamMembers();
-      } else if (user.userType === 'project_manager') {
+      if (user.userType === 'project_manager') {
+        // Reset selections first
+        setSelectedInterviewers([]);
+        setSelectedQualityAgents([]);
+        // Load team members - selections will be set in a separate useEffect
         loadTeamMembers();
       }
     }
   }, [user]);
+
+  // Separate useEffect to set selected team members after they're loaded
+  useEffect(() => {
+    // Only run when user is a project manager, loading is complete, and we have the user data
+    if (user && user.userType === 'project_manager' && !loadingTeamMembers) {
+      // Set selected interviewers and quality agents after team members are loaded
+      if (user.assignedTeamMembers && Array.isArray(user.assignedTeamMembers) && user.assignedTeamMembers.length > 0) {
+        const interviewerIds = user.assignedTeamMembers
+          .filter(member => member.userType === 'interviewer')
+          .map(member => {
+            // Handle both populated and non-populated cases
+            if (member.user) {
+              // If user is populated (object), get _id
+              if (typeof member.user === 'object' && member.user !== null && member.user._id) {
+                return member.user._id.toString();
+              }
+              // If user is a string (ObjectId), use it directly
+              if (typeof member.user === 'string') {
+                return member.user;
+              }
+            }
+            return null;
+          })
+          .filter(id => id !== null);
+        
+        const qualityAgentIds = user.assignedTeamMembers
+          .filter(member => member.userType === 'quality_agent')
+          .map(member => {
+            // Handle both populated and non-populated cases
+            if (member.user) {
+              // If user is populated (object), get _id
+              if (typeof member.user === 'object' && member.user !== null && member.user._id) {
+                return member.user._id.toString();
+              }
+              // If user is a string (ObjectId), use it directly
+              if (typeof member.user === 'string') {
+                return member.user;
+              }
+            }
+            return null;
+          })
+          .filter(id => id !== null);
+        
+        // Always update selections, even if empty (to clear previous selections)
+        setSelectedInterviewers(interviewerIds);
+        setSelectedQualityAgents(qualityAgentIds);
+      } else {
+        // If no assignedTeamMembers, clear selections
+        setSelectedInterviewers([]);
+        setSelectedQualityAgents([]);
+      }
+    }
+  }, [user, availableInterviewers, availableQualityAgents, loadingTeamMembers]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

@@ -1398,6 +1398,51 @@ exports.registerCompanyUser = async (req, res) => {
       userData.canSelectMode = canSelectMode || false;
     }
 
+    // Add assignedTeamMembers for project managers
+    if (userType === 'project_manager' && assignedTeamMembers && Array.isArray(assignedTeamMembers)) {
+      // Validate assigned team members
+      for (const assignment of assignedTeamMembers) {
+        if (!assignment.user || !assignment.userType) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each assigned team member must have a user ID and userType'
+          });
+        }
+
+        // Validate userType
+        if (!['interviewer', 'quality_agent'].includes(assignment.userType)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid userType for assigned team member. Must be interviewer or quality_agent'
+          });
+        }
+
+        // Check if the assigned user exists and belongs to the same company
+        const assignedUser = await User.findById(assignment.user);
+        if (!assignedUser) {
+          return res.status(400).json({
+            success: false,
+            message: `Assigned ${assignment.userType} with ID ${assignment.user} not found`
+          });
+        }
+
+        if (assignedUser.company.toString() !== currentUser.company._id.toString()) {
+          return res.status(400).json({
+            success: false,
+            message: `Assigned ${assignment.userType} must belong to the same company`
+          });
+        }
+
+        if (assignedUser.userType !== assignment.userType) {
+          return res.status(400).json({
+            success: false,
+            message: `User type mismatch for assigned ${assignment.userType}`
+          });
+        }
+      }
+      userData.assignedTeamMembers = assignedTeamMembers;
+    }
+
     // Generate memberId for interviewers and quality agents
     if (userType === 'interviewer' || userType === 'quality_agent') {
       try {
@@ -1413,6 +1458,9 @@ exports.registerCompanyUser = async (req, res) => {
 
     // Create user
     const user = await User.create(userData);
+
+    // Populate assignedTeamMembers for response
+    await user.populate('assignedTeamMembers.user', 'firstName lastName email memberId userType');
 
     // Generate token
     const token = generateToken(user._id);
@@ -1431,6 +1479,7 @@ exports.registerCompanyUser = async (req, res) => {
       status: user.status,
       isEmailVerified: user.isEmailVerified,
       isPhoneVerified: user.isPhoneVerified,
+      assignedTeamMembers: user.assignedTeamMembers, // Include assignedTeamMembers in response
       createdAt: user.createdAt
     };
 
