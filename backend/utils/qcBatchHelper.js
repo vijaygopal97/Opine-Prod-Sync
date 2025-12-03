@@ -110,11 +110,13 @@ const addResponseToBatch = async (responseId, surveyId, interviewerId) => {
       batch.totalResponses = batch.responses.length;
       await batch.save();
       
-      // Update response with batch reference
-      await SurveyResponse.findByIdAndUpdate(responseId, {
-        qcBatch: batch._id,
-        isSampleResponse: false
-      });
+      // Update response with batch reference - CRITICAL: Use native MongoDB to preserve setNumber
+      const mongoose = require('mongoose');
+      const collection = mongoose.connection.collection('surveyresponses');
+      await collection.updateOne(
+        { _id: new mongoose.Types.ObjectId(responseId) },
+        { $set: { qcBatch: batch._id, isSampleResponse: false } }
+      );
       
       console.log(`✅ Added response ${responseId} to batch ${batch._id} (${batch.totalResponses}/100)`);
       

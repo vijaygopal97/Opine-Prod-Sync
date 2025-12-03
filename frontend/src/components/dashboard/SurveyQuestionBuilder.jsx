@@ -47,11 +47,6 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
   const surveyId = surveyData?._id || surveyData?.id;
   const isSpecialSurvey = surveyId === '68fd1915d41841da463f0d46';
   
-  // Debug log to verify survey detection
-  if (surveyId) {
-    console.log('🔍 SurveyQuestionBuilder - Survey ID:', surveyId, 'isSpecialSurvey:', isSpecialSurvey);
-  }
-  
   const [sections, setSections] = useState(() => {
     if (initialData && initialData.length > 0) {
       // For the special survey, don't add fixed questions
@@ -110,15 +105,6 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
           const preservedSettings = question.settings && typeof question.settings === 'object' 
             ? { ...question.settings } 
             : {};
-          
-          // Debug logging for settings loading
-          if (question.type === 'multiple_choice' && (preservedSettings.allowMultiple || preservedSettings.maxSelections)) {
-            console.log('🔍 Loading settings for question:', {
-              questionId: question.id,
-              questionText: question.text,
-              settings: preservedSettings
-            });
-          }
           
           // Ensure question has questionNumber (auto-generate if missing)
           const questionNumber = question.questionNumber || generateAutoQuestionNumber(sectionIndex, questionIndex);
@@ -337,16 +323,6 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
         settings: mergedSettings
       };
       
-      // Debug logging for settings updates
-      if (updates.settings && (updates.settings.allowMultiple !== undefined || updates.settings.maxSelections !== undefined)) {
-        console.log('🔍 Updating question settings:', {
-          questionId: updatedSections[sectionIndex].questions[questionIndex].id,
-          questionText: updatedSections[sectionIndex].questions[questionIndex].text,
-          oldSettings: currentSettings,
-          newSettings: mergedSettings,
-          updates: updates.settings
-        });
-      }
       
       // Update parent component for any changes (not just conditions)
       setTimeout(() => {

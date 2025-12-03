@@ -477,6 +477,7 @@ const completeInterview = async (req, res) => {
       selectedPollingStation: metadata?.selectedPollingStation || null,
       location: metadata?.location || null,
       qualityMetrics,
+      setNumber: metadata?.setNumber || null, // Save set number for CATI interviews
       metadata: {
         ...session.metadata,
         ...metadata
@@ -540,16 +541,17 @@ const completeInterview = async (req, res) => {
   }
 };
 
-// Abandon interview
+// Abandon interview - now saves responses if at least 1 question is answered (excluding AC/Polling Station)
 const abandonInterview = async (req, res) => {
   try {
     const { sessionId } = req.params;
+    const { responses, metadata } = req.body; // Accept responses and metadata
     const interviewerId = req.user.id;
 
     const session = await InterviewSession.findOne({
       sessionId,
       interviewer: interviewerId
-    });
+    }).populate('survey');
 
     if (!session) {
       return res.status(404).json({
@@ -558,13 +560,103 @@ const abandonInterview = async (req, res) => {
       });
     }
 
-    session.abandonSession();
-    await session.save();
+    // Check if we have responses and if at least 1 question is answered (excluding AC/Polling Station)
+    let shouldSaveResponse = false;
+    let validResponses = [];
+    
+    if (responses && Array.isArray(responses) && responses.length > 0) {
+      // Filter out AC selection and Polling Station questions
+      validResponses = responses.filter(r => {
+        const questionId = r.questionId || '';
+        const questionText = (r.questionText || '').toLowerCase();
+        
+        // Exclude AC selection and Polling Station questions
+        const isACSelection = questionId === 'ac-selection' || 
+                             questionText.includes('assembly constituency') ||
+                             questionText.includes('select assembly constituency');
+        const isPollingStation = questionId === 'polling-station-selection' ||
+                                questionText.includes('polling station') ||
+                                questionText.includes('select polling station');
+        
+        return !isACSelection && !isPollingStation;
+      });
+      
+      // Check if at least 1 valid question has a response
+      const hasValidResponse = validResponses.some(r => {
+        const response = r.response;
+        if (response === null || response === undefined) return false;
+        if (typeof response === 'string' && response.trim() === '') return false;
+        if (Array.isArray(response) && response.length === 0) return false;
+        return true;
+      });
+      
+      shouldSaveResponse = hasValidResponse;
+    }
 
-    res.status(200).json({
-      success: true,
-      message: 'Interview abandoned'
-    });
+    // If we should save, create a terminated response
+    if (shouldSaveResponse) {
+      const endTime = new Date();
+      const totalTimeSpent = Math.round((endTime - session.startTime) / 1000);
+      
+      // Extract audioRecording from metadata if available
+      const audioRecording = metadata?.audioRecording || {};
+      
+      // Create terminated survey response
+      const surveyResponse = await SurveyResponse.createCompleteResponse({
+        survey: session.survey._id,
+        interviewer: session.interviewer,
+        sessionId: session.sessionId,
+        startTime: session.startTime,
+        endTime,
+        responses: validResponses, // Use only valid responses (excluding AC/Polling Station)
+        interviewMode: session.interviewMode,
+        deviceInfo: session.deviceInfo,
+        audioRecording: audioRecording,
+        selectedAC: metadata?.selectedAC || null,
+        selectedPollingStation: metadata?.selectedPollingStation || null,
+        location: metadata?.location || null,
+        qualityMetrics: metadata?.qualityMetrics || {
+          averageResponseTime: 0,
+          backNavigationCount: 0,
+          dataQualityScore: 0,
+          totalPauseTime: 0,
+          totalPauses: 0
+        },
+        setNumber: metadata?.setNumber || null,
+        metadata: {
+          ...session.metadata,
+          ...metadata,
+          abandoned: true,
+          terminationReason: 'Interview abandoned by interviewer'
+        }
+      });
+      
+      // Set status to Terminated
+      surveyResponse.status = 'Terminated';
+      await surveyResponse.save();
+      
+      // Mark session as abandoned
+      session.abandonSession();
+      await session.save();
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Interview abandoned and response saved with Terminated status',
+        data: {
+          responseId: surveyResponse.responseId,
+          status: 'Terminated'
+        }
+      });
+    } else {
+      // No valid responses, just abandon session without saving
+      session.abandonSession();
+      await session.save();
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Interview abandoned (no valid responses to save)'
+      });
+    }
 
   } catch (error) {
     console.error('Error abandoning interview:', error);
@@ -2109,6 +2201,134 @@ const getNextReviewAssignment = async (req, res) => {
   }
 };
 
+// Get last CATI response set number for a survey (to alternate sets)
+const getLastCatiSetNumber = async (req, res) => {
+  console.log('🔵 getLastCatiSetNumber route handler called');
+  console.log('🔵 Request method:', req.method);
+  console.log('🔵 Request URL:', req.url);
+  console.log('🔵 Request path:', req.path);
+  console.log('🔵 Request params:', JSON.stringify(req.params));
+  try {
+    const { surveyId } = req.params;
+    console.log('🔵 Processing request for surveyId:', surveyId);
+
+    // Validate surveyId
+    if (!surveyId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Survey ID is required'
+      });
+    }
+
+    // Validate that surveyId is a valid MongoDB ObjectId
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(surveyId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid survey ID format'
+      });
+    }
+
+    // Find all available set numbers in the survey FIRST (before checking last response)
+    const survey = await Survey.findById(surveyId).select('sections');
+    
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+    
+    const availableSets = new Set();
+    
+    if (survey && survey.sections) {
+      survey.sections.forEach(section => {
+        if (section.questions) {
+          section.questions.forEach(question => {
+            if (question.setsForThisQuestion && question.setNumber !== null && question.setNumber !== undefined) {
+              availableSets.add(question.setNumber);
+            }
+          });
+        }
+      });
+    }
+    
+    const setArray = Array.from(availableSets).sort((a, b) => a - b);
+    
+    if (setArray.length === 0) {
+      // No sets defined in survey
+      return res.status(200).json({
+        success: true,
+        data: {
+          lastSetNumber: null,
+          nextSetNumber: null
+        }
+      });
+    }
+
+    // CRITICAL: Get last set number from SetData model (dedicated model for tracking sets)
+    const SetData = require('../models/SetData');
+    const lastSetData = await SetData.findOne({
+      survey: new mongoose.Types.ObjectId(surveyId),
+      interviewMode: 'cati'
+    })
+    .sort({ createdAt: -1 }) // Most recent first
+    .select('setNumber surveyResponse')
+    .lean();
+
+    if (!lastSetData || lastSetData.setNumber === null || lastSetData.setNumber === undefined) {
+      // No previous CATI response found - default to Set 1 (first set)
+      const defaultSetNumber = setArray[0]; // First set (usually Set 1)
+      console.log(`🔵 No previous SetData found - defaulting to first set: ${defaultSetNumber}`);
+      return res.status(200).json({
+        success: true,
+        data: {
+          lastSetNumber: null,
+          nextSetNumber: defaultSetNumber // Default to first available set
+        }
+      });
+    }
+
+    const lastSetNumber = Number(lastSetData.setNumber);
+    console.log(`🔵 Found last setNumber from SetData: ${lastSetNumber} (responseId: ${lastSetData.surveyResponse})`);
+    
+    // Find current set index and get next set (rotate)
+    const currentIndex = setArray.indexOf(lastSetNumber);
+    
+    if (currentIndex === -1) {
+      // Last set number not found in available sets, default to first set
+      console.warn(`⚠️  Last setNumber ${lastSetNumber} not found in available sets, defaulting to first set`);
+      const defaultSetNumber = setArray[0];
+      return res.status(200).json({
+        success: true,
+        data: {
+          lastSetNumber: lastSetNumber,
+          nextSetNumber: defaultSetNumber
+        }
+      });
+    }
+    
+    const nextIndex = (currentIndex + 1) % setArray.length;
+    const nextSetNumber = setArray[nextIndex];
+    console.log(`🔵 Rotating sets - Last: ${lastSetNumber}, Next: ${nextSetNumber} (from available sets: [${setArray.join(', ')}])`);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        lastSetNumber: lastSetNumber,
+        nextSetNumber: nextSetNumber
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get last CATI set number',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 // Release review assignment (when user abandons review)
 const releaseReviewAssignment = async (req, res) => {
   try {
@@ -3135,6 +3355,7 @@ const getInterviewerPerformanceStats = async (req, res) => {
 };
 
 module.exports = {
+  getLastCatiSetNumber,
   startInterview,
   getInterviewSession,
   updateResponse,
@@ -3157,5 +3378,6 @@ module.exports = {
   approveSurveyResponse,
   rejectSurveyResponse,
   getACPerformanceStats,
-  getInterviewerPerformanceStats
+  getInterviewerPerformanceStats,
+  getLastCatiSetNumber
 };

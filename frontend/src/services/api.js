@@ -370,7 +370,10 @@ export const surveyAPI = {
   createSurvey: async (surveyData) => {
     try {
       // Creating survey via API
-      const response = await api.post('/api/surveys', surveyData);
+      // Increase timeout to 5 minutes for large surveys with many contacts
+      const response = await api.post('/api/surveys', surveyData, {
+        timeout: 300000 // 5 minutes timeout for large payloads
+      });
       // Survey API response received
       return response.data;
     } catch (error) {
@@ -404,7 +407,10 @@ export const surveyAPI = {
   updateSurvey: async (id, surveyData) => {
     try {
       // Updating survey via API
-      const response = await api.put(`/api/surveys/${id}`, surveyData);
+      // Increase timeout to 5 minutes for large surveys with many contacts
+      const response = await api.put(`/api/surveys/${id}`, surveyData, {
+        timeout: 300000 // 5 minutes timeout for large payloads
+      });
       // Survey update API response received
       return response.data;
     } catch (error) {
@@ -769,9 +775,12 @@ export const surveyResponseAPI = {
   },
 
   // Abandon interview
-  abandonInterview: async (sessionId) => {
+  abandonInterview: async (sessionId, responses, metadata) => {
     try {
-      const response = await api.post(`/api/survey-responses/session/${sessionId}/abandon`);
+      const response = await api.post(`/api/survey-responses/session/${sessionId}/abandon`, {
+        responses,
+        metadata
+      });
       return response.data;
     } catch (error) {
       throw error;
@@ -875,6 +884,49 @@ export const surveyResponseAPI = {
         throw error;
       }
     },
+
+  // Get last CATI set number for a survey (to alternate sets)
+  getLastCatiSetNumber: async (surveyId) => {
+    try {
+      if (!surveyId) {
+        return {
+          success: false,
+          message: 'Survey ID is required',
+          error: 'Missing surveyId parameter'
+        };
+      }
+      // Use validateStatus to prevent axios from throwing on 404
+      // 404 is expected for first CATI response (no previous set number)
+      const response = await api.get(`/api/survey-responses/survey/${surveyId}/last-cati-set`, {
+        validateStatus: (status) => status < 500 // Don't throw for 4xx errors, only 5xx
+      });
+      
+      // If 404, return a success response with null data (frontend will default to Set 1)
+      if (response.status === 404) {
+        return {
+          success: true,
+          data: {
+            lastSetNumber: null,
+            nextSetNumber: null // Frontend will default to Set 1
+          }
+        };
+      }
+      
+      return response.data;
+    } catch (error) {
+      // Only catch unexpected errors (5xx or network errors)
+      // 4xx errors are handled by validateStatus above
+      return {
+        success: false,
+        message: 'Failed to get last CATI set number',
+        error: error.message || 'Unknown error',
+        data: {
+          lastSetNumber: null,
+          nextSetNumber: null // Frontend will default to Set 1
+        }
+      };
+    }
+  },
 
     // Approve survey response
     approveResponse: async (responseId) => {
@@ -1050,6 +1102,19 @@ export const qcBatchConfigAPI = {
       const response = await api.post('/api/qc-batch-config', configData);
       return response.data;
     } catch (error) {
+      throw error;
+    }
+  }
+};
+
+export const masterDataAPI = {
+  // Get MP and MLA names for an AC
+  getACData: async (acName) => {
+    try {
+      const response = await api.get(`/api/master-data/ac/${encodeURIComponent(acName)}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching AC data:', error);
       throw error;
     }
   }
@@ -1257,7 +1322,8 @@ export const catiInterviewAPI = {
         endTime,
         totalQuestions,
         answeredQuestions,
-        completionPercentage
+        completionPercentage,
+        setNumber // Save which Set was shown in this CATI interview
       });
       return response.data;
     } catch (error) {

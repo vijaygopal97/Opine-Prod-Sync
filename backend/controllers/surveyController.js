@@ -1097,6 +1097,7 @@ exports.updateSurvey = async (req, res) => {
     };
 
     // Update the survey
+    // Note: MongoDB handles large arrays efficiently, but we ensure proper indexing
     const updatedSurvey = await Survey.findByIdAndUpdate(
       surveyId,
       updateData,

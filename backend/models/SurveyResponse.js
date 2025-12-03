@@ -26,7 +26,7 @@ const surveyResponseSchema = new mongoose.Schema({
   // Response Status
   status: {
     type: String,
-    enum: ['Pending_Approval', 'Approved', 'Rejected', 'completed', 'abandoned'],
+    enum: ['Pending_Approval', 'Approved', 'Rejected', 'completed', 'abandoned', 'Terminated'],
     required: true,
     default: 'Pending_Approval'
   },
@@ -109,6 +109,16 @@ const surveyResponseSchema = new mongoose.Schema({
     type: String,
     enum: ['capi', 'cati', 'online'],
     required: true
+  },
+  
+  // Set Number (for surveys with sets - only used in CATI interviews)
+  setNumber: {
+    type: Number,
+    default: null,
+    required: false,
+    index: { sparse: true },
+    index: true,
+    sparse: true // Allow null values but still index non-null values
   },
   
   // CATI Call ID (DeepCall callId) - for linking to CatiCall record
@@ -475,7 +485,8 @@ surveyResponseSchema.statics.createCompleteResponse = async function(data) {
     metadata,
     selectedAC,
     selectedPollingStation,
-    location
+    location,
+    setNumber
   } = data;
   
   console.log('createCompleteResponse received audioRecording:', audioRecording); // Debug log
@@ -507,6 +518,7 @@ surveyResponseSchema.statics.createCompleteResponse = async function(data) {
     selectedAC: selectedAC || null,
     selectedPollingStation: selectedPollingStation || null,
     location: location || null,
+    setNumber: setNumber || null, // Save set number for CATI interviews
     totalQuestions,
     answeredQuestions,
     skippedQuestions,

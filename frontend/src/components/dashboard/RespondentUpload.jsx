@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Download, 
   Upload, 
@@ -10,7 +10,9 @@ import {
   X,
   Plus,
   UserPlus,
-  FileText
+  FileText,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { surveyAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
@@ -23,6 +25,33 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'manual'
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(contacts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedContacts = useMemo(() => {
+    return contacts.slice(startIndex, endIndex);
+  }, [contacts, startIndex, endIndex]);
+
+  // Reset to first page when contacts change significantly
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [contacts.length, totalPages, currentPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      // Scroll to top of table
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const [manualForm, setManualForm] = useState({
     name: '',
     countryCode: '+91',
@@ -36,9 +65,15 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
   });
   const [formErrors, setFormErrors] = useState({});
 
-  // Update parent when contacts change
+  // Update parent when contacts change (but only if contacts actually changed)
+  const prevContactsRef = useRef(JSON.stringify(contacts));
   useEffect(() => {
-    onUpdate(contacts);
+    // Only call onUpdate if contacts actually changed (deep comparison for arrays)
+    const currentContactsStr = JSON.stringify(contacts);
+    if (prevContactsRef.current !== currentContactsStr) {
+      prevContactsRef.current = currentContactsStr;
+      onUpdate(contacts);
+    }
   }, [contacts, onUpdate]);
 
   // Initialize from initialData only once when component mounts
@@ -579,48 +614,145 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
             <p className="text-sm text-gray-400 mt-2">Upload an Excel file to add contacts</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Country Code</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Phone</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Address</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">City</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">AC</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">PC</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">PS</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {contacts.map((contact, index) => (
-                  <tr key={index} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm text-gray-800">{contact.name || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{contact.countryCode || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-800">{contact.phone || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{contact.email || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{contact.address || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{contact.city || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{contact.ac || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{contact.pc || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{contact.ps || '-'}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleDeleteContact(index)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
-                        title="Delete contact"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
+          <>
+            {/* Pagination Controls - Top */}
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">
+                  Showing {startIndex + 1} to {Math.min(endIndex, contacts.length)} of {contacts.length} contacts
+                </span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={25}>25 per page</option>
+                  <option value={50}>50 per page</option>
+                  <option value={100}>100 per page</option>
+                  <option value={200}>200 per page</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm text-gray-600 px-3">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Next page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contacts Table */}
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">#</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Country Code</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Phone</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Address</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">City</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">AC</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">PC</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">PS</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {paginatedContacts.map((contact, index) => {
+                    const actualIndex = startIndex + index;
+                    return (
+                      <tr key={actualIndex} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-sm text-gray-500">{actualIndex + 1}</td>
+                        <td className="px-4 py-3 text-sm text-gray-800">{contact.name || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{contact.countryCode || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-800">{contact.phone || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{contact.email || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{contact.address || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{contact.city || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{contact.ac || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{contact.pc || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{contact.ps || '-'}</td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleDeleteContact(actualIndex)}
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                            title="Delete contact"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls - Bottom */}
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-600">
+                    Showing {startIndex + 1} to {Math.min(endIndex, contacts.length)} of {contacts.length} contacts
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="p-2 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Previous page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-sm text-gray-600 px-3">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title="Next page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Last
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

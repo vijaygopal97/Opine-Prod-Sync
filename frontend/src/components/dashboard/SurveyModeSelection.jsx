@@ -251,17 +251,8 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
   };
 
   const handleModeGigWorkersToggle = (mode, checked) => {
-    console.log('🔧 handleModeGigWorkersToggle called:', { mode, checked, currentModeGigWorkers: modeGigWorkers });
     const newModeGigWorkers = { ...modeGigWorkers, [mode]: checked };
-    console.log('🔧 New modeGigWorkers:', newModeGigWorkers);
     setModeGigWorkers(newModeGigWorkers);
-    console.log('🔧 Calling onUpdate with:', { 
-      mode: selectedMode, 
-      modes: selectedModes,
-      modeAllocation: modeAllocation,
-      includeGigWorkers: includeGigWorkers,
-      modeGigWorkers: newModeGigWorkers
-    });
     onUpdate({ 
       mode: selectedMode, 
       modes: selectedModes,
@@ -468,7 +459,6 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
         {/* Multi-Mode Selection and Allocation */}
         {(selectedMode === 'multi_mode' || (selectedModes.includes('capi') && selectedModes.includes('cati'))) && (
           <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-8">
-            {console.log('🔧 Configure Mode Allocation section is being rendered')}
             <div className="flex items-center space-x-3 mb-6">
               <Target className="w-6 h-6 text-purple-600" />
               <h3 className="text-lg font-semibold text-gray-900">Configure Mode Allocation</h3>
@@ -541,8 +531,6 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
                        (selectedMode === 'capi' ? ['capi'] : 
                         (selectedMode === 'cati' ? ['cati'] : [])));
                     
-                    console.log('🔧 Gig Workers Toggle - selectedMode:', selectedMode, 'selectedModes:', selectedModes, 'modesToShow:', modesToShow, 'modeGigWorkers:', modeGigWorkers);
-                    
                     return modesToShow.map((mode) => {
                       const modeInfo = mode === 'capi' ? 
                         { name: 'CAPI', color: 'blue', icon: Home } : 
@@ -560,7 +548,6 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
                               type="checkbox"
                               checked={modeGigWorkers[mode] || false}
                               onChange={(e) => {
-                                console.log('🔧 Toggle clicked for mode:', mode, 'checked:', e.target.checked);
                                 handleModeGigWorkersToggle(mode, e.target.checked);
                               }}
                               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"

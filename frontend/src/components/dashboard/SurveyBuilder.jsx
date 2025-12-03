@@ -27,6 +27,7 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [contactsModified, setContactsModified] = useState(false); // Track if respondentContacts have been modified
   const { showSuccess, showError } = useToast();
   const [surveyData, setSurveyData] = useState({
     mode: '',
@@ -92,34 +93,15 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
   // Populate form with existing data when editing
   useEffect(() => {
     if (editingSurvey) {
-      
-      console.log('🔧 Edit mode initialization, editingSurvey.modeGigWorkers:', editingSurvey.modeGigWorkers);
-      console.log('🔧 Edit mode - editingSurvey.capiInterviewers:', editingSurvey.capiInterviewers);
-      console.log('🔧 Edit mode - editingSurvey.catiInterviewers:', editingSurvey.catiInterviewers);
-      
-      // Debug the structure of the first interviewer
-      if (editingSurvey.capiInterviewers && editingSurvey.capiInterviewers.length > 0) {
-        console.log('🔧 First CAPI interviewer structure:', editingSurvey.capiInterviewers[0]);
-        console.log('🔧 CAPI interviewer.interviewer:', editingSurvey.capiInterviewers[0].interviewer);
-        console.log('🔧 CAPI interviewer.interviewer._id:', editingSurvey.capiInterviewers[0].interviewer?._id);
-      }
-      if (editingSurvey.catiInterviewers && editingSurvey.catiInterviewers.length > 0) {
-        console.log('🔧 First CATI interviewer structure:', editingSurvey.catiInterviewers[0]);
-        console.log('🔧 CATI interviewer.interviewer:', editingSurvey.catiInterviewers[0].interviewer);
-        console.log('🔧 CATI interviewer.interviewer._id:', editingSurvey.catiInterviewers[0].interviewer?._id);
-      }
+      // Reset contactsModified flag when loading survey for editing
+      setContactsModified(false);
       
       // Process interviewer data first
       const processedCapiInterviewers = editingSurvey.capiInterviewers && Array.isArray(editingSurvey.capiInterviewers) ? 
         (() => {
-          console.log('🔧 Processing capiInterviewers:', editingSurvey.capiInterviewers);
           const filtered = editingSurvey.capiInterviewers.filter(assignment => {
-            console.log('🔧 Checking assignment:', assignment);
-            console.log('🔧 assignment.interviewer:', assignment?.interviewer);
-            console.log('🔧 assignment.interviewer._id:', assignment?.interviewer?._id);
             return assignment && assignment.interviewer;
           });
-          console.log('🔧 Filtered capiInterviewers:', filtered);
           const mapped = filtered.map(assignment => ({
             id: assignment.interviewer._id || assignment.interviewer,
             firstName: assignment.interviewer.firstName || '',
@@ -144,20 +126,14 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             assignedACs: assignment.assignedACs || [],
             selectedCountry: assignment.selectedCountry || ''
           }));
-          console.log('🔧 Mapped capiInterviewers:', mapped);
           return mapped;
         })() : [];
 
       const processedCatiInterviewers = editingSurvey.catiInterviewers && Array.isArray(editingSurvey.catiInterviewers) ? 
         (() => {
-          console.log('🔧 Processing catiInterviewers:', editingSurvey.catiInterviewers);
           const filtered = editingSurvey.catiInterviewers.filter(assignment => {
-            console.log('🔧 Checking CATI assignment:', assignment);
-            console.log('🔧 CATI assignment.interviewer:', assignment?.interviewer);
-            console.log('🔧 CATI assignment.interviewer._id:', assignment?.interviewer?._id);
             return assignment && assignment.interviewer;
           });
-          console.log('🔧 Filtered catiInterviewers:', filtered);
           const mapped = filtered.map(assignment => ({
             id: assignment.interviewer._id || assignment.interviewer,
             firstName: assignment.interviewer.firstName || '',
@@ -182,15 +158,9 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             assignedACs: assignment.assignedACs || [],
             selectedCountry: assignment.selectedCountry || ''
           }));
-          console.log('🔧 Mapped catiInterviewers:', mapped);
           return mapped;
         })() : [];
 
-      console.log('🔧 Setting surveyData with processed interviewers:', {
-        capiInterviewers: processedCapiInterviewers,
-        catiInterviewers: processedCatiInterviewers
-      });
-      
       setSurveyData({
         _id: editingSurvey._id || editingSurvey.id, // Include survey ID for special survey detection
         mode: editingSurvey.mode || '',
@@ -298,12 +268,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           selectedState: editingSurvey.acAssignmentState || ''
         }
       });
-      
-      // Log the final surveyData after processing
-      console.log('🔧 Final surveyData after processing:', {
-        capiInterviewers: processedCapiInterviewers,
-        catiInterviewers: processedCatiInterviewers
-      });
     }
   }, [editingSurvey]);
 
@@ -405,34 +369,11 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
   };
 
   const updateSurveyData = useCallback((step, data) => {
-    console.log('🔧 SurveyBuilder updateSurveyData called:', { step, data });
-    
-    // Debug logging for questions/sections updates
-    if (step === 'questions' && Array.isArray(data) && data.length > 0) {
-      // Check if any question has settings
-      data.forEach((section, sectionIdx) => {
-        if (section.questions && Array.isArray(section.questions)) {
-          section.questions.forEach((question, questionIdx) => {
-            if (question.type === 'multiple_choice' && question.settings) {
-              console.log('🔍 Question with settings in updateSurveyData:', {
-                sectionIndex: sectionIdx,
-                questionIndex: questionIdx,
-                questionId: question.id,
-                questionText: question.text,
-                settings: question.settings
-              });
-            }
-          });
-        }
-      });
-    }
-    
     // Prevent infinite loops by checking if the data is actually different
     if (step === 'capiInterviewers' && Array.isArray(data) && data.length === 0) {
       // Only update if the current capiInterviewers is not already empty
       setSurveyData(prev => {
         if (prev.capiInterviewers && prev.capiInterviewers.length === 0) {
-          console.log('🔧 Skipping capiInterviewers update - already empty');
           return prev;
         }
         return { ...prev, [step]: data };
@@ -444,7 +385,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
       // Only update if the current catiInterviewers is not already empty
       setSurveyData(prev => {
         if (prev.catiInterviewers && prev.catiInterviewers.length === 0) {
-          console.log('🔧 Skipping catiInterviewers update - already empty');
           return prev;
         }
         return { ...prev, [step]: data };
@@ -452,20 +392,30 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
       return;
     }
     
+    // Track if respondentContacts are being modified (only if actually changed)
+    if (step === 'respondentContacts') {
+      // Prevent infinite loop by checking if data actually changed
+      setSurveyData(prev => {
+        const prevContactsStr = JSON.stringify(prev.respondentContacts || []);
+        const newContactsStr = JSON.stringify(data || []);
+        if (prevContactsStr !== newContactsStr) {
+          setContactsModified(true);
+          return { ...prev, [step]: data };
+        }
+        return prev; // No change, don't update
+      });
+      return;
+    }
+    
     setSurveyData(prev => {
       // Special handling for mode data to extract modes and modeAllocation
       if (step === 'mode') {
-        console.log('🔧 Processing mode data, modeGigWorkers:', data.modeGigWorkers);
-        console.log('🔧 Comparing - prev.modeGigWorkers:', prev.modeGigWorkers, 'data.modeGigWorkers:', data.modeGigWorkers);
-        console.log('🔧 Comparing - prev.includeGigWorkers:', prev.includeGigWorkers, 'data.includeGigWorkers:', data.includeGigWorkers);
-        
         // Simple check - only update if mode actually changed
         if (prev.mode === data.mode && 
             JSON.stringify(prev.modes) === JSON.stringify(data.modes || []) &&
             JSON.stringify(prev.modeAllocation) === JSON.stringify(data.modeAllocation || {}) &&
             JSON.stringify(prev.modeGigWorkers) === JSON.stringify(data.modeGigWorkers || {}) &&
             prev.includeGigWorkers === data.includeGigWorkers) {
-          console.log('🔧 No change detected, skipping update');
           return prev;
         }
         
@@ -478,7 +428,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           includeGigWorkers: data.includeGigWorkers || false
         };
         
-        console.log('🔧 Updated surveyData with modeGigWorkers:', newData.modeGigWorkers);
         return newData;
       }
       
@@ -535,14 +484,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
               })) || []
             };
             
-            // Debug: Log if settings are being preserved
-            if (question.type === 'multiple_choice' && question.settings) {
-              console.log('🔍 addIdsToSections preserving settings:', {
-                questionId: questionWithIds.id,
-                questionText: questionWithIds.text,
-                settings: questionWithIds.settings
-              });
-            }
             
             return questionWithIds;
           }) || []
@@ -588,14 +529,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             ? { ...normalizedQuestion.settings } 
             : {};
           
-          // Debug logging for settings preservation
-          if (normalizedQuestion.type === 'multiple_choice' && (preservedSettings.allowMultiple || preservedSettings.maxSelections)) {
-            console.log('🔍 Preserving settings for question:', {
-              questionId: normalizedQuestion.id,
-              questionText: normalizedQuestion.text,
-              settings: preservedSettings
-            });
-          }
           
           // Preserve options with codes
           const preservedOptions = normalizedQuestion.options?.map((opt, idx) => {
@@ -674,9 +607,13 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
                            surveyData.capiACSettings?.selectedState || 
                            surveyData.catiACSettings?.selectedState || 
                            surveyData.qualityAgentACSettings?.selectedState || '',
-        respondentContacts: surveyData.respondentContacts || [],
         sets: surveyData.sets || []
       };
+      
+      // Only include respondentContacts if they have been modified
+      if (contactsModified) {
+        surveyPayload.respondentContacts = surveyData.respondentContacts || [];
+      }
 
       // Only add fields if they have values (for draft)
       if (surveyData.specifications.surveyName) {
@@ -712,6 +649,8 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
       }
       
       if (response && response.success) {
+        // Reset contactsModified flag after successful save
+        setContactsModified(false);
         // Check if this is a multi-mode survey
         const isMultiMode = surveyData.mode === 'multi_mode' || (surveyData.modes && surveyData.modes.length > 1);
         
@@ -896,14 +835,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
               })) || []
             };
             
-            // Debug: Log if settings are being preserved
-            if (question.type === 'multiple_choice' && question.settings) {
-              console.log('🔍 addIdsToSections preserving settings:', {
-                questionId: questionWithIds.id,
-                questionText: questionWithIds.text,
-                settings: questionWithIds.settings
-              });
-            }
             
             return questionWithIds;
           }) || []
@@ -949,14 +880,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             ? { ...normalizedQuestion.settings } 
             : {};
           
-          // Debug logging for settings preservation
-          if (normalizedQuestion.type === 'multiple_choice' && (preservedSettings.allowMultiple || preservedSettings.maxSelections)) {
-            console.log('🔍 Preserving settings for question:', {
-              questionId: normalizedQuestion.id,
-              questionText: normalizedQuestion.text,
-              settings: preservedSettings
-            });
-          }
           
           // Preserve options with codes
           const preservedOptions = normalizedQuestion.options?.map((opt, idx) => {
@@ -1001,8 +924,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
         }));
       };
 
-      console.log('🔧 Creating survey payload, surveyData.modeGigWorkers:', surveyData.modeGigWorkers);
-      
       const surveyPayload = {
         surveyName: surveyData.specifications.surveyName,
         description: surveyData.specifications.description,
@@ -1064,17 +985,14 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
                            surveyData.capiACSettings?.selectedState || 
                            surveyData.catiACSettings?.selectedState || 
                            surveyData.qualityAgentACSettings?.selectedState || '',
-        respondentContacts: surveyData.respondentContacts || [],
         sets: surveyData.sets || []
       };
-
-      // Debug: Log the survey payload
-      console.log('🔍 Survey payload being sent:', JSON.stringify(surveyPayload, null, 2));
-      console.log('🔍 Mode value:', surveyPayload.mode);
-      console.log('🔍 Modes array:', surveyPayload.modes);
-      console.log('🔍 surveyData.mode:', surveyData.mode);
-      console.log('🔍 surveyData.modes:', surveyData.modes);
       
+      // Only include respondentContacts if they have been modified
+      if (contactsModified) {
+        surveyPayload.respondentContacts = surveyData.respondentContacts || [];
+      }
+
       // Create or update survey
       
       let response;
@@ -1268,13 +1186,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
     if (editingSurvey) {
       switch (currentStep) {
         case 1:
-          console.log('🔧 Rendering SurveyModeSelection with initialData:', {
-            mode: surveyData.mode,
-            modes: surveyData.modes,
-            modeAllocation: surveyData.modeAllocation,
-            modeGigWorkers: surveyData.modeGigWorkers,
-            includeGigWorkers: surveyData.includeGigWorkers
-          });
           return (
             <SurveyModeSelection 
               onUpdate={(data) => updateSurveyData('mode', data)}
@@ -1303,7 +1214,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           
           if (isMultiModeEdit) {
             // Multi-mode: CAPI step
-            console.log('🔧 Edit mode - Rendering CAPI InterviewerSelection with initialData:', surveyData.capiInterviewers);
             return (
               <InterviewerSelection 
                 onUpdate={(data) => updateSurveyData('capiInterviewers', data)}
@@ -1364,7 +1274,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           
           if (isMultiModeEditStep4) {
             // Multi-mode: CATI step
-            console.log('🔧 Edit mode - Rendering CATI InterviewerSelection with initialData:', surveyData.catiInterviewers);
             return (
               <InterviewerSelection 
                 onUpdate={(data) => updateSurveyData('catiInterviewers', data)}
@@ -1379,7 +1288,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             );
           } else {
             // Single mode: Quality Agent Selection step
-            console.log('🔍 SurveyBuilder - Rendering QualityAgentSelection with initialData:', surveyData.qualityAgents);
             return (
               <QualityAgentSelection 
                 onUpdate={(data) => updateSurveyData('qualityAgents', data)}
@@ -1399,7 +1307,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           
           if (isMultiModeEditStep5) {
             // Multi-mode: Quality Agent Selection step
-            console.log('🔍 SurveyBuilder - Rendering QualityAgentSelection with initialData:', surveyData.qualityAgents);
             return (
               <QualityAgentSelection 
                 onUpdate={(data) => updateSurveyData('qualityAgents', data)}
@@ -1471,13 +1378,6 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
     // Normal flow for new surveys
     switch (currentStep) {
       case 1:
-        console.log('🔧 Rendering SurveyModeSelection (create mode) with initialData:', {
-          mode: surveyData.mode,
-          modes: surveyData.modes,
-          modeAllocation: surveyData.modeAllocation,
-          modeGigWorkers: surveyData.modeGigWorkers,
-          includeGigWorkers: surveyData.includeGigWorkers
-        });
         return (
           <SurveyModeSelection 
             onUpdate={(data) => updateSurveyData('mode', data)}

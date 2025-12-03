@@ -60,17 +60,6 @@ const AvailableSurveys = () => {
       });
       
       if (response.success) {
-        console.log('🔍 Frontend received surveys:', response.data.surveys);
-        console.log('🔍 Frontend surveys count:', response.data.surveys.length);
-        response.data.surveys.forEach((survey, index) => {
-          console.log(`🔍 Survey ${index + 1}:`, {
-            id: survey._id,
-            name: survey.surveyName,
-            mode: survey.mode,
-            assignedMode: survey.assignedMode,
-            assignmentStatus: survey.assignmentStatus
-          });
-        });
         setSurveys(response.data.surveys);
       } else {
         showError('Failed to fetch available surveys');

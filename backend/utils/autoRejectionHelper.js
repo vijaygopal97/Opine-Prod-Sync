@@ -93,7 +93,74 @@ const checkAutoRejection = async (surveyResponse, responses, surveyId) => {
     }
   }
   
-  // Condition 3: Duplicate phone number check (only for specific survey)
+  // Condition 3: GPS distance check for CAPI interviews with booster enabled
+  // Only apply if interview mode is CAPI and booster is enabled
+  if (surveyResponse.interviewMode === 'capi' && surveyResponse.metadata?.locationControlBooster) {
+    const pollingStation = surveyResponse.selectedPollingStation;
+    // GPS location can be in gpsLocation or location field
+    const gpsLocation = surveyResponse.gpsLocation || surveyResponse.location;
+    const distanceRadius = surveyResponse.metadata?.distanceRadius || 100; // Default 100 meters
+    
+    // Check if both GPS location and polling station coordinates are available
+    if (gpsLocation && pollingStation) {
+      // Extract coordinates - handle different formats
+      let gpsLat = null, gpsLon = null;
+      let psLat = null, psLon = null;
+      
+      // Get GPS coordinates
+      if (gpsLocation.latitude && gpsLocation.longitude) {
+        gpsLat = gpsLocation.latitude;
+        gpsLon = gpsLocation.longitude;
+      } else if (gpsLocation.coordinates && gpsLocation.coordinates.latitude && gpsLocation.coordinates.longitude) {
+        gpsLat = gpsLocation.coordinates.latitude;
+        gpsLon = gpsLocation.coordinates.longitude;
+      } else if (typeof gpsLocation === 'string' && gpsLocation.includes(',')) {
+        // Handle "lat,lng" format
+        const parts = gpsLocation.split(',');
+        gpsLat = parseFloat(parts[0]);
+        gpsLon = parseFloat(parts[1]);
+      }
+      
+      // Get polling station coordinates
+      if (pollingStation.latitude && pollingStation.longitude) {
+        psLat = pollingStation.latitude;
+        psLon = pollingStation.longitude;
+      } else if (pollingStation.gpsLocation && typeof pollingStation.gpsLocation === 'string' && pollingStation.gpsLocation.includes(',')) {
+        // Handle "lat,lng" format
+        const parts = pollingStation.gpsLocation.split(',');
+        psLat = parseFloat(parts[0]);
+        psLon = parseFloat(parts[1]);
+      }
+      
+      // Calculate distance if we have valid coordinates
+      if (gpsLat !== null && gpsLon !== null && psLat !== null && psLon !== null &&
+          !isNaN(gpsLat) && !isNaN(gpsLon) && !isNaN(psLat) && !isNaN(psLon)) {
+        
+        // Calculate distance using Haversine formula
+        const R = 6371000; // Earth's radius in meters
+        const lat1 = gpsLat * Math.PI / 180;
+        const lat2 = psLat * Math.PI / 180;
+        const deltaLat = (psLat - gpsLat) * Math.PI / 180;
+        const deltaLon = (psLon - gpsLon) * Math.PI / 180;
+        
+        const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+                  Math.cos(lat1) * Math.cos(lat2) *
+                  Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c; // Distance in meters
+        
+        // Reject if distance exceeds the radius limit
+        if (distance > distanceRadius) {
+          rejectionReasons.push({
+            reason: 'GPS Location too far from polling station',
+            condition: 'gps_distance'
+          });
+        }
+      }
+    }
+  }
+  
+  // Condition 4: Duplicate phone number check (only for specific survey)
   const TARGET_SURVEY_ID = '68fd1915d41841da463f0d46';
   const PHONE_QUESTION_TEXT = 'Would you like to share your mobile number with us? We assure you we shall keep it confidential and shall use only for quality control purposes.';
   
@@ -131,7 +198,8 @@ const checkAutoRejection = async (surveyResponse, responses, surveyId) => {
     }
     
     // If phone number found, check for duplicates
-    if (phoneNumber && phoneNumber.length > 0) {
+    // Skip if phone number is "0" (indicates "Did not Answer")
+    if (phoneNumber && phoneNumber.length > 0 && phoneNumber !== '0') {
       try {
         // Find all other responses for this survey
         const otherResponses = await SurveyResponse.find({
@@ -220,6 +288,10 @@ const applyAutoRejection = async (surveyResponse, rejectionInfo) => {
     return;
   }
   
+  // CRITICAL: Preserve setNumber before modifying the response
+  const preservedSetNumber = surveyResponse.setNumber;
+  console.log(`💾 Preserving setNumber in applyAutoRejection: ${preservedSetNumber}`);
+  
   // Update response status to Rejected
   surveyResponse.status = 'Rejected';
   
@@ -233,8 +305,14 @@ const applyAutoRejection = async (surveyResponse, rejectionInfo) => {
     autoRejectionReasons: rejectionInfo.reasons.map(r => r.condition)
   };
   
+  // CRITICAL: Re-apply setNumber before saving
+  if (preservedSetNumber !== null && preservedSetNumber !== undefined) {
+    surveyResponse.setNumber = preservedSetNumber;
+    surveyResponse.markModified('setNumber');
+  }
+  
   await surveyResponse.save();
-  console.log(`✅ Auto-rejected survey response ${surveyResponse.responseId}: ${rejectionInfo.feedback}`);
+  console.log(`✅ Auto-rejected survey response ${surveyResponse.responseId}: ${rejectionInfo.feedback}, setNumber preserved: ${surveyResponse.setNumber}`);
 };
 
 module.exports = {

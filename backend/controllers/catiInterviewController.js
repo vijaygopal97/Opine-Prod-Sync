@@ -288,7 +288,10 @@ const startCatiInterview = async (req, res) => {
           id: nextRespondent._id,
           name: nextRespondent.respondentContact.name,
           phone: nextRespondent.respondentContact.phone,
-          countryCode: nextRespondent.respondentContact.countryCode
+          countryCode: nextRespondent.respondentContact.countryCode,
+          ac: nextRespondent.respondentContact.ac || null, // AC from respondent contact
+          pc: nextRespondent.respondentContact.pc || null, // PC from respondent contact
+          ps: nextRespondent.respondentContact.ps || null  // Polling Station from respondent contact
         },
         interviewer: {
           phone: interviewer.phone,
@@ -300,9 +303,9 @@ const startCatiInterview = async (req, res) => {
         },
         reachedQuestions: session.reachedQuestions,
         startTime: session.startTime,
-        // AC Selection information (same as CAPI)
-        requiresACSelection: requiresACSelection,
-        assignedACs: requiresACSelection ? assignment.assignedACs : []
+        // AC Selection information - For CATI, we don't require AC selection as it's auto-populated
+        requiresACSelection: false, // Always false for CATI - AC is auto-populated from respondent
+        assignedACs: []
       }
     });
     console.log('✅ Successfully returning response');
@@ -596,8 +599,42 @@ const abandonInterview = async (req, res) => {
 const completeCatiInterview = async (req, res) => {
   try {
     const { queueId } = req.params;
-    const { sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions: frontendTotalQuestions, answeredQuestions: frontendAnsweredQuestions, completionPercentage: frontendCompletionPercentage } = req.body;
+    const { sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions: frontendTotalQuestions, answeredQuestions: frontendAnsweredQuestions, completionPercentage: frontendCompletionPercentage, setNumber } = req.body;
+    
+    // CRITICAL: Convert setNumber to number immediately at the top level so it's available everywhere
+    // Try to get setNumber from multiple possible locations (top level, nested, etc.)
+    let finalSetNumber = null;
+    
+    // Log what we received - check all possible locations
+    console.log(`🔵🔵🔵 setNumber extraction - req.body.setNumber: ${req.body.setNumber} (type: ${typeof req.body.setNumber})`);
+    console.log(`🔵🔵🔵 setNumber extraction - Full req.body keys: ${Object.keys(req.body).join(', ')}`);
+    console.log(`🔵🔵🔵 setNumber extraction - req.body (full):`, JSON.stringify(Object.keys(req.body).reduce((acc, key) => {
+      if (key !== 'responses') acc[key] = req.body[key];
+      return acc;
+    }, {})));
+    
+    // Try to get setNumber from multiple possible locations
+    // Priority: 1. Direct from req.body.setNumber, 2. From nested interviewData, 3. From any nested object
+    const setNumberValue = setNumber !== undefined ? setNumber 
+      : (req.body.setNumber !== undefined ? req.body.setNumber 
+        : (req.body.interviewData?.setNumber !== undefined ? req.body.interviewData.setNumber 
+          : null));
+    
+    console.log(`🔵🔵🔵 setNumber extraction - setNumberValue found: ${setNumberValue} (type: ${typeof setNumberValue})`);
+    
+    if (setNumberValue !== null && setNumberValue !== undefined && setNumberValue !== '' && !isNaN(Number(setNumberValue))) {
+      finalSetNumber = Number(setNumberValue);
+      console.log(`🔵🔵🔵 finalSetNumber converted to: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
+    } else {
+      console.log(`⚠️  setNumber conversion failed or was null/undefined/empty. setNumberValue: ${setNumberValue}, typeof: ${typeof setNumberValue}`);
+    }
     const interviewerId = req.user._id;
+    
+    // Log setNumber for debugging - CRITICAL for CATI interviews
+    console.log(`💾 completeCatiInterview - Received setNumber: ${setNumber} (type: ${typeof setNumber}, queueId: ${queueId})`);
+    console.log(`💾 completeCatiInterview - Full req.body keys:`, Object.keys(req.body));
+    console.log(`💾 completeCatiInterview - setNumber in req.body:`, req.body.setNumber);
+    console.log(`💾 completeCatiInterview - Raw req.body.setNumber:`, JSON.stringify(req.body.setNumber));
 
     const queueEntry = await CatiRespondentQueue.findById(queueId)
       .populate('survey')
@@ -608,6 +645,27 @@ const completeCatiInterview = async (req, res) => {
         success: false,
         message: 'Respondent queue entry not found'
       });
+    }
+    
+    // CRITICAL: Auto-populate selectedAC and selectedPollingStation from respondent contact if not provided
+    // This ensures CATI interviews always have AC/PC populated from respondent data
+    let finalSelectedAC = selectedAC;
+    let finalSelectedPollingStation = selectedPollingStation;
+    
+    // Check if selectedAC is null, undefined, or empty string, and auto-populate from respondent contact
+    if ((!finalSelectedAC || finalSelectedAC === '' || finalSelectedAC === null) && queueEntry.respondentContact?.ac) {
+      finalSelectedAC = queueEntry.respondentContact.ac;
+      console.log(`✅ Auto-populated selectedAC from respondent contact: ${finalSelectedAC}`);
+    }
+    
+    // If polling station is not provided but respondent has AC, we can at least set the AC in polling station
+    if ((!finalSelectedPollingStation || Object.keys(finalSelectedPollingStation).length === 0) && finalSelectedAC) {
+      finalSelectedPollingStation = {
+        acName: finalSelectedAC,
+        pcName: queueEntry.respondentContact?.pc || null,
+        state: queueEntry.survey?.acAssignmentState || null
+      };
+      console.log(`✅ Auto-populated selectedPollingStation from respondent contact:`, finalSelectedPollingStation);
     }
 
     if (queueEntry.assignedTo.toString() !== interviewerId.toString()) {
@@ -708,14 +766,25 @@ const completeCatiInterview = async (req, res) => {
       console.log('⚠️  SurveyResponse already exists for this session, updating instead of creating new');
       // Update existing response
       surveyResponse.responses = allResponses;
-      surveyResponse.selectedAC = selectedAC || null;
-      surveyResponse.selectedPollingStation = selectedPollingStation || null;
+      surveyResponse.selectedAC = finalSelectedAC || null;
+      surveyResponse.selectedPollingStation = finalSelectedPollingStation || null;
       surveyResponse.endTime = finalEndTime;
       surveyResponse.totalTimeSpent = finalTotalTimeSpent;
       surveyResponse.totalQuestions = totalQuestions;
       surveyResponse.answeredQuestions = answeredQuestions;
       surveyResponse.skippedQuestions = totalQuestions - answeredQuestions;
       surveyResponse.completionPercentage = completionPercentage;
+      // Always update setNumber if provided (even if it's 1)
+      const finalSetNumber = (setNumber !== null && setNumber !== undefined && setNumber !== '') 
+        ? Number(setNumber) 
+        : null;
+      
+      if (finalSetNumber !== null) {
+        surveyResponse.setNumber = finalSetNumber; // Update set number (ensure it's a number)
+        console.log(`💾 Updating existing response with setNumber: ${surveyResponse.setNumber} (original: ${setNumber})`);
+      } else {
+        console.log(`⚠️  setNumber not provided or invalid in request body for existing response (received: ${setNumber}, type: ${typeof setNumber})`);
+      }
       if (callId) {
         surveyResponse.call_id = callId;
       }
@@ -726,14 +795,73 @@ const completeCatiInterview = async (req, res) => {
         respondentPhone: queueEntry.respondentContact?.phone || queueEntry.respondentContact?.phone,
         callRecordId: queueEntry.callRecord?._id
       };
+      // Log before saving
+      console.log(`💾 About to update EXISTING SurveyResponse - setNumber in object: ${surveyResponse.setNumber}, type: ${typeof surveyResponse.setNumber}`);
+      
+      // Use the finalSetNumber already calculated at the top level
+      
+      console.log(`💾 CATI Interview (EXISTING) - setNumber received: ${setNumber} (type: ${typeof setNumber}), converted to: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
+      
+      // Update the existing response
+      surveyResponse.setNumber = finalSetNumber;
+      surveyResponse.markModified('setNumber');
+      
       await surveyResponse.save();
+      
+      // CRITICAL: Use MongoDB's native collection.updateOne to FORCE save setNumber
+      const mongoose = require('mongoose');
+      // Get the actual collection name from the model
+      const collectionName = SurveyResponse.collection.name;
+      const collection = mongoose.connection.collection(collectionName);
+      console.log(`💾 Using collection name: ${collectionName}`);
+      const updateResult = await collection.updateOne(
+        { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+        { $set: { setNumber: finalSetNumber } }
+      );
+      
+      console.log(`💾 CATI Interview (EXISTING) - Direct MongoDB update - setNumber: ${finalSetNumber}, matched: ${updateResult.matchedCount}, modified: ${updateResult.modifiedCount}`);
+      
+      // Verify by querying the database directly using native MongoDB
+      const savedDoc = await collection.findOne(
+        { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+        { projection: { setNumber: 1, responseId: 1, interviewMode: 1 } }
+      );
+      
+      console.log(`✅ CATI SurveyResponse (EXISTING) updated - responseId: ${savedDoc?.responseId}, setNumber in DB: ${savedDoc?.setNumber}`);
+      
+      if (savedDoc?.setNumber !== finalSetNumber) {
+        console.error(`❌ CRITICAL: setNumber STILL NOT SAVED! Expected: ${finalSetNumber}, Got in DB: ${savedDoc?.setNumber}`);
+        // Last resort: try one more time with explicit type
+        await collection.updateOne(
+          { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+          { $set: { setNumber: finalSetNumber === null ? null : Number(finalSetNumber) } }
+        );
+        const finalCheck = await collection.findOne(
+          { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+          { projection: { setNumber: 1 } }
+        );
+        console.log(`🔧 After final retry - setNumber in DB: ${finalCheck?.setNumber}`);
+      } else {
+        console.log(`✅ setNumber correctly saved: ${savedDoc.setNumber}`);
+      }
       
       // Check for auto-rejection conditions
       const { checkAutoRejection, applyAutoRejection } = require('../utils/autoRejectionHelper');
       try {
+        // IMPORTANT: Save setNumber before auto-rejection check to ensure it's preserved
+        const setNumberToPreserve = surveyResponse.setNumber;
+        console.log(`💾 Preserving setNumber before auto-rejection check: ${setNumberToPreserve}`);
+        
         const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
         if (rejectionInfo) {
           await applyAutoRejection(surveyResponse, rejectionInfo);
+          // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
+          if (setNumberToPreserve !== null && setNumberToPreserve !== undefined) {
+            surveyResponse.setNumber = setNumberToPreserve;
+            surveyResponse.markModified('setNumber');
+            await surveyResponse.save();
+            console.log(`💾 Restored setNumber after auto-rejection: ${surveyResponse.setNumber}`);
+          }
           // Refresh the response to get updated status
           await surveyResponse.populate('survey');
         }
@@ -772,6 +900,8 @@ const completeCatiInterview = async (req, res) => {
         totalTimeSpent: finalTotalTimeSpent
       });
       
+      // Use the finalSetNumber already calculated at the top level
+      
       surveyResponse = new SurveyResponse({
         responseId,
         survey: queueEntry.survey._id,
@@ -779,9 +909,10 @@ const completeCatiInterview = async (req, res) => {
         sessionId: session.sessionId,
         interviewMode: 'cati',
         call_id: callId || null, // Store DeepCall callId
+        setNumber: (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber))) ? Number(finalSetNumber) : null, // Save which Set was shown in this CATI interview (ensure it's a proper Number type or null)
         responses: allResponses,
-        selectedAC: selectedAC || null,
-        selectedPollingStation: selectedPollingStation || null,
+        selectedAC: finalSelectedAC || null,
+        selectedPollingStation: finalSelectedPollingStation || null,
         location: null, // No GPS location for CATI
         startTime: finalStartTime, // Required field
         endTime: finalEndTime, // Required field
@@ -798,10 +929,49 @@ const completeCatiInterview = async (req, res) => {
           callRecordId: queueEntry.callRecord?._id
         }
       });
+      
+      // Verify setNumber is set before saving
+      console.log(`🔴🔴🔴 SurveyResponse object created - setNumber before save: ${surveyResponse.setNumber}, type: ${typeof surveyResponse.setNumber}`);
 
       try {
+        // Log before saving
+        console.log(`🔴🔴🔴 About to save NEW SurveyResponse - setNumber in object: ${surveyResponse.setNumber}, type: ${typeof surveyResponse.setNumber}`);
+        console.log(`🔴🔴🔴 SurveyResponse document before save:`, JSON.stringify({ 
+          _id: surveyResponse._id, 
+          responseId: surveyResponse.responseId, 
+          setNumber: surveyResponse.setNumber,
+          interviewMode: surveyResponse.interviewMode,
+          sessionId: surveyResponse.sessionId
+        }, null, 2));
+        
+        // CRITICAL: For CATI interviews, save setNumber using direct MongoDB update
+        // Save the response first
+        console.log(`🔴🔴🔴 Saving SurveyResponse to database...`);
         await surveyResponse.save();
-        console.log('✅ SurveyResponse saved successfully:', surveyResponse.responseId);
+        console.log(`🔴🔴🔴 SurveyResponse saved. Now checking setNumber in saved object: ${surveyResponse.setNumber}`);
+        
+        // CRITICAL: Immediately update setNumber using native MongoDB after initial save
+        // This ensures it's persisted even if Mongoose stripped it out
+        if (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber))) {
+          try {
+            const mongoose = require('mongoose');
+            const collection = mongoose.connection.collection('surveyresponses');
+            const immediateUpdateResult = await collection.updateOne(
+              { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+              { $set: { setNumber: Number(finalSetNumber) } }
+            );
+            console.log(`🔴🔴🔴 Immediate setNumber update after save - matched: ${immediateUpdateResult.matchedCount}, modified: ${immediateUpdateResult.modifiedCount}, setNumber: ${Number(finalSetNumber)}`);
+            
+            // Verify immediately
+            const immediateVerify = await collection.findOne(
+              { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+              { projection: { setNumber: 1 } }
+            );
+            console.log(`🔴🔴🔴 Immediate verification - setNumber in DB: ${immediateVerify?.setNumber}`);
+          } catch (immediateUpdateError) {
+            console.error('❌ Error in immediate setNumber update:', immediateUpdateError);
+          }
+        }
       } catch (saveError) {
         console.error('❌ Error saving SurveyResponse:', saveError);
         console.error('❌ Save error details:', {
@@ -817,9 +987,43 @@ const completeCatiInterview = async (req, res) => {
     // Check for auto-rejection conditions
     const { checkAutoRejection, applyAutoRejection } = require('../utils/autoRejectionHelper');
     try {
+      // CRITICAL: Preserve setNumber before auto-rejection check
+      // Ensure it's a proper Number type
+      const setNumberToPreserve = (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber)))
+        ? Number(finalSetNumber)
+        : ((surveyResponse.setNumber !== null && surveyResponse.setNumber !== undefined && !isNaN(Number(surveyResponse.setNumber)))
+          ? Number(surveyResponse.setNumber)
+          : null);
+      console.log(`💾 Preserving setNumber before auto-rejection check (new response): ${setNumberToPreserve} (type: ${typeof setNumberToPreserve}), finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
+      
       const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
       if (rejectionInfo) {
         await applyAutoRejection(surveyResponse, rejectionInfo);
+        
+        // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
+        // ALWAYS re-apply, even if null, to ensure the field exists
+        // CRITICAL: Ensure it's a proper Number type
+        const setNumberToRestore = (setNumberToPreserve !== null && setNumberToPreserve !== undefined && !isNaN(Number(setNumberToPreserve))) 
+          ? Number(setNumberToPreserve) 
+          : null;
+        surveyResponse.setNumber = setNumberToRestore;
+        surveyResponse.markModified('setNumber');
+        await surveyResponse.save();
+        console.log(`💾 Restored setNumber after auto-rejection (new response): ${surveyResponse.setNumber} (type: ${typeof surveyResponse.setNumber}), original finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
+        
+        // Also update using native MongoDB to ensure it's persisted
+        try {
+          const mongoose = require('mongoose');
+          const collection = mongoose.connection.collection('surveyresponses');
+          await collection.updateOne(
+            { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+            { $set: { setNumber: setNumberToRestore } }
+          );
+          console.log(`💾 Native MongoDB update after auto-rejection: ${setNumberToRestore} (type: ${typeof setNumberToRestore})`);
+        } catch (nativeUpdateError) {
+          console.error('Error in native MongoDB update after auto-rejection:', nativeUpdateError);
+        }
+        
         // Refresh the response to get updated status
         await surveyResponse.populate('survey');
       }
@@ -851,6 +1055,80 @@ const completeCatiInterview = async (req, res) => {
     queueEntry.response = surveyResponse._id;
     queueEntry.completedAt = new Date();
     await queueEntry.save();
+    
+    // CRITICAL: Save setNumber in SetData model for reliable set rotation
+    // This is a dedicated model to track which set was used for each response
+    // Re-extract setNumber from req.body one more time as a fallback
+    let setNumberForSetData = null;
+    
+    // Try multiple sources in priority order
+    if (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber))) {
+      setNumberForSetData = Number(finalSetNumber);
+    } else if (req.body.setNumber !== null && req.body.setNumber !== undefined && !isNaN(Number(req.body.setNumber))) {
+      setNumberForSetData = Number(req.body.setNumber);
+    } else if (setNumber !== null && setNumber !== undefined && !isNaN(Number(setNumber))) {
+      setNumberForSetData = Number(setNumber);
+    }
+    
+    console.log(`🔵🔵🔵 SetData creation check - finalSetNumber: ${finalSetNumber}, req.body.setNumber: ${req.body.setNumber}, destructured setNumber: ${setNumber}, setNumberForSetData: ${setNumberForSetData}`);
+    console.log(`🔵🔵🔵 SetData creation check - queueEntry.survey: ${queueEntry.survey?._id || queueEntry.survey}, surveyResponse._id: ${surveyResponse._id}`);
+    
+    // Ensure survey reference is available - handle both populated and non-populated cases
+    let surveyIdForSetData = null;
+    if (queueEntry.survey) {
+      surveyIdForSetData = queueEntry.survey._id || queueEntry.survey;
+    }
+    
+    // If survey is not populated, get it from the surveyResponse
+    if (!surveyIdForSetData && surveyResponse.survey) {
+      surveyIdForSetData = surveyResponse.survey._id || surveyResponse.survey;
+    }
+    
+    console.log(`🔵🔵🔵 SetData pre-check - setNumberForSetData: ${setNumberForSetData}, surveyIdForSetData: ${surveyIdForSetData}, surveyResponse._id: ${surveyResponse._id}`);
+    console.log(`🔵🔵🔵 SetData pre-check - queueEntry.survey type: ${typeof queueEntry.survey}, surveyResponse.survey type: ${typeof surveyResponse.survey}`);
+    
+    if (setNumberForSetData !== null && setNumberForSetData !== undefined && surveyIdForSetData && surveyResponse._id) {
+      try {
+        const SetData = require('../models/SetData');
+        console.log(`🔵🔵🔵 Creating SetData with - survey: ${surveyIdForSetData}, response: ${surveyResponse._id}, setNumber: ${setNumberForSetData}`);
+        
+        // Check if SetData already exists for this response (to avoid duplicates)
+        const existingSetData = await SetData.findOne({ surveyResponse: surveyResponse._id });
+        if (existingSetData) {
+          // Update existing SetData
+          existingSetData.setNumber = setNumberForSetData;
+          existingSetData.survey = surveyIdForSetData;
+          await existingSetData.save();
+          console.log(`✅ SetData updated (existing) - _id: ${existingSetData._id}, survey: ${surveyIdForSetData}, response: ${surveyResponse._id}, setNumber: ${setNumberForSetData}`);
+        } else {
+          // Create new SetData
+          const setData = new SetData({
+            survey: surveyIdForSetData,
+            surveyResponse: surveyResponse._id,
+            setNumber: setNumberForSetData,
+            interviewMode: 'cati'
+          });
+          
+          console.log(`🔵🔵🔵 SetData object created, about to save...`);
+          const savedSetData = await setData.save();
+          console.log(`✅ SetData saved successfully (new) - _id: ${savedSetData._id}, survey: ${surveyIdForSetData}, response: ${surveyResponse._id}, setNumber: ${setNumberForSetData}`);
+        }
+      } catch (setDataError) {
+        console.error('❌ CRITICAL Error saving SetData:', setDataError);
+        console.error('❌ SetData error message:', setDataError.message);
+        console.error('❌ SetData error name:', setDataError.name);
+        if (setDataError.errors) {
+          console.error('❌ SetData validation errors:', JSON.stringify(setDataError.errors, null, 2));
+        }
+        if (setDataError.code) {
+          console.error('❌ SetData error code:', setDataError.code);
+        }
+        console.error('❌ SetData error stack:', setDataError.stack);
+        // Don't fail the request if SetData save fails - response is already saved
+      }
+    } else {
+      console.error(`❌ CRITICAL: Cannot save SetData - Missing required data. setNumberForSetData: ${setNumberForSetData}, surveyIdForSetData: ${surveyIdForSetData}, surveyResponse._id: ${surveyResponse._id}`);
+    }
 
     // Update session status - InterviewSession only allows 'active', 'paused', 'abandoned'
     // Since interview is completed successfully, we'll mark it as abandoned (completed interviews are no longer active)
@@ -868,6 +1146,124 @@ const completeCatiInterview = async (req, res) => {
       // Continue even if session update fails
     }
 
+    // CRITICAL: FINAL STEP - ALWAYS update setNumber using MongoDB native update AFTER all other operations
+    // This ensures setNumber is saved even if other operations overwrite it
+    // IMPORTANT: Re-extract setNumber from req.body one more time as a fallback (in case finalSetNumber was lost)
+    // The response object's setNumber might have been lost during auto-rejection or other operations
+    // CRITICAL: Ensure it's a proper Number type (not string, not undefined)
+    let setNumberToSave = null;
+    
+    // Try to get setNumber one more time from req.body (fallback)
+    const setNumberFromBody = req.body.setNumber !== undefined ? req.body.setNumber 
+      : (req.body.interviewData?.setNumber !== undefined ? req.body.interviewData.setNumber : null);
+    
+    // Priority: 1. finalSetNumber (from initial extraction), 2. setNumberFromBody (re-extracted), 3. surveyResponse.setNumber, 4. null
+    if (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber))) {
+      setNumberToSave = Number(finalSetNumber);
+      console.log(`🔵🔵🔵 FINAL UPDATE - Using finalSetNumber: ${setNumberToSave}`);
+    } else if (setNumberFromBody !== null && setNumberFromBody !== undefined && !isNaN(Number(setNumberFromBody))) {
+      setNumberToSave = Number(setNumberFromBody);
+      console.log(`🔵🔵🔵 FINAL UPDATE - Using setNumberFromBody (re-extracted): ${setNumberToSave}`);
+    } else if (surveyResponse.setNumber !== null && surveyResponse.setNumber !== undefined && !isNaN(Number(surveyResponse.setNumber))) {
+      setNumberToSave = Number(surveyResponse.setNumber);
+      console.log(`🔵🔵🔵 FINAL UPDATE - Using surveyResponse.setNumber: ${setNumberToSave}`);
+    } else {
+      console.log(`⚠️  FINAL UPDATE - No valid setNumber found. finalSetNumber: ${finalSetNumber}, setNumberFromBody: ${setNumberFromBody}, surveyResponse.setNumber: ${surveyResponse.setNumber}`);
+    }
+    
+    console.log(`🔵🔵🔵 FINAL UPDATE - setNumberToSave: ${setNumberToSave} (type: ${typeof setNumberToSave}), surveyResponse.setNumber: ${surveyResponse.setNumber} (type: ${typeof surveyResponse.setNumber}), finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber}), setNumberFromBody: ${setNumberFromBody} (type: ${typeof setNumberFromBody}), responseId: ${surveyResponse.responseId}`);
+    
+    // CRITICAL: Update setNumber SYNCHRONOUSLY before sending response
+    // This ensures it happens and completes before the response is sent
+    try {
+      const mongoose = require('mongoose');
+      const collectionName = SurveyResponse.collection.name;
+      const collection = mongoose.connection.collection(collectionName);
+      
+      console.log(`🔵🔵🔵 Starting final setNumber update for responseId: ${surveyResponse.responseId}, setNumberToSave: ${setNumberToSave} (type: ${typeof setNumberToSave}), _id: ${surveyResponse._id}`);
+      
+      // CRITICAL: Update setNumber using native MongoDB - this MUST be the last operation
+      // CRITICAL: Explicitly convert to Number to ensure type match with schema
+      // IMPORTANT: Only update if setNumberToSave is not null - MongoDB might remove the field if we set it to null
+      if (setNumberToSave !== null && setNumberToSave !== undefined) {
+        const updateValue = Number(setNumberToSave);
+        console.log(`🔵🔵🔵 Update value: ${updateValue} (type: ${typeof updateValue})`);
+        
+        // CRITICAL: Use $set with explicit Number value
+        const updateResult = await collection.updateOne(
+          { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+          { 
+            $set: { 
+              setNumber: updateValue 
+            } 
+          },
+          { 
+            upsert: false
+          }
+        );
+        
+        console.log(`🔵🔵🔵 Update result - matched: ${updateResult.matchedCount}, modified: ${updateResult.modifiedCount}, acknowledged: ${updateResult.acknowledged}, updateValue: ${updateValue} (type: ${typeof updateValue})`);
+        
+        // If update didn't modify, log a warning but continue
+        if (updateResult.modifiedCount === 0) {
+          console.warn(`⚠️  Update did not modify document - this might mean the value was already ${updateValue}`);
+        }
+      
+      // Verify the update worked
+      if (updateResult.matchedCount === 0) {
+        console.error(`❌ CRITICAL: Document not found for setNumber update - _id: ${surveyResponse._id}, responseId: ${surveyResponse.responseId}`);
+      } else if (updateResult.modifiedCount === 0 && setNumberToSave !== null) {
+        console.error(`❌ CRITICAL: setNumber update did not modify document - _id: ${surveyResponse._id}, setNumber: ${setNumberToSave}`);
+      }
+      
+        // Immediately verify by reading back from database
+        const verifyDoc = await collection.findOne(
+          { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+          { projection: { setNumber: 1, responseId: 1 } }
+        );
+        
+        console.log(`🔵🔵🔵 Verification - Expected: ${updateValue} (type: ${typeof updateValue}), Got: ${verifyDoc?.setNumber} (type: ${typeof verifyDoc?.setNumber}), responseId: ${verifyDoc?.responseId}`);
+        
+        // Use loose equality for comparison (== instead of ===) to handle type coercion
+        if (verifyDoc?.setNumber != updateValue) {
+          console.error(`❌ CRITICAL: setNumber verification failed - Expected: ${updateValue} (type: ${typeof updateValue}), Got: ${verifyDoc?.setNumber} (type: ${typeof verifyDoc?.setNumber}), responseId: ${surveyResponse.responseId}`);
+          // Try one more time with explicit type conversion and force write
+          const retryValue = Number(setNumberToSave);
+          const retryResult = await collection.updateOne(
+            { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+            { 
+              $set: { setNumber: retryValue }
+            },
+            {
+              upsert: false
+            }
+          );
+          console.log(`🔵🔵🔵 Retry result - matched: ${retryResult.matchedCount}, modified: ${retryResult.modifiedCount}, retryValue: ${retryValue} (type: ${typeof retryValue})`);
+          
+          // Final verification after retry
+          const finalVerify = await collection.findOne(
+            { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+            { projection: { setNumber: 1, responseId: 1 } }
+          );
+          if (finalVerify?.setNumber != retryValue) {
+            console.error(`❌ CRITICAL: setNumber STILL NOT SAVED after retry - Expected: ${retryValue} (type: ${typeof retryValue}), Got: ${finalVerify?.setNumber} (type: ${typeof finalVerify?.setNumber}), responseId: ${surveyResponse.responseId}`);
+            console.error(`❌ CRITICAL: Full document after retry:`, JSON.stringify(finalVerify, null, 2));
+          } else {
+            console.log(`✅ setNumber successfully saved after retry: ${finalVerify?.setNumber} (type: ${typeof finalVerify?.setNumber}), responseId: ${surveyResponse.responseId}`);
+          }
+        } else {
+          console.log(`✅ setNumber successfully saved: ${verifyDoc?.setNumber} (type: ${typeof verifyDoc?.setNumber}), responseId: ${surveyResponse.responseId}`);
+        }
+      } else {
+        console.warn(`⚠️  FINAL UPDATE - Skipping setNumber update because setNumberToSave is null/undefined. setNumberToSave: ${setNumberToSave}`);
+      }
+    } catch (finalUpdateError) {
+      console.error('❌ CRITICAL: Error in final setNumber update:', finalUpdateError);
+      console.error('❌ Error stack:', finalUpdateError.stack);
+      // Don't fail the request if this fails - response is already saved
+    }
+    
+    // Send response to client AFTER setNumber update completes
     res.status(200).json({
       success: true,
       message: 'CATI interview completed and submitted for approval',

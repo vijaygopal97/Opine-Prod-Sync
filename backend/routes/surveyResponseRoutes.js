@@ -25,7 +25,8 @@ const {
   approveSurveyResponse,
   rejectSurveyResponse,
   getACPerformanceStats,
-  getInterviewerPerformanceStats
+  getInterviewerPerformanceStats,
+  getLastCatiSetNumber
 } = require('../controllers/surveyResponseController');
 const { protect } = require('../middleware/auth');
 
@@ -92,6 +93,11 @@ router.post('/session/:sessionId/abandon', abandonInterview);
 
 // Get gender response counts for quota management
 router.get('/survey/:surveyId/gender-counts', getGenderResponseCounts);
+
+// Get last CATI set number for a survey (to alternate sets)
+// CRITICAL: This route MUST be defined BEFORE /survey/:surveyId/responses to avoid route conflicts
+// Express matches routes in order, so more specific routes must come first
+router.get('/survey/:surveyId/last-cati-set', getLastCatiSetNumber);
 
 // Upload audio file for interview
 router.post('/upload-audio', upload.single('audio'), uploadAudioFile);

@@ -301,13 +301,6 @@ const CompanySurveysManagement = () => {
   const fetchSurveys = async () => {
     try {
       setLoading(true);
-      console.log('Fetching surveys with pagination...', {
-        page: currentPage,
-        limit: pageSize,
-        search: searchTerm,
-        status: filterStatus,
-        category: filterCategory
-      });
       
       const params = {
         page: currentPage,
@@ -318,18 +311,8 @@ const CompanySurveysManagement = () => {
       };
       
       const response = await surveyAPI.getSurveys(params);
-      console.log('Surveys response:', response);
       
       if (response.success) {
-        console.log('📊 Frontend received surveys with analytics:');
-        (response.data.surveys || []).forEach(survey => {
-          console.log(`  ${survey.surveyName}:`, {
-            analytics: survey.analytics,
-            approvedResponses: survey.analytics?.totalResponses,
-            completionRate: survey.analytics?.completionRate,
-            assignedInterviewersCount: survey.analytics?.assignedInterviewersCount
-          });
-        });
         setSurveys(response.data.surveys || []);
         
         // Transform backend pagination format to frontend format
@@ -341,7 +324,6 @@ const CompanySurveysManagement = () => {
           hasNext: (backendPagination.current || 1) < (backendPagination.pages || 1),
           hasPrev: (backendPagination.current || 1) > 1
         });
-        console.log('Surveys loaded:', response.data.surveys?.length || 0);
       }
     } catch (error) {
       console.error('Error fetching surveys:', error);

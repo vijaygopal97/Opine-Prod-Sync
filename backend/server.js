@@ -20,6 +20,7 @@ const catiInterviewRoutes = require('./routes/catiInterviewRoutes');
 const qcBatchRoutes = require('./routes/qcBatchRoutes');
 const qcBatchConfigRoutes = require('./routes/qcBatchConfigRoutes');
 const pollingStationRoutes = require('./routes/pollingStationRoutes');
+const masterDataRoutes = require('./routes/masterDataRoutes');
 const cron = require('node-cron');
 const { processQCBatches } = require('./jobs/qcBatchProcessor');
 
@@ -58,6 +59,9 @@ app.use(cookieParser());
 
 // Serve static files (audio recordings)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Serve party logos
+app.use('/api/party-logos', express.static(path.join(__dirname, '../../Report-Generation/party symbols')));
 
 // MongoDB Connection
 if (!MONGODB_URI) {
@@ -113,6 +117,7 @@ app.use('/api/survey-responses', surveyResponseRoutes);
 app.use('/api/qc-batches', qcBatchRoutes);
 app.use('/api/qc-batch-config', qcBatchConfigRoutes);
 app.use('/api/polling-stations', pollingStationRoutes);
+app.use('/api/master-data', masterDataRoutes);
 
 // Note: Opines API routes removed - using Contact API instead
 
