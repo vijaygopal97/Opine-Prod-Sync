@@ -63,6 +63,12 @@ const ViewResponsesPage = () => {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const { showError, showSuccess } = useToast();
 
+  // Table pagination state
+  const [tablePagination, setTablePagination] = useState({
+    currentPage: 1,
+    pageSize: 10
+  });
+
   // Load assembly constituencies data
   const [assemblyConstituencies, setAssemblyConstituencies] = useState({});
   
@@ -99,10 +105,6 @@ const ViewResponsesPage = () => {
       };
       
       const response = await surveyResponseAPI.getSurveyResponses(surveyId, params);
-      
-      console.log('🔍 ViewResponsesPage - API Response:', response);
-      console.log('🔍 ViewResponsesPage - Responses count:', response.data?.responses?.length);
-      console.log('🔍 ViewResponsesPage - Response statuses:', response.data?.responses?.map(r => r.status));
       
       if (response.success) {
         setOriginalResponses(response.data.responses); // Store original unfiltered data
@@ -390,6 +392,90 @@ const ViewResponsesPage = () => {
     return 'N/A';
   };
 
+  // Helper function to capitalize name
+  const capitalizeName = (name) => {
+    if (!name || name === 'N/A') return 'N/A';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Helper function to get all questions from survey (handles both sections and direct questions)
+  const getAllSurveyQuestions = (survey) => {
+    if (!survey) return [];
+    const actualSurvey = survey.survey || survey;
+    let allQuestions = [];
+    
+    // Get questions from sections
+    if (actualSurvey?.sections && Array.isArray(actualSurvey.sections)) {
+      actualSurvey.sections.forEach(section => {
+        if (section.questions && Array.isArray(section.questions)) {
+          allQuestions.push(...section.questions);
+        }
+      });
+    }
+    
+    // Get direct questions if they exist
+    if (actualSurvey?.questions && Array.isArray(actualSurvey.questions)) {
+      allQuestions.push(...actualSurvey.questions);
+    }
+    
+    // Sort by order if available
+    allQuestions.sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    return allQuestions;
+  };
+
+  // Helper function to get option text from value (removes translation part)
+  const getOptionTextFromValue = (value, question) => {
+    if (!question || !question.options || !value) {
+      // If value is a string with translation format like "male_{পুরুষ}", extract main part
+      if (typeof value === 'string' && value.includes('_{')) {
+        return value.split('_{')[0];
+      }
+      return value;
+    }
+    
+    // Handle array values
+    if (Array.isArray(value)) {
+      value = value[0];
+    }
+    
+    // Find the option that matches the value
+    const option = question.options.find(opt => 
+      opt.value === value || 
+      opt.value?.toString() === value?.toString() ||
+      opt.code === value ||
+      opt.code?.toString() === value?.toString()
+    );
+    
+    if (option) {
+      // Return main text without translation
+      return getMainText(option.text || option.value || value);
+    }
+    
+    // If not found, check if value has translation format
+    if (typeof value === 'string' && value.includes('_{')) {
+      return value.split('_{')[0];
+    }
+    
+    // If not found, return the value as is
+    return value;
+  };
+
+  // Helper function to find question by questionNumber
+  const findQuestionByNumber = (questionNumber, survey) => {
+    if (!survey || !questionNumber) return null;
+    const allQuestions = getAllSurveyQuestions(survey);
+    return allQuestions.find(q => {
+      const qNum = q.questionNumber || '';
+      return qNum === questionNumber || 
+             qNum.includes(questionNumber) || 
+             questionNumber.includes(qNum);
+    });
+  };
+
   // Helper function to extract respondent info from responses array
   const getRespondentInfo = (responses, responseData) => {
     if (!responses || !Array.isArray(responses)) {
@@ -407,17 +493,34 @@ const ViewResponsesPage = () => {
       });
     };
 
+    // Helper to find response by questionNumber
+    const findResponseByQuestionNumber = (responses, questionNumber) => {
+      return responses.find(r => {
+        if (!r.questionNumber) return false;
+        return r.questionNumber === questionNumber || 
+               r.questionNumber.includes(questionNumber) ||
+               questionNumber.includes(r.questionNumber);
+      });
+    };
+
     // Get survey ID
     const surveyId = responseData?.survey?._id || responseData?.survey?._id || null;
 
     // Special handling for survey "68fd1915d41841da463f0d46"
     if (surveyId === '68fd1915d41841da463f0d46') {
-      // Find name from "Would You like to share your name with us?" question
-      let nameResponse = findResponseByQuestionText(responses, [
-        'would you like to share your name',
-        'share your name',
-        'name with us'
-      ]);
+      // Find name from Q28 - "Would You like to share your name with us?"
+      let nameResponse = findResponseByQuestionNumber(responses, 'Q28') || 
+                         findResponseByQuestionNumber(responses, '28');
+      
+      // Fallback to question text search
+      if (!nameResponse) {
+        nameResponse = findResponseByQuestionText(responses, [
+          'would you like to share your name',
+          'share your name',
+          'name with us'
+        ]);
+      }
+      
       // Fallback to general name search
       if (!nameResponse) {
         nameResponse = findResponseByQuestionText(responses, [
@@ -425,6 +528,12 @@ const ViewResponsesPage = () => {
           'full name',
           'name'
         ]);
+      }
+      
+      // Get name and capitalize it
+      let name = nameResponse?.response || 'N/A';
+      if (name !== 'N/A') {
+        name = capitalizeName(String(name));
       }
       
       // Find gender from "Please note the respondent's gender"
@@ -450,6 +559,18 @@ const ViewResponsesPage = () => {
         if (genderResponseById) {
           genderResponse = genderResponseById;
         }
+      }
+      
+      // Get gender option text (without translation)
+      let gender = 'N/A';
+      if (genderResponse?.response) {
+        // Try to find the gender question in survey
+        const genderQuestion = survey ? getAllSurveyQuestions(survey).find(q => {
+          const qText = getMainText(q.text || '').toLowerCase();
+          return qText.includes('gender') || qText.includes('respondent');
+        }) : null;
+        
+        gender = getOptionTextFromValue(genderResponse.response, genderQuestion);
       }
       
       // Find age from age question
@@ -488,8 +609,8 @@ const ViewResponsesPage = () => {
       const state = getStateFromGPS(responseData?.location);
 
       return {
-        name: nameResponse?.response || 'N/A',
-        gender: genderResponse?.response || 'N/A',
+        name: name,
+        gender: gender,
         age: ageResponse?.response || 'N/A',
         city: city,
         district: district,
@@ -510,6 +631,17 @@ const ViewResponsesPage = () => {
       getMainText(r.questionText || '').toLowerCase().includes('gender') || 
       getMainText(r.questionText || '').toLowerCase().includes('sex')
     );
+    
+    // Get gender option text (without translation)
+    let gender = 'N/A';
+    if (genderResponse?.response) {
+      const genderQuestion = survey ? getAllSurveyQuestions(survey).find(q => {
+        const qText = getMainText(q.text || '').toLowerCase();
+        return qText.includes('gender') || qText.includes('sex');
+      }) : null;
+      
+      gender = getOptionTextFromValue(genderResponse.response, genderQuestion);
+    }
     
     const ageResponse = responses.find(r => 
       getMainText(r.questionText || '').toLowerCase().includes('age') || 
@@ -543,9 +675,15 @@ const ViewResponsesPage = () => {
     // Get state from GPS location
     const state = getStateFromGPS(responseData?.location);
 
+    // Get name and capitalize it
+    let name = nameResponse?.response || 'N/A';
+    if (name !== 'N/A') {
+      name = capitalizeName(String(name));
+    }
+
     return {
-      name: nameResponse?.response || 'N/A',
-      gender: genderResponse?.response || 'N/A',
+      name: name,
+      gender: gender,
       age: ageResponse?.response || 'N/A',
       city: city,
       district: district,
@@ -707,30 +845,26 @@ const ViewResponsesPage = () => {
     });
   }, [originalResponses, filters]);
 
-  // Helper function to get all questions from survey (handles both sections and direct questions)
-  const getAllSurveyQuestions = (survey) => {
-    const actualSurvey = survey?.survey || survey;
-    let allQuestions = [];
-    
-    // Get questions from sections
-    if (actualSurvey?.sections && Array.isArray(actualSurvey.sections)) {
-      actualSurvey.sections.forEach(section => {
-        if (section.questions && Array.isArray(section.questions)) {
-          allQuestions.push(...section.questions);
-        }
-      });
-    }
-    
-    // Get direct questions if they exist
-    if (actualSurvey?.questions && Array.isArray(actualSurvey.questions)) {
-      allQuestions.push(...actualSurvey.questions);
-    }
-    
-    // Sort by order if available
-    allQuestions.sort((a, b) => (a.order || 0) - (b.order || 0));
-    
-    return allQuestions;
+  // Paginated responses for table
+  const paginatedResponses = useMemo(() => {
+    const startIndex = (tablePagination.currentPage - 1) * tablePagination.pageSize;
+    const endIndex = startIndex + tablePagination.pageSize;
+    return filteredResponses.slice(startIndex, endIndex);
+  }, [filteredResponses, tablePagination]);
+
+  // Calculate total pages for table
+  const totalTablePages = Math.ceil(filteredResponses.length / tablePagination.pageSize);
+
+  // Handle table pagination
+  const handleTablePageChange = (newPage) => {
+    setTablePagination(prev => ({
+      ...prev,
+      currentPage: newPage
+    }));
+    // Scroll to top of table
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
 
   // Helper function to check if a question is AC selection or polling station
   const isACOrPollingStationQuestion = (question) => {
@@ -1474,59 +1608,65 @@ const ViewResponsesPage = () => {
               {/* Table Header */}
               <div className="bg-gray-50 px-4 sm:px-6 py-3 border-b border-gray-200 w-full">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                  <h3 className="text-lg font-medium text-gray-900">Survey Responses</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Survey Responses</h3>
                   <div className="text-sm text-gray-600">
-                    Showing {filteredResponses.length} of {originalResponses.length} responses
+                    {filteredResponses.length} of {originalResponses.length} responses
+                    {totalTablePages > 1 && (
+                      <span className="ml-2 text-gray-500">
+                        (Page {tablePagination.currentPage} of {totalTablePages})
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Table */}
               <div className="overflow-x-auto w-full">
-                <table className="w-full divide-y divide-gray-200" style={{ minWidth: '100%' }}>
+                <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-16">
                         S.No
                       </th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48">
                         Respondent
                       </th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell w-32">
                         Demographics
                       </th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell w-48">
                         Location
                       </th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
                         Interviewer
                       </th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
                         Date
                       </th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden xl:table-cell">
                         GPS
                       </th>
-                      <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                        Interview Mode
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                        Mode
                       </th>
-                      <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredResponses.map((response, index) => {
+                    {paginatedResponses.map((response, index) => {
                       const respondentInfo = getRespondentInfo(response.responses, response);
+                      const actualIndex = (tablePagination.currentPage - 1) * tablePagination.pageSize + index + 1;
                       return (
                         <tr key={response._id} className="hover:bg-gray-50 transition-colors">
                           {/* S.No */}
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {index + 1}
+                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {actualIndex}
                           </td>
                           
                           {/* Respondent */}
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                          <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10">
                                 <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -1556,13 +1696,13 @@ const ViewResponsesPage = () => {
                           </td>
                           
                           {/* Demographics - Hidden on mobile */}
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                          <td className="px-4 py-4 hidden sm:table-cell">
                             <div className="text-sm text-gray-900">
                               <div className="flex flex-col space-y-1">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 w-fit">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 w-fit">
                                   {respondentInfo.gender}
                                 </span>
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 w-fit">
                                   Age: {respondentInfo.age}
                                 </span>
                               </div>
@@ -1570,58 +1710,42 @@ const ViewResponsesPage = () => {
                           </td>
                           
                           {/* Location - Hidden on small screens */}
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden md:table-cell">
+                          <td className="px-4 py-4 hidden md:table-cell">
                             <div className="text-sm text-gray-900">
                               {response.selectedPollingStation ? (
-                                <>
-                                  <div className="flex items-center space-x-1 mb-1">
-                                    <MapPin className="h-4 w-4 text-gray-400" />
-                                    <span className="font-medium">AC: {response.selectedPollingStation.acName || response.selectedAC || respondentInfo.ac}</span>
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center space-x-1">
+                                    <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                    <span className="font-medium truncate">{response.selectedPollingStation.acName || response.selectedAC || respondentInfo.ac}</span>
                                   </div>
-                                  {response.selectedPollingStation.pcName && (
-                                    <div className="text-xs text-gray-500">
-                                      <span className="font-medium">PC:</span> {response.selectedPollingStation.pcName} ({response.selectedPollingStation.pcNo})
-                                    </div>
-                                  )}
                                   {response.selectedPollingStation.district && (
-                                    <div className="text-xs text-gray-500">
-                                      <span className="font-medium">District:</span> {response.selectedPollingStation.district}
+                                    <div className="text-xs text-gray-500 truncate">
+                                      {response.selectedPollingStation.district}
                                     </div>
                                   )}
-                                  {response.selectedPollingStation.stationName && (
-                                    <div className="text-xs text-gray-500">
-                                      <span className="font-medium">Polling Station:</span> {response.selectedPollingStation.stationName}
-                                    </div>
-                                  )}
-                                  <div className="text-xs text-gray-500">
-                                    <span className="font-medium">State:</span> {response.selectedPollingStation.state || getStateFromGPS(response.location)}
+                                  <div className="text-xs text-gray-500 truncate">
+                                    {response.selectedPollingStation.state || getStateFromGPS(response.location)}
                                   </div>
-                                </>
+                                </div>
                               ) : (
-                                <>
-                                  <div className="flex items-center space-x-1 mb-1">
-                                    <MapPin className="h-4 w-4 text-gray-400" />
-                                    <span className="font-medium">AC: {response.selectedAC || respondentInfo.ac}</span>
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center space-x-1">
+                                    <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                    <span className="font-medium truncate">{response.selectedAC || respondentInfo.ac}</span>
                                   </div>
-                                  <div className="text-xs text-gray-500">
-                                    <span className="font-medium">City:</span> {response.location?.city || respondentInfo.city}
+                                  <div className="text-xs text-gray-500 truncate">
+                                    {response.location?.city || respondentInfo.city}
                                   </div>
-                                  <div className="text-xs text-gray-500">
-                                    <span className="font-medium">District:</span> {respondentInfo.district}
+                                  <div className="text-xs text-gray-500 truncate">
+                                    {respondentInfo.district}
                                   </div>
-                                  <div className="text-xs text-gray-500">
-                                    <span className="font-medium">State:</span> {getStateFromGPS(response.location)}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    <span className="font-medium">Lok Sabha:</span> {getLokSabhaFromAC(respondentInfo.ac)}
-                                  </div>
-                                </>
+                                </div>
                               )}
                             </div>
                           </td>
                           
                           {/* Interviewer - Hidden on small/medium screens */}
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                          <td className="px-4 py-4 hidden lg:table-cell">
                             <div className="text-sm text-gray-900">
                               <div className="font-medium truncate">
                                 {response.interviewer ? `${response.interviewer.firstName} ${response.interviewer.lastName}` : 'N/A'}
@@ -1635,7 +1759,7 @@ const ViewResponsesPage = () => {
                           </td>
                           
                           {/* Date - Hidden on small/medium/large screens */}
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden xl:table-cell">
+                          <td className="px-4 py-4 hidden xl:table-cell">
                             <div className="text-sm text-gray-900">
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-4 w-4 text-gray-400" />
@@ -1648,14 +1772,14 @@ const ViewResponsesPage = () => {
                           </td>
                           
                           {/* GPS - Hidden on small/medium/large screens */}
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden xl:table-cell">
+                          <td className="px-4 py-4 hidden xl:table-cell">
                             {response.location ? (
                               <div className="text-sm text-gray-900">
                                 <div className="font-mono text-xs">
                                   {response.location.latitude?.toFixed(4)}, {response.location.longitude?.toFixed(4)}
                                 </div>
                                 <div className="text-xs text-green-600">
-                                  ✓ GPS Available
+                                  ✓ GPS
                                 </div>
                               </div>
                             ) : (
@@ -1666,9 +1790,9 @@ const ViewResponsesPage = () => {
                           </td>
                           
                           {/* Interview Mode - Hidden on small/medium/large screens */}
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
+                          <td className="px-4 py-4 hidden lg:table-cell">
                             <div className="text-sm text-gray-900">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                 response.interviewMode?.toUpperCase() === 'CAPI' 
                                   ? 'bg-blue-100 text-blue-800' 
                                   : response.interviewMode?.toUpperCase() === 'CATI'
@@ -1681,10 +1805,10 @@ const ViewResponsesPage = () => {
                           </td>
                           
                           {/* Actions */}
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button
                               onClick={() => handleViewResponse(response)}
-                              className="inline-flex items-center space-x-1 px-2 sm:px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                              className="inline-flex items-center space-x-1 px-3 py-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
                             >
                               <Eye className="h-4 w-4" />
                               <span className="hidden sm:inline">View</span>
@@ -1696,6 +1820,94 @@ const ViewResponsesPage = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {totalTablePages > 1 && (
+                <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 flex justify-between sm:hidden">
+                      <button
+                        onClick={() => handleTablePageChange(tablePagination.currentPage - 1)}
+                        disabled={tablePagination.currentPage === 1}
+                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() => handleTablePageChange(tablePagination.currentPage + 1)}
+                        disabled={tablePagination.currentPage === totalTablePages}
+                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm text-gray-700">
+                          Showing{' '}
+                          <span className="font-medium">
+                            {(tablePagination.currentPage - 1) * tablePagination.pageSize + 1}
+                          </span>{' '}
+                          to{' '}
+                          <span className="font-medium">
+                            {Math.min(tablePagination.currentPage * tablePagination.pageSize, filteredResponses.length)}
+                          </span>{' '}
+                          of{' '}
+                          <span className="font-medium">{filteredResponses.length}</span> results
+                        </p>
+                      </div>
+                      <div>
+                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                          <button
+                            onClick={() => handleTablePageChange(tablePagination.currentPage - 1)}
+                            disabled={tablePagination.currentPage === 1}
+                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronLeft className="h-5 w-5" />
+                          </button>
+                          {[...Array(totalTablePages)].map((_, i) => {
+                            const page = i + 1;
+                            // Show first page, last page, current page, and pages around current
+                            if (
+                              page === 1 ||
+                              page === totalTablePages ||
+                              (page >= tablePagination.currentPage - 1 && page <= tablePagination.currentPage + 1)
+                            ) {
+                              return (
+                                <button
+                                  key={page}
+                                  onClick={() => handleTablePageChange(page)}
+                                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                    page === tablePagination.currentPage
+                                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {page}
+                                </button>
+                              );
+                            } else if (page === tablePagination.currentPage - 2 || page === tablePagination.currentPage + 2) {
+                              return (
+                                <span key={page} className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                  ...
+                                </span>
+                              );
+                            }
+                            return null;
+                          })}
+                          <button
+                            onClick={() => handleTablePageChange(tablePagination.currentPage + 1)}
+                            disabled={tablePagination.currentPage === totalTablePages}
+                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <ChevronRight className="h-5 w-5" />
+                          </button>
+                        </nav>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

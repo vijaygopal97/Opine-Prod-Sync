@@ -1057,26 +1057,26 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     
     // Add Consent Form question as the very first question (before AC/Polling Station)
     const consentFormMessage = isCatiMode 
-      ? `Namaste, my name is ${interviewerFirstName || 'Interviewer'}. We are calling from Convergent, an independent research organization. We are conducting a survey on social and political issues in West Bengal, interviewing thousands of people. I will ask you a few questions about government performance and your preferences. Your responses will remain strictly confidential and will only be analysed in combination with others. No personal details will ever be shared. The survey will take about 5–10 minutes, and your honest opinions will greatly help us.\n\nShould I Continue?`
-      : `Namaste, my name is ${interviewerFirstName || 'Interviewer'}. We are from Convergent, an independent research organization. We are conducting a survey on social and political issues in West Bengal, interviewing thousands of people. I will ask you a few questions about government performance and your preferences.\n\nYour responses will remain strictly confidential and will only be analysed in combination with others. No personal details will ever be shared. The survey will take about 5–10 minutes, and your honest opinions will greatly help us.\n\nShould I Continue?`;
+      ? `Namaste, my name is ${interviewerFirstName || 'Interviewer'}. We are calling from Convergent, an independent research organization. We are conducting a survey on social and political issues in West Bengal, interviewing thousands of people. I will ask you a few questions about government performance and your preferences. Your responses will remain strictly confidential and will only be analysed in combination with others. No personal details will ever be shared. The survey will take about 5–10 minutes, and your honest opinions will greatly help us. {নমস্কার, আমার নাম ${interviewerFirstName || 'Interviewer'}। আমরা কনভারজেন্ট থেকে বলছি, এটি একটি স্বাধীন গবেষণা সংস্থা। আমরা পশ্চিমবঙ্গে সামাজিক ও রাজনৈতিক বিষয় নিয়ে একটি সমীক্ষা করছি, যেখানে হাজার হাজার মানুষের সঙ্গে কথা বলা হচ্ছে। সরকার কতটা ভালো কাজ করছে এবং আপনার পছন্দ-অপছন্দ সম্পর্কে কিছু প্রশ্ন করব। আপনার সব উত্তর একদম গোপন রাখা হবে এবং শুধুমাত্র অন্যদের সঙ্গে মিলিয়ে বিশ্লেষণ করা হবে। কোন ব্যক্তিগত তথ্য কখনোই শেয়ার করা হবে না। এই সার্ভেটা প্রায় ৫–১০ মিনিট লাগবে, এবং আপনার সৎ মতামত আমাদের জন্য খুবই মূল্যবান।}\n\nShould I Continue? {আমি কি চালিয়ে যেতে পারি?}`
+      : `Namaste, my name is ${interviewerFirstName || 'Interviewer'}. We are from Convergent, an independent research organization. We are conducting a survey on social and political issues in West Bengal, interviewing thousands of people. I will ask you a few questions about government performance and your preferences. {নমস্কার, আমার নাম ${interviewerFirstName || 'Interviewer'}। আমরা কনভার্জেন্ট থেকে কথা বলছি, এটা একটা স্বাধীন গবেষণা সংস্থা। আমরা পশ্চিমবঙ্গের সামাজিক ও রাজনৈতিক বিষয় নিয়ে একটা সার্ভে করছি, যেখানে হাজার হাজার মানুষের মতামত নেওয়া হচ্ছে। আমি আপনাকে সরকারী কাজকর্ম আর আপনার পছন্দ-অপছন্দ নিয়ে কয়েকটা প্রশ্ন করব।}\n\nYour responses will remain strictly confidential and will only be analysed in combination with others. No personal details will ever be shared. The survey will take about 5–10 minutes, and your honest opinions will greatly help us. {আপনার দেওয়া তথ্য পুরোপুরি গোপন রাখা হবে এবং শুধু অন্যদের সঙ্গে মিলিয়ে বিশ্লেষণ করা হবে—কোনো ব্যক্তিগত তথ্য কখনোই শেয়ার করা হবে না। সার্ভেটা প্রায় ৫–১০ মিনিট লাগবে, আর আপনার সৎ মতামত আমাদের জন্য খুবই গুরুত্বপূর্ণ।}\n\nShould I Continue? {আমি কি চালিয়ে যেতে পারি?}`;
     
     const consentFormQuestion = {
       id: 'consent-form',
       type: 'single_choice',
-      text: 'Consent Form',
+      text: 'Consent Form {সম্মতিপত্র}',
       description: consentFormMessage,
       required: true,
       order: -2, // Make it appear first (before AC selection)
       options: [
         {
           id: 'consent-agree',
-          text: 'Yes',
+          text: 'Yes {হ্যাঁ}',
           value: '1',
           code: '1'
         },
         {
           id: 'consent-disagree',
-          text: 'No',
+          text: 'No {না}',
           value: '2',
           code: '2'
         }
@@ -1084,7 +1084,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
       sectionIndex: -2, // Special section for consent form
       questionIndex: -2,
       sectionId: 'consent-form',
-      sectionTitle: 'Consent Form',
+      sectionTitle: 'Consent Form {সম্মতিপত্র}',
       isConsentForm: true // Flag to identify this special question
     };
     allQuestions.push(consentFormQuestion);
@@ -1214,6 +1214,37 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
   // Helper function to render text based on translation toggle
   const renderDisplayText = (text, options = {}) => {
     if (!text) return null;
+    
+    // Handle multi-line descriptions with multiple translation blocks
+    // Split by \n\n to handle paragraphs, then parse each paragraph separately
+    if (text.includes('\n\n')) {
+      const paragraphs = text.split('\n\n');
+      return (
+        <span className={options.className || ''}>
+          {paragraphs.map((paragraph, index) => {
+            const parsed = parseTranslation(paragraph.trim());
+            // If toggle is ON and translation exists, show only translation
+            if (showTranslationOnly && parsed.translation) {
+              return (
+                <React.Fragment key={index}>
+                  {index > 0 && <><br /><br /></>}
+                  {parsed.translation}
+                </React.Fragment>
+              );
+            }
+            // If toggle is OFF, show only main text (no translation)
+            return (
+              <React.Fragment key={index}>
+                {index > 0 && <><br /><br /></>}
+                {parsed.mainText}
+              </React.Fragment>
+            );
+          })}
+        </span>
+      );
+    }
+    
+    // Single line or no line breaks - parse normally
     const parsed = parseTranslation(text);
     
     // If toggle is ON and translation exists, show only translation
@@ -2034,11 +2065,19 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
       
       if (isPhoneQuestion) {
         const phoneResponse = responses[currentQuestion.id];
-        const validation = validatePhoneNumber(phoneResponse);
-        if (!validation.valid) {
-          showError(validation.message);
-          return;
+        
+        // Check if "refused to share phone number" is selected (stored as 0 or '0')
+        const didNotAnswer = phoneResponse === 0 || phoneResponse === '0' || phoneResponse === null || phoneResponse === undefined;
+        
+        // Only validate if "refused to share phone number" is NOT selected
+        if (!didNotAnswer) {
+          const validation = validatePhoneNumber(phoneResponse);
+          if (!validation.valid) {
+            showError(validation.message);
+            return;
+          }
         }
+        // If "refused to share phone number" is selected, allow proceeding without validation
       }
     }
     
@@ -3466,7 +3505,9 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                   }}
                   className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <span className="text-lg text-gray-700">Did not Answer</span>
+                <span className="text-lg text-gray-700">
+                  {renderDisplayText('refused to share phone number {নম্বর দিতে চাননি}')}
+                </span>
               </label>
             )}
           </div>
