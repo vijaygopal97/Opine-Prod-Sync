@@ -462,6 +462,18 @@ const completeInterview = async (req, res) => {
     const endTime = new Date();
     const totalTimeSpent = Math.round((endTime - session.startTime) / 1000);
 
+    // Extract OldinterviewerID from responses (for survey 68fd1915d41841da463f0d46)
+    let oldInterviewerID = null;
+    if (metadata?.OldinterviewerID) {
+      oldInterviewerID = String(metadata.OldinterviewerID);
+    } else {
+      // Also check in responses array as fallback
+      const interviewerIdResponse = responses.find(r => r.questionId === 'interviewer-id');
+      if (interviewerIdResponse && interviewerIdResponse.response !== null && interviewerIdResponse.response !== undefined && interviewerIdResponse.response !== '') {
+        oldInterviewerID = String(interviewerIdResponse.response);
+      }
+    }
+
     // Create complete survey response
     const surveyResponse = await SurveyResponse.createCompleteResponse({
       survey: session.survey._id,
@@ -478,6 +490,7 @@ const completeInterview = async (req, res) => {
       location: metadata?.location || null,
       qualityMetrics,
       setNumber: metadata?.setNumber || null, // Save set number for CATI interviews
+      OldinterviewerID: oldInterviewerID, // Save old interviewer ID
       metadata: {
         ...session.metadata,
         ...metadata
@@ -2266,57 +2279,80 @@ const getLastCatiSetNumber = async (req, res) => {
       });
     }
 
-    // CRITICAL: Get last set number from SetData model (dedicated model for tracking sets)
+    // PROFESSIONAL BALANCED ROTATION: Count completed responses per set and pick the least used one
+    // This ensures even distribution across all sets
     const SetData = require('../models/SetData');
+    
+    // Count completed CATI responses for each set using SetData (most reliable)
+    const setCounts = {};
+    for (const setNum of setArray) {
+      const count = await SetData.countDocuments({
+        survey: new mongoose.Types.ObjectId(surveyId),
+        interviewMode: 'cati',
+        setNumber: setNum
+      });
+      setCounts[setNum] = count || 0;
+    }
+    
+    console.log(`🔵 Set usage counts for survey ${surveyId}:`, setCounts);
+    
+    // Find the minimum count
+    const minCount = Math.min(...Object.values(setCounts));
+    
+    // Find all sets with the minimum count (least used sets)
+    const leastUsedSets = setArray.filter(setNum => setCounts[setNum] === minCount);
+    
+    console.log(`🔵 Least used sets (count: ${minCount}):`, leastUsedSets);
+    
+    // Get last set data for round-robin logic (needed for tie-breaking)
     const lastSetData = await SetData.findOne({
       survey: new mongoose.Types.ObjectId(surveyId),
       interviewMode: 'cati'
     })
-    .sort({ createdAt: -1 }) // Most recent first
-    .select('setNumber surveyResponse')
+    .sort({ createdAt: -1 })
+    .select('setNumber')
     .lean();
-
-    if (!lastSetData || lastSetData.setNumber === null || lastSetData.setNumber === undefined) {
-      // No previous CATI response found - default to Set 1 (first set)
-      const defaultSetNumber = setArray[0]; // First set (usually Set 1)
-      console.log(`🔵 No previous SetData found - defaulting to first set: ${defaultSetNumber}`);
-      return res.status(200).json({
-        success: true,
-        data: {
-          lastSetNumber: null,
-          nextSetNumber: defaultSetNumber // Default to first available set
+    
+    const lastSetNumber = lastSetData && lastSetData.setNumber !== null && lastSetData.setNumber !== undefined 
+      ? Number(lastSetData.setNumber) 
+      : null;
+    
+    let nextSetNumber;
+    
+    if (leastUsedSets.length === 1) {
+      // Only one set has the minimum count - use it
+      nextSetNumber = leastUsedSets[0];
+      console.log(`🔵 Only one least-used set found: ${nextSetNumber}`);
+    } else {
+      // Multiple sets have the same minimum count - use round-robin based on last used set
+      if (lastSetNumber !== null) {
+        const lastSetIndex = leastUsedSets.indexOf(lastSetNumber);
+        
+        if (lastSetIndex !== -1) {
+          // Last set is one of the least used - rotate to next one in the list
+          const nextIndex = (lastSetIndex + 1) % leastUsedSets.length;
+          nextSetNumber = leastUsedSets[nextIndex];
+          console.log(`🔵 Round-robin among least-used sets - Last: ${lastSetNumber}, Next: ${nextSetNumber}`);
+        } else {
+          // Last set is not in least-used sets - pick first least-used set
+          nextSetNumber = leastUsedSets[0];
+          console.log(`🔵 Last set ${lastSetNumber} not in least-used sets, picking first: ${nextSetNumber}`);
         }
-      });
-    }
-
-    const lastSetNumber = Number(lastSetData.setNumber);
-    console.log(`🔵 Found last setNumber from SetData: ${lastSetNumber} (responseId: ${lastSetData.surveyResponse})`);
-    
-    // Find current set index and get next set (rotate)
-    const currentIndex = setArray.indexOf(lastSetNumber);
-    
-    if (currentIndex === -1) {
-      // Last set number not found in available sets, default to first set
-      console.warn(`⚠️  Last setNumber ${lastSetNumber} not found in available sets, defaulting to first set`);
-      const defaultSetNumber = setArray[0];
-      return res.status(200).json({
-        success: true,
-        data: {
-          lastSetNumber: lastSetNumber,
-          nextSetNumber: defaultSetNumber
-        }
-      });
+      } else {
+        // No previous set data - pick first least-used set
+        nextSetNumber = leastUsedSets[0];
+        console.log(`🔵 No previous set data, picking first least-used set: ${nextSetNumber}`);
+      }
     }
     
-    const nextIndex = (currentIndex + 1) % setArray.length;
-    const nextSetNumber = setArray[nextIndex];
-    console.log(`🔵 Rotating sets - Last: ${lastSetNumber}, Next: ${nextSetNumber} (from available sets: [${setArray.join(', ')}])`);
+    console.log(`🔵 Balanced rotation result - Last: ${lastSetNumber}, Next: ${nextSetNumber}, Set counts:`, setCounts);
 
     res.status(200).json({
       success: true,
       data: {
         lastSetNumber: lastSetNumber,
-        nextSetNumber: nextSetNumber
+        nextSetNumber: nextSetNumber,
+        setCounts: setCounts // Include counts for debugging/monitoring
       }
     });
 

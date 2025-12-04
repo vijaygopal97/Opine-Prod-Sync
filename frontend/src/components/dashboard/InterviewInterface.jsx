@@ -1055,6 +1055,31 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     // Determine current interview mode
     const interviewMode = survey.mode === 'multi_mode' ? (survey.assignedMode || 'capi') : (survey.mode || 'capi');
     
+    // Check if this is the target survey for Interviewer ID question
+    const isTargetSurvey = survey && (survey._id === '68fd1915d41841da463f0d46' || survey.id === '68fd1915d41841da463f0d46');
+    
+    // Add "Enter Interviewer ID" question before Consent Form (only for target survey)
+    if (isTargetSurvey) {
+      const interviewerIdQuestion = {
+        id: 'interviewer-id',
+        type: 'numeric',
+        text: 'Enter Interviewer ID {সাক্ষাৎকারকারীর আইডি লিখুন}',
+        description: '',
+        required: false, // Optional question
+        order: -3, // Make it appear before Consent Form
+        sectionIndex: -3, // Special section for interviewer ID
+        questionIndex: -3,
+        sectionId: 'interviewer-id',
+        sectionTitle: 'Interviewer ID',
+        isInterviewerId: true, // Flag to identify this special question
+        validation: {
+          maxValue: 99999, // Max 5 digits
+          minValue: 0
+        }
+      };
+      allQuestions.push(interviewerIdQuestion);
+    }
+    
     // Add Consent Form question as the very first question (before AC/Polling Station)
     const consentFormMessage = isCatiMode 
       ? `Namaste, my name is ${interviewerFirstName || 'Interviewer'}. We are calling from Convergent, an independent research organization. We are conducting a survey on social and political issues in West Bengal, interviewing thousands of people. I will ask you a few questions about government performance and your preferences. Your responses will remain strictly confidential and will only be analysed in combination with others. No personal details will ever be shared. The survey will take about 5–10 minutes, and your honest opinions will greatly help us. {নমস্কার, আমার নাম ${interviewerFirstName || 'Interviewer'}। আমরা কনভারজেন্ট থেকে বলছি, এটি একটি স্বাধীন গবেষণা সংস্থা। আমরা পশ্চিমবঙ্গে সামাজিক ও রাজনৈতিক বিষয় নিয়ে একটি সমীক্ষা করছি, যেখানে হাজার হাজার মানুষের সঙ্গে কথা বলা হচ্ছে। সরকার কতটা ভালো কাজ করছে এবং আপনার পছন্দ-অপছন্দ সম্পর্কে কিছু প্রশ্ন করব। আপনার সব উত্তর একদম গোপন রাখা হবে এবং শুধুমাত্র অন্যদের সঙ্গে মিলিয়ে বিশ্লেষণ করা হবে। কোন ব্যক্তিগত তথ্য কখনোই শেয়ার করা হবে না। এই সার্ভেটা প্রায় ৫–১০ মিনিট লাগবে, এবং আপনার সৎ মতামত আমাদের জন্য খুবই মূল্যবান।}\n\nShould I Continue? {আমি কি চালিয়ে যেতে পারি?}`
@@ -2614,6 +2639,15 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         dataQualityScore: 100
       };
 
+      // Extract interviewer ID from responses (for survey 68fd1915d41841da463f0d46)
+      const isTargetSurvey = survey && (survey._id === '68fd1915d41841da463f0d46' || survey.id === '68fd1915d41841da463f0d46');
+      let oldInterviewerID = null;
+      if (isTargetSurvey) {
+        const interviewerIdResponse = responses['interviewer-id'];
+        if (interviewerIdResponse !== null && interviewerIdResponse !== undefined && interviewerIdResponse !== '') {
+          oldInterviewerID = String(interviewerIdResponse);
+        }
+      }
 
       let response;
       
@@ -2654,7 +2688,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
           totalQuestions,
           answeredQuestions,
           completionPercentage,
-          selectedSetNumber // Save which Set was shown in this CATI interview
+          selectedSetNumber, // Save which Set was shown in this CATI interview
+          oldInterviewerID // Save old interviewer ID
         );
       } else {
         // CAPI mode - use standard completion endpoint
@@ -2698,7 +2733,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
           answeredQuestions: finalResponses.filter(r => hasResponseContent(r.response)).length,
           skippedQuestions: finalResponses.filter(r => !hasResponseContent(r.response)).length,
           completionPercentage: Math.round((finalResponses.filter(r => hasResponseContent(r.response)).length / allQuestions.length) * 100),
-          setNumber: selectedSetNumber // Save which Set was shown in this interview
+          setNumber: selectedSetNumber, // Save which Set was shown in this interview
+          OldinterviewerID: oldInterviewerID // Save old interviewer ID
         }
       );
       }
@@ -3465,6 +3501,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         const isPhoneQuestion = questionText.toLowerCase().includes('share your mobile') || 
                                 questionText.toLowerCase().includes('mobile number') ||
                                 questionText.toLowerCase().includes('phone number');
+        const isInterviewerIdQuestion = currentQuestion.id === 'interviewer-id' || currentQuestion.isInterviewerId;
         const didNotAnswer = currentResponse === 0 || currentResponse === '0';
         
         return (
@@ -3478,14 +3515,33 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                 if (text === '') {
                   handleResponseChange(currentQuestion.id, '');
                 } else {
-                  const numValue = parseFloat(text);
-                  if (!isNaN(numValue) && isFinite(numValue)) {
-                    handleResponseChange(currentQuestion.id, numValue);
+                  // For interviewer ID question, limit to 5 digits
+                  if (isInterviewerIdQuestion) {
+                    // Remove any non-numeric characters
+                    const numericText = text.replace(/[^0-9]/g, '');
+                    // Limit to 5 digits
+                    if (numericText.length <= 5) {
+                      const numValue = parseInt(numericText, 10);
+                      if (!isNaN(numValue) && isFinite(numValue)) {
+                        handleResponseChange(currentQuestion.id, numValue);
+                      } else if (numericText === '') {
+                        handleResponseChange(currentQuestion.id, '');
+                      }
+                    }
+                    // If longer than 5 digits, don't update (effectively blocks input)
+                  } else {
+                    const numValue = parseFloat(text);
+                    if (!isNaN(numValue) && isFinite(numValue)) {
+                      handleResponseChange(currentQuestion.id, numValue);
+                    }
                   }
                 }
               }}
-              placeholder="Enter a number..."
+              placeholder={isInterviewerIdQuestion ? "Enter Interviewer ID (max 5 digits)..." : "Enter a number..."}
               disabled={didNotAnswer && isPhoneQuestion}
+              max={isInterviewerIdQuestion ? 99999 : undefined}
+              min={isInterviewerIdQuestion ? 0 : undefined}
+              maxLength={isInterviewerIdQuestion ? 5 : undefined}
               className={`w-full p-6 text-lg border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 ${
                 didNotAnswer && isPhoneQuestion ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
               }`}
@@ -4468,8 +4524,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                   // Get question number - use custom questionNumber if available, otherwise generate from position
                   let questionNumber = currentQuestion.questionNumber;
                   
-                  // Special handling for consent form and AC selection
-                  if (currentQuestion.id === 'consent-form') {
+                  // Special handling for interviewer ID, consent form and AC selection
+                  if (currentQuestion.id === 'interviewer-id') {
+                    questionNumber = '0.001';
+                  } else if (currentQuestion.id === 'consent-form') {
                     questionNumber = '0.0';
                   } else if (currentQuestion.id === 'ac-selection') {
                     questionNumber = '0.1';

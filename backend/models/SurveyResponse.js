@@ -121,6 +121,13 @@ const surveyResponseSchema = new mongoose.Schema({
     sparse: true // Allow null values but still index non-null values
   },
   
+  // Old Interviewer ID (for survey 68fd1915d41841da463f0d46 - entered by interviewer)
+  OldinterviewerID: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  
   // CATI Call ID (DeepCall callId) - for linking to CatiCall record
   call_id: {
     type: String,
@@ -486,7 +493,8 @@ surveyResponseSchema.statics.createCompleteResponse = async function(data) {
     selectedAC,
     selectedPollingStation,
     location,
-    setNumber
+    setNumber,
+    OldinterviewerID
   } = data;
   
   console.log('createCompleteResponse received audioRecording:', audioRecording); // Debug log
@@ -519,6 +527,7 @@ surveyResponseSchema.statics.createCompleteResponse = async function(data) {
     selectedPollingStation: selectedPollingStation || null,
     location: location || null,
     setNumber: setNumber || null, // Save set number for CATI interviews
+    OldinterviewerID: OldinterviewerID || null, // Save old interviewer ID if provided
     totalQuestions,
     answeredQuestions,
     skippedQuestions,

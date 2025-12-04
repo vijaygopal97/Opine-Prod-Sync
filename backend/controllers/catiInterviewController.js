@@ -599,7 +599,7 @@ const abandonInterview = async (req, res) => {
 const completeCatiInterview = async (req, res) => {
   try {
     const { queueId } = req.params;
-    const { sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions: frontendTotalQuestions, answeredQuestions: frontendAnsweredQuestions, completionPercentage: frontendCompletionPercentage, setNumber } = req.body;
+    const { sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions: frontendTotalQuestions, answeredQuestions: frontendAnsweredQuestions, completionPercentage: frontendCompletionPercentage, setNumber, OldinterviewerID } = req.body;
     
     // CRITICAL: Convert setNumber to number immediately at the top level so it's available everywhere
     // Try to get setNumber from multiple possible locations (top level, nested, etc.)
@@ -692,6 +692,18 @@ const completeCatiInterview = async (req, res) => {
     // Calculate statistics from responses
     const allResponses = responses || [];
     
+    // Extract OldinterviewerID from responses (for survey 68fd1915d41841da463f0d46)
+    let oldInterviewerID = null;
+    if (OldinterviewerID) {
+      oldInterviewerID = String(OldinterviewerID);
+    } else {
+      // Also check in responses array as fallback
+      const interviewerIdResponse = allResponses.find(r => r.questionId === 'interviewer-id');
+      if (interviewerIdResponse && interviewerIdResponse.response !== null && interviewerIdResponse.response !== undefined && interviewerIdResponse.response !== '') {
+        oldInterviewerID = String(interviewerIdResponse.response);
+      }
+    }
+    
     // Use frontend-provided values if available, otherwise calculate
     let totalQuestions = frontendTotalQuestions;
     let answeredQuestions = frontendAnsweredQuestions;
@@ -774,6 +786,7 @@ const completeCatiInterview = async (req, res) => {
       surveyResponse.answeredQuestions = answeredQuestions;
       surveyResponse.skippedQuestions = totalQuestions - answeredQuestions;
       surveyResponse.completionPercentage = completionPercentage;
+      surveyResponse.OldinterviewerID = oldInterviewerID || null; // Update old interviewer ID
       // Always update setNumber if provided (even if it's 1)
       const finalSetNumber = (setNumber !== null && setNumber !== undefined && setNumber !== '') 
         ? Number(setNumber) 
@@ -914,6 +927,7 @@ const completeCatiInterview = async (req, res) => {
         selectedAC: finalSelectedAC || null,
         selectedPollingStation: finalSelectedPollingStation || null,
         location: null, // No GPS location for CATI
+        OldinterviewerID: oldInterviewerID || null, // Save old interviewer ID
         startTime: finalStartTime, // Required field
         endTime: finalEndTime, // Required field
         totalTimeSpent: finalTotalTimeSpent, // Required field

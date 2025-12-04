@@ -1310,7 +1310,7 @@ export const catiInterviewAPI = {
   },
 
   // Complete CATI interview
-  completeCatiInterview: async (queueId, sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions, answeredQuestions, completionPercentage, setNumber = null) => {
+  completeCatiInterview: async (queueId, sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions, answeredQuestions, completionPercentage, setNumber = null, OldinterviewerID = null) => {
     try {
       const response = await api.post(`/api/cati-interview/complete/${queueId}`, {
         sessionId,
@@ -1323,7 +1323,8 @@ export const catiInterviewAPI = {
         totalQuestions,
         answeredQuestions,
         completionPercentage,
-        setNumber // Save which Set was shown in this CATI interview
+        setNumber, // Save which Set was shown in this CATI interview
+        OldinterviewerID // Save old interviewer ID
       });
       return response.data;
     } catch (error) {
