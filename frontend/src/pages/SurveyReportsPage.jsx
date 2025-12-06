@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { 
   ArrowLeft,
   Download, 
@@ -29,6 +31,7 @@ import { surveyResponseAPI, surveyAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { findGenderResponse, normalizeGenderResponse } from '../utils/genderUtils';
 import { getMainText } from '../utils/translations';
+import { getACByName } from '../utils/assemblyConstituencies';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -95,8 +98,20 @@ const SurveyReportsPage = () => {
     ac: '',
     district: '',
     lokSabha: '',
-    interviewer: ''
+    interviewer: '', // Legacy: kept for backward compatibility
+    interviewerIds: [], // New: array of interviewer IDs
+    interviewerMode: 'include' // 'include' or 'exclude'
   });
+
+  // Interviewer filter states
+  const [interviewerSearchTerm, setInterviewerSearchTerm] = useState('');
+  const [showInterviewerDropdown, setShowInterviewerDropdown] = useState(false);
+  const interviewerDropdownRef = useRef(null);
+
+  // AC filter states
+  const [acSearchTerm, setAcSearchTerm] = useState('');
+  const [showACDropdown, setShowACDropdown] = useState(false);
+  const acDropdownRef = useRef(null);
 
   // Load assembly constituencies data
   const [assemblyConstituencies, setAssemblyConstituencies] = useState({});
@@ -221,15 +236,168 @@ const SurveyReportsPage = () => {
       .survey-reports-page * {
         max-width: none !important;
       }
+      
+      /* React DatePicker Custom Styling */
+      .react-datepicker {
+        font-family: inherit;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+      
+      .react-datepicker__header {
+        background-color: #3b82f6;
+        border-bottom: 1px solid #e5e7eb;
+        border-top-left-radius: 0.5rem;
+        border-top-right-radius: 0.5rem;
+        padding-top: 0.75rem;
+        position: relative;
+      }
+      
+      .react-datepicker__current-month {
+        color: white;
+        font-weight: 600;
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      .react-datepicker__day-name {
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 500;
+        width: 2rem;
+        line-height: 2rem;
+        margin: 0.166rem;
+        font-size: 0.75rem;
+      }
+      
+      .react-datepicker__day {
+        width: 2rem;
+        line-height: 2rem;
+        margin: 0.166rem;
+        border-radius: 0.375rem;
+        color: #374151;
+        font-size: 0.875rem;
+      }
+      
+      .react-datepicker__day:hover {
+        border-radius: 0.375rem;
+        background-color: #e5e7eb;
+      }
+      
+      .react-datepicker__day--selected,
+      .react-datepicker__day--in-selecting-range,
+      .react-datepicker__day--in-range {
+        background-color: #3b82f6;
+        color: white;
+        border-radius: 0.375rem;
+      }
+      
+      .react-datepicker__day--selected:hover,
+      .react-datepicker__day--in-selecting-range:hover,
+      .react-datepicker__day--in-range:hover {
+        background-color: #2563eb;
+      }
+      
+      .react-datepicker__day--keyboard-selected {
+        background-color: #dbeafe;
+        color: #1e40af;
+        border-radius: 0.375rem;
+      }
+      
+      .react-datepicker__day--disabled {
+        color: #d1d5db;
+        cursor: not-allowed;
+      }
+      
+      .react-datepicker__day--today {
+        font-weight: 600;
+        color: #3b82f6;
+      }
+      
+      .react-datepicker__day--today.react-datepicker__day--selected {
+        color: white;
+      }
+      
+      .react-datepicker__triangle {
+        display: none;
+      }
+      
+      .react-datepicker__navigation {
+        top: 0.75rem;
+      }
+      
+      .react-datepicker__navigation-icon::before {
+        border-color: white;
+      }
+      
+      .react-datepicker__navigation:hover *::before {
+        border-color: rgba(255, 255, 255, 0.8);
+      }
+      
+      .react-datepicker__month-container {
+        padding: 0.5rem;
+      }
+      
+      .react-datepicker__input-container {
+        width: 100%;
+        position: relative;
+      }
+      
+      .react-datepicker__input-container input {
+        width: 100%;
+        padding: 0.625rem 2.5rem 0.625rem 2rem;
+        border: 2px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        cursor: pointer;
+        background-color: white;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      }
+      
+      .react-datepicker__input-container input:hover {
+        border-color: #93c5fd;
+        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+      }
+      
+      .react-datepicker__input-container input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+      }
+      
+      .react-datepicker__input-container input::placeholder {
+        color: #9ca3af;
+        font-weight: 400;
+      }
+      
+      .react-datepicker__close-icon {
+        padding: 0.5rem;
+        right: 0.5rem;
+      }
+      
+      .react-datepicker__close-icon::after {
+        background-color: #6b7280;
+        font-size: 1rem;
+        padding: 0.25rem;
+      }
+      
+      .react-datepicker__close-icon:hover::after {
+        background-color: #374151;
+      }
+      
+      .react-datepicker-popper {
+        z-index: 9999 !important;
+      }
     `;
     document.head.appendChild(style);
     
     return () => {
-      document.head.removeChild(style);
-    };
-    
-    return () => {
-      document.head.removeChild(style);
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
     };
   }, []);
 
@@ -700,8 +868,20 @@ const SurveyReportsPage = () => {
         return false;
       }
 
-      // Interviewer filter
-      if (filters.interviewer) {
+      // Interviewer filter - support both legacy single interviewer and new multi-select
+      if (filters.interviewerIds && filters.interviewerIds.length > 0) {
+        const interviewerId = response.interviewer?._id?.toString();
+        const isIncluded = filters.interviewerIds.includes(interviewerId);
+        
+        if (filters.interviewerMode === 'include') {
+          // Include mode: only show responses from selected interviewers
+          if (!isIncluded) return false;
+        } else {
+          // Exclude mode: exclude responses from selected interviewers
+          if (isIncluded) return false;
+        }
+      } else if (filters.interviewer) {
+        // Legacy single interviewer filter (backward compatibility)
         const interviewerName = response.interviewer 
           ? `${response.interviewer.firstName} ${response.interviewer.lastName}`.toLowerCase()
           : '';
@@ -1333,7 +1513,116 @@ const SurveyReportsPage = () => {
     setCallRecordsPage(1);
   }, [callRecordsFilters.search, callRecordsFilters.status]);
 
+  // Helper function to extract numeric AC code (remove state prefix and leading zeros)
+  // e.g., "WB001" -> "1", "WB010" -> "10", "WB100" -> "100"
+  const getNumericACCode = (acCode) => {
+    if (!acCode || typeof acCode !== 'string') return '';
+    
+    // Remove state prefix (alphabets at the start) and extract numeric part
+    const numericPart = acCode.replace(/^[A-Z]+/, '');
+    
+    // Remove leading zeros and return as string
+    // If all zeros, return "0", otherwise return the number without leading zeros
+    const numericValue = parseInt(numericPart, 10);
+    return isNaN(numericValue) ? '' : numericValue.toString();
+  };
+
+  // All ACs from ALL responses (Approved, Rejected, Pending_Approval) - for dropdown/search
+  // This should NOT be filtered by current filters, so users can always see all available ACs
+  // Includes both AC name and numeric AC code for searching
+  const allACObjects = useMemo(() => {
+    if (!responses || responses.length === 0) return [];
+
+    const acMap = new Map(); // Map to store AC objects with name and code
+
+    responses.forEach(response => {
+      // Only include responses with Approved, Rejected, or Pending_Approval status
+      if (response.status === 'Approved' || 
+          response.status === 'Rejected' || 
+          response.status === 'Pending_Approval') {
+        const respondentInfo = getRespondentInfo(response.responses, response);
+        
+        if (respondentInfo.ac && respondentInfo.ac !== 'N/A') {
+          const acName = respondentInfo.ac;
+          
+          // Get AC code from assembly constituencies data
+          if (!acMap.has(acName)) {
+            const acData = getACByName(acName);
+            const fullCode = acData?.acCode || '';
+            const numericCode = getNumericACCode(fullCode);
+            
+            acMap.set(acName, {
+              name: acName,
+              code: fullCode, // Keep full code for reference
+              numericCode: numericCode // Numeric code for display and search
+            });
+          }
+        }
+      }
+    });
+
+    return Array.from(acMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [responses]);
+
+  // Filter ACs based on search term (name or numeric code)
+  const filteredACs = useMemo(() => {
+    if (!allACObjects) return [];
+    
+    if (!acSearchTerm.trim()) {
+      return allACObjects;
+    }
+
+    const searchLower = acSearchTerm.toLowerCase();
+    const searchNumeric = acSearchTerm.trim(); // For numeric search, don't lowercase
+    
+    return allACObjects.filter(ac => {
+      const nameMatch = ac.name.toLowerCase().includes(searchLower);
+      // Search by numeric code (exact match or partial match)
+      const numericCodeMatch = ac.numericCode && (
+        ac.numericCode === searchNumeric || 
+        ac.numericCode.includes(searchNumeric) ||
+        searchNumeric.includes(ac.numericCode)
+      );
+      
+      return nameMatch || numericCodeMatch;
+    });
+  }, [allACObjects, acSearchTerm]);
+
+  // All interviewers from ALL responses (Approved, Rejected, Pending_Approval) - for dropdown/search
+  // This should NOT be filtered by current filters, so users can always see all available interviewers
+  const allInterviewerObjects = useMemo(() => {
+    if (!responses || responses.length === 0) return [];
+
+    const interviewerMap = new Map(); // Map to store full interviewer objects
+
+    responses.forEach(response => {
+      // Only include responses with Approved, Rejected, or Pending_Approval status
+      if (response.interviewer && 
+          (response.status === 'Approved' || 
+           response.status === 'Rejected' || 
+           response.status === 'Pending_Approval')) {
+        const interviewerName = `${response.interviewer.firstName} ${response.interviewer.lastName}`;
+        
+        // Store full interviewer object for search
+        if (!interviewerMap.has(response.interviewer._id)) {
+          interviewerMap.set(response.interviewer._id, {
+            _id: response.interviewer._id,
+            name: interviewerName,
+            firstName: response.interviewer.firstName,
+            lastName: response.interviewer.lastName,
+            email: response.interviewer.email || '',
+            phone: response.interviewer.phone || '',
+            memberID: response.interviewer.memberId || response.interviewer.memberID || '' // Use memberId (lowercase d) from User model
+          });
+        }
+      }
+    });
+
+    return Array.from(interviewerMap.values());
+  }, [responses]);
+
   // Filter options - based on filteredResponses to show only options available in current filter
+  // Note: interviewerObjects is NOT included here - use allInterviewerObjects instead
   const filterOptions = useMemo(() => {
     if (!filteredResponses || filteredResponses.length === 0) return { ac: [], district: [], lokSabha: [], interviewer: [] };
 
@@ -1355,7 +1644,8 @@ const SurveyReportsPage = () => {
         lokSabhaSet.add(respondentInfo.lokSabha);
       }
       if (response.interviewer) {
-        interviewerSet.add(`${response.interviewer.firstName} ${response.interviewer.lastName}`);
+        const interviewerName = `${response.interviewer.firstName} ${response.interviewer.lastName}`;
+        interviewerSet.add(interviewerName);
       }
     });
 
@@ -1375,6 +1665,77 @@ const SurveyReportsPage = () => {
     }));
   };
 
+  // Handle interviewer selection
+  const handleInterviewerToggle = (interviewerId) => {
+    setFilters(prev => {
+      const currentIds = prev.interviewerIds || [];
+      const isSelected = currentIds.includes(interviewerId);
+      
+      return {
+        ...prev,
+        interviewerIds: isSelected
+          ? currentIds.filter(id => id !== interviewerId)
+          : [...currentIds, interviewerId],
+        interviewer: '' // Clear legacy interviewer filter when using new system
+      };
+    });
+  };
+
+  // Handle interviewer mode toggle (include/exclude)
+  const handleInterviewerModeToggle = (mode) => {
+    setFilters(prev => ({
+      ...prev,
+      interviewerMode: mode
+    }));
+  };
+
+  // Clear all interviewer filters
+  const clearInterviewerFilters = () => {
+    setFilters(prev => ({
+      ...prev,
+      interviewerIds: [],
+      interviewer: '',
+      interviewerMode: 'include'
+    }));
+    setInterviewerSearchTerm('');
+  };
+
+  // Filter interviewers based on search term - use allInterviewerObjects (not filtered by current filters)
+  const filteredInterviewers = useMemo(() => {
+    if (!allInterviewerObjects || allInterviewerObjects.length === 0) return [];
+    
+    if (!interviewerSearchTerm.trim()) {
+      return allInterviewerObjects;
+    }
+
+    const searchLower = interviewerSearchTerm.toLowerCase();
+    return allInterviewerObjects.filter(interviewer => {
+      const nameMatch = interviewer.name.toLowerCase().includes(searchLower);
+      const emailMatch = interviewer.email?.toLowerCase().includes(searchLower);
+      const phoneMatch = interviewer.phone?.toLowerCase().includes(searchLower);
+      const memberIDMatch = interviewer.memberID?.toLowerCase().includes(searchLower);
+      
+      return nameMatch || emailMatch || phoneMatch || memberIDMatch;
+    });
+  }, [allInterviewerObjects, interviewerSearchTerm]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (interviewerDropdownRef.current && !interviewerDropdownRef.current.contains(event.target)) {
+        setShowInterviewerDropdown(false);
+      }
+      if (acDropdownRef.current && !acDropdownRef.current.contains(event.target)) {
+        setShowACDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Clear all filters
   const clearFilters = () => {
     setFilters({
@@ -1386,8 +1747,11 @@ const SurveyReportsPage = () => {
       ac: '',
       district: '',
       lokSabha: '',
-      interviewer: ''
+      interviewer: '',
+      interviewerIds: [],
+      interviewerMode: 'include'
     });
+    setInterviewerSearchTerm('');
   };
 
   // Handle CSV download
@@ -1540,11 +1904,18 @@ const SurveyReportsPage = () => {
                 </div>
 
                 {/* Date Range */}
-                <div>
+                <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
                   <select
                     value={filters.dateRange}
-                    onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                    onChange={(e) => {
+                      handleFilterChange('dateRange', e.target.value);
+                      // Clear custom dates when switching away from custom
+                      if (e.target.value !== 'custom') {
+                        handleFilterChange('startDate', '');
+                        handleFilterChange('endDate', '');
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="all">All Time</option>
@@ -1553,6 +1924,132 @@ const SurveyReportsPage = () => {
                     <option value="month">Last 30 Days</option>
                     <option value="custom">Custom Range</option>
                   </select>
+                  
+                  {/* Custom Date Range Picker */}
+                  {filters.dateRange === 'custom' && (
+                    <div className="mt-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Calendar className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-semibold text-gray-700">Select Date Range</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Start Date */}
+                        <div className="relative">
+                          <label className="block text-xs font-semibold text-gray-700 mb-2">
+                            From Date
+                          </label>
+                          <div className="relative">
+                            <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                            <DatePicker
+                              selected={filters.startDate ? new Date(filters.startDate) : null}
+                              onChange={(date) => {
+                                if (date) {
+                                  const dateStr = date.toISOString().split('T')[0];
+                                  handleFilterChange('startDate', dateStr);
+                                } else {
+                                  handleFilterChange('startDate', '');
+                                }
+                              }}
+                              selectsStart
+                              startDate={filters.startDate ? new Date(filters.startDate) : null}
+                              endDate={filters.endDate ? new Date(filters.endDate) : null}
+                              maxDate={filters.endDate ? new Date(filters.endDate) : new Date()}
+                              dateFormat="MMM dd, yyyy"
+                              placeholderText="Select start date"
+                              className="w-full pl-8 pr-10 py-2.5 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-blue-400"
+                              showPopperArrow={false}
+                              popperClassName="react-datepicker-popper"
+                              calendarClassName="custom-calendar"
+                              isClearable
+                              clearButtonClassName="text-gray-400 hover:text-red-500 transition-colors"
+                            />
+                          </div>
+                          {filters.startDate && (
+                            <p className="mt-1.5 text-xs text-gray-500">
+                              {new Date(filters.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* End Date */}
+                        <div className="relative">
+                          <label className="block text-xs font-semibold text-gray-700 mb-2">
+                            To Date
+                          </label>
+                          <div className="relative">
+                            <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                            <DatePicker
+                              selected={filters.endDate ? new Date(filters.endDate) : null}
+                              onChange={(date) => {
+                                if (date) {
+                                  const dateStr = date.toISOString().split('T')[0];
+                                  handleFilterChange('endDate', dateStr);
+                                } else {
+                                  handleFilterChange('endDate', '');
+                                }
+                              }}
+                              selectsEnd
+                              startDate={filters.startDate ? new Date(filters.startDate) : null}
+                              endDate={filters.endDate ? new Date(filters.endDate) : null}
+                              minDate={filters.startDate ? new Date(filters.startDate) : null}
+                              maxDate={new Date()}
+                              dateFormat="MMM dd, yyyy"
+                              placeholderText="Select end date"
+                              className="w-full pl-8 pr-10 py-2.5 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-blue-400"
+                              showPopperArrow={false}
+                              popperClassName="react-datepicker-popper"
+                              calendarClassName="custom-calendar"
+                              isClearable
+                              clearButtonClassName="text-gray-400 hover:text-red-500 transition-colors"
+                            />
+                          </div>
+                          {filters.endDate && (
+                            <p className="mt-1.5 text-xs text-gray-500">
+                              {new Date(filters.endDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Date Range Summary */}
+                      {filters.startDate && filters.endDate && (
+                        <div className="mt-4 pt-4 border-t border-blue-200 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <span className="text-sm font-medium text-gray-700">
+                              {new Date(filters.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - {new Date(filters.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              handleFilterChange('startDate', '');
+                              handleFilterChange('endDate', '');
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            Clear Range
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Helper Text */}
+                      {(!filters.startDate || !filters.endDate) && (
+                        <div className="mt-3 pt-3 border-t border-blue-200">
+                          <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            {!filters.startDate && !filters.endDate 
+                              ? 'Select both start and end dates to filter responses'
+                              : !filters.startDate 
+                                ? 'Please select a start date'
+                                : 'Please select an end date'
+                            }
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Interview Mode */}
@@ -1569,34 +2066,214 @@ const SurveyReportsPage = () => {
                   </select>
                 </div>
 
-                {/* Assembly Constituency */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Assembly Constituency</label>
-                  <select
-                    value={filters.ac}
-                    onChange={(e) => handleFilterChange('ac', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All ACs</option>
-                    {filterOptions.ac.map(ac => (
-                      <option key={ac} value={ac}>{ac}</option>
-                    ))}
-                  </select>
+                {/* Assembly Constituency - Modern Searchable Dropdown */}
+                <div className="relative" ref={acDropdownRef}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Assembly Constituency
+                    {filters.ac && (
+                      <span className="text-xs font-normal text-gray-500 ml-1">
+                        (AC: {allACObjects.find(ac => ac.name === filters.ac)?.numericCode || ''})
+                      </span>
+                    )}
+                  </label>
+                  
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder={filters.ac ? filters.ac : "Search by AC name or code..."}
+                      value={filters.ac ? filters.ac : acSearchTerm}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setAcSearchTerm(value);
+                        setShowACDropdown(true);
+                        handleFilterChange('ac', ''); // Clear selection when typing
+                      }}
+                      onFocus={() => {
+                        setShowACDropdown(true);
+                        if (filters.ac) {
+                          setAcSearchTerm(filters.ac);
+                          handleFilterChange('ac', '');
+                        }
+                      }}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    {filters.ac && (
+                      <button
+                        onClick={() => {
+                          handleFilterChange('ac', '');
+                          setAcSearchTerm('');
+                          setShowACDropdown(false);
+                        }}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {showACDropdown && filteredACs.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredACs.map(ac => {
+                        const isSelected = filters.ac === ac.name;
+                        return (
+                          <div
+                            key={ac.name}
+                            onClick={() => {
+                              handleFilterChange('ac', ac.name);
+                              setAcSearchTerm('');
+                              setShowACDropdown(false);
+                            }}
+                            className={`px-4 py-2 cursor-pointer hover:bg-gray-100 transition-colors ${
+                              isSelected ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{ac.name}</div>
+                                {ac.numericCode && (
+                                  <div className="text-xs text-gray-500">AC Code: {ac.numericCode}</div>
+                                )}
+                              </div>
+                              {isSelected && (
+                                <CheckCircle className="w-5 h-5 text-blue-600" />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {showACDropdown && acSearchTerm && filteredACs.length === 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500 text-sm">
+                      No ACs found matching "{acSearchTerm}"
+                    </div>
+                  )}
                 </div>
 
-                {/* Interviewer */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Interviewer</label>
-                  <select
-                    value={filters.interviewer}
-                    onChange={(e) => handleFilterChange('interviewer', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Interviewers</option>
-                    {filterOptions.interviewer.map(interviewer => (
-                      <option key={interviewer} value={interviewer}>{interviewer}</option>
-                    ))}
-                  </select>
+                {/* Interviewer - Modern Multi-Select Search */}
+                <div className="relative" ref={interviewerDropdownRef}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Interviewer {filters.interviewerIds?.length > 0 && `(${filters.interviewerIds.length} selected)`}
+                  </label>
+                  
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Search by name, email, phone, or Member ID..."
+                      value={interviewerSearchTerm}
+                      onChange={(e) => {
+                        setInterviewerSearchTerm(e.target.value);
+                        setShowInterviewerDropdown(true);
+                      }}
+                      onFocus={() => setShowInterviewerDropdown(true)}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    {filters.interviewerIds?.length > 0 && (
+                      <button
+                        onClick={clearInterviewerFilters}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        title="Clear all"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Include/Exclude Toggle */}
+                  {filters.interviewerIds?.length > 0 && (
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        onClick={() => handleInterviewerModeToggle('include')}
+                        className={`flex-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                          filters.interviewerMode === 'include'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Include
+                      </button>
+                      <button
+                        onClick={() => handleInterviewerModeToggle('exclude')}
+                        className={`flex-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                          filters.interviewerMode === 'exclude'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Exclude
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Selected Interviewers Chips */}
+                  {filters.interviewerIds?.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {filters.interviewerIds.map(interviewerId => {
+                        const interviewer = allInterviewerObjects.find(i => i._id === interviewerId);
+                        if (!interviewer) return null;
+                        return (
+                          <span
+                            key={interviewerId}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                          >
+                            {interviewer.name}
+                            <button
+                              onClick={() => handleInterviewerToggle(interviewerId)}
+                              className="hover:text-blue-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Dropdown Results */}
+                  {showInterviewerDropdown && filteredInterviewers.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredInterviewers.map(interviewer => {
+                        const isSelected = filters.interviewerIds?.includes(interviewer._id);
+                        return (
+                          <div
+                            key={interviewer._id}
+                            onClick={() => {
+                              handleInterviewerToggle(interviewer._id);
+                            }}
+                            className={`px-4 py-2 cursor-pointer hover:bg-gray-100 transition-colors ${
+                              isSelected ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{interviewer.name}</div>
+                                <div className="text-xs text-gray-500 space-x-2">
+                                  {interviewer.email && <span>{interviewer.email}</span>}
+                                  {interviewer.phone && <span>• {interviewer.phone}</span>}
+                                  {interviewer.memberID && <span>• Member ID: {interviewer.memberID}</span>}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <CheckCircle className="w-5 h-5 text-blue-600" />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* No Results Message */}
+                  {showInterviewerDropdown && interviewerSearchTerm && filteredInterviewers.length === 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500 text-sm">
+                      No interviewers found matching "{interviewerSearchTerm}"
+                    </div>
+                  )}
                 </div>
               </div>
 

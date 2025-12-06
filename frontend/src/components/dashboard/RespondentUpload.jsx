@@ -17,40 +17,34 @@ import {
 import { surveyAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 
-const RespondentUpload = ({ onUpdate, initialData }) => {
+const RespondentUpload = ({ onUpdate, initialData, surveyId }) => {
   const { showSuccess, showError } = useToast();
-  const [contacts, setContacts] = useState(initialData || []);
+  const [contacts, setContacts] = useState([]); // Only current page contacts
   const [uploading, setUploading] = useState(false);
   const [uploadErrors, setUploadErrors] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'manual'
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false
+  });
   
-  // Calculate pagination
-  const totalPages = Math.ceil(contacts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedContacts = useMemo(() => {
-    return contacts.slice(startIndex, endIndex);
-  }, [contacts, startIndex, endIndex]);
-
-  // Reset to first page when contacts change significantly
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [contacts.length, totalPages, currentPage]);
-
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-      // Scroll to top of table
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+  // Cache for loaded pages (to avoid re-fetching)
+  const [loadedPagesCache, setLoadedPagesCache] = useState(new Map());
+  
+  // Local modifications (contacts added/deleted in current session)
+  const [localModifications, setLocalModifications] = useState({
+    added: [], // Contacts added via upload/manual
+    deleted: [] // Contact IDs deleted
+  });
 
   const [manualForm, setManualForm] = useState({
     name: '',
@@ -65,31 +59,153 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
   });
   const [formErrors, setFormErrors] = useState({});
 
-  // Update parent when contacts change (but only if contacts actually changed)
-  const prevContactsRef = useRef(JSON.stringify(contacts));
-  useEffect(() => {
-    // Only call onUpdate if contacts actually changed (deep comparison for arrays)
-    const currentContactsStr = JSON.stringify(contacts);
-    if (prevContactsRef.current !== currentContactsStr) {
-      prevContactsRef.current = currentContactsStr;
-      onUpdate(contacts);
+  // Fetch contacts for a specific page
+  const fetchContactsPage = async (page) => {
+    if (!surveyId) {
+      // If no surveyId (creating new survey), use initialData with client-side pagination
+      if (initialData && Array.isArray(initialData) && initialData.length > 0) {
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageContacts = initialData.slice(startIndex, endIndex);
+        setContacts(pageContacts);
+        setPagination({
+          total: initialData.length,
+          totalPages: Math.ceil(initialData.length / itemsPerPage),
+          hasNext: endIndex < initialData.length,
+          hasPrev: page > 1
+        });
+      }
+      return;
     }
-  }, [contacts, onUpdate]);
 
-  // Initialize from initialData only once when component mounts
-  // After that, we preserve all contacts (including uploaded ones) and only append new ones
-  useEffect(() => {
-    // Only initialize on first mount if we have initialData and haven't initialized yet
-    if (!isInitialized && initialData && Array.isArray(initialData) && initialData.length > 0) {
-      setContacts(initialData);
-      setIsInitialized(true);
-    } else if (!isInitialized) {
-      // Mark as initialized even if no initialData, to prevent future resets
-      setIsInitialized(true);
+    // Check cache first
+    if (loadedPagesCache.has(page)) {
+      const cachedData = loadedPagesCache.get(page);
+      setContacts(cachedData.contacts);
+      setPagination(cachedData.pagination);
+      return;
     }
-    // Note: We don't update contacts when initialData changes after initialization
-    // This ensures uploaded contacts are never lost
-  }, [initialData, isInitialized]);
+
+    try {
+      setLoadingContacts(true);
+      const response = await surveyAPI.getRespondentContacts(surveyId, {
+        page: page,
+        limit: itemsPerPage
+      });
+
+      if (response.success && response.data) {
+        const pageContacts = response.data.contacts || [];
+        const paginationData = response.data.pagination || {};
+        
+        // Apply local modifications (filter deleted, add new ones if on first page)
+        let finalContacts = pageContacts.filter(contact => {
+          const contactId = contact._id || contact.id || `${contact.phone}_${contact.name}`;
+          return !localModifications.deleted.includes(contactId);
+        });
+
+        // If on first page, prepend newly added contacts
+        if (page === 1 && localModifications.added.length > 0) {
+          finalContacts = [...localModifications.added, ...finalContacts];
+        }
+
+        // Update total count to account for modifications
+        const totalCount = paginationData.total 
+          - localModifications.deleted.length 
+          + localModifications.added.length;
+
+        const updatedPagination = {
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / itemsPerPage),
+          hasNext: paginationData.hasNext || (page * itemsPerPage < totalCount),
+          hasPrev: paginationData.hasPrev || page > 1
+        };
+
+        setContacts(finalContacts);
+        setPagination(updatedPagination);
+
+        // Cache the page data (without local modifications for consistency)
+        setLoadedPagesCache(prev => {
+          const newCache = new Map(prev);
+          newCache.set(page, {
+            contacts: pageContacts,
+            pagination: paginationData
+          });
+          return newCache;
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching contacts page:', error);
+      showError('Failed to load contacts');
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  // Load first page on mount or when surveyId changes
+  useEffect(() => {
+    if (!isInitialized) {
+      if (surveyId) {
+        // For existing surveys, fetch from API
+        console.log(`🔍 Initializing RespondentUpload with surveyId: ${surveyId}`);
+        setIsInitialized(true);
+        fetchContactsPage(1);
+      } else if (initialData && Array.isArray(initialData) && initialData.length > 0) {
+        // For new surveys without surveyId, use initialData
+        console.log(`🔍 Initializing RespondentUpload with initialData: ${initialData.length} contacts`);
+        setIsInitialized(true);
+        fetchContactsPage(1);
+      } else {
+        // No surveyId and no initialData, just mark as initialized
+        console.log(`🔍 Initializing RespondentUpload with no data`);
+        setIsInitialized(true);
+      }
+    }
+  }, [surveyId]); // Only depend on surveyId, not initialData to avoid re-initialization
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= (pagination.totalPages || 1)) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  // Fetch page when currentPage changes (but avoid infinite loop)
+  useEffect(() => {
+    if (isInitialized && currentPage > 0 && surveyId) {
+      fetchContactsPage(currentPage);
+    }
+  }, [currentPage, itemsPerPage]);
+
+  // Update parent with modification status (for saving)
+  // Only notify when there are actual modifications, don't notify on initial load
+  const hasNotifiedEmpty = useRef(false);
+  const isInitialLoad = useRef(true);
+  
+  useEffect(() => {
+    // Skip notification on initial load
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
+    
+    if (localModifications.added.length > 0 || localModifications.deleted.length > 0) {
+      hasNotifiedEmpty.current = false;
+      onUpdate({
+        hasModifications: true,
+        addedCount: localModifications.added.length,
+        deletedCount: localModifications.deleted.length,
+        modifications: {
+          added: localModifications.added,
+          deleted: localModifications.deleted
+        }
+      });
+    } else if (!hasNotifiedEmpty.current) {
+      hasNotifiedEmpty.current = true;
+      // Only notify about empty state if we've had modifications before
+      // Don't notify on initial load
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localModifications.added.length, localModifications.deleted.length]);
 
   const handleDownloadTemplate = async () => {
     try {
@@ -104,7 +220,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type
       const validTypes = [
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel'
@@ -130,48 +245,54 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
       const response = await surveyAPI.uploadRespondentContacts(selectedFile);
       
       if (response.success && response.data.contacts) {
-        // Merge new contacts with existing ones - always append, never replace
         const newContacts = response.data.contacts.map(contact => ({
           ...contact,
           addedAt: new Date(contact.addedAt || new Date())
         }));
         
-        // Combine existing and new contacts, avoiding duplicates based on phone number
-        // This ensures we always append to the existing list
-        setContacts(prevContacts => {
-          const existingPhones = new Set(prevContacts.map(c => c.phone));
-          const uniqueNewContacts = newContacts.filter(c => !existingPhones.has(c.phone));
-          const updatedContacts = [...prevContacts, ...uniqueNewContacts];
-          
-          console.log('📝 Contacts before upload:', prevContacts.length);
-          console.log('📝 New contacts from file:', newContacts.length);
-          console.log('📝 Unique new contacts (after duplicate check):', uniqueNewContacts.length);
-          console.log('📝 Total contacts after upload:', updatedContacts.length);
-          
-          return updatedContacts;
-        });
+        // Check for duplicates against current page and already added contacts
+        const existingPhones = new Set([
+          ...contacts.map(c => c.phone),
+          ...localModifications.added.map(c => c.phone)
+        ]);
+        const uniqueNewContacts = newContacts.filter(c => !existingPhones.has(c.phone));
+        
+        // Add to local modifications
+        setLocalModifications(prev => ({
+          ...prev,
+          added: [...prev.added, ...uniqueNewContacts]
+        }));
+        
+        // Clear cache to force refresh
+        setLoadedPagesCache(new Map());
+        
+        // Refresh current page to show new contacts
+        if (currentPage === 1) {
+          setContacts(prev => [...uniqueNewContacts, ...prev]);
+          setPagination(prev => ({
+            ...prev,
+            total: prev.total + uniqueNewContacts.length,
+            totalPages: Math.ceil((prev.total + uniqueNewContacts.length) / itemsPerPage)
+          }));
+        } else {
+          fetchContactsPage(currentPage);
+        }
         
         setSelectedFile(null);
-        
-        // Reset file input
         const fileInput = document.getElementById('excel-upload');
         if (fileInput) fileInput.value = '';
 
-        // Calculate how many were actually added (excluding duplicates)
-        const existingPhones = new Set(contacts.map(c => c.phone));
-        const actuallyAdded = newContacts.filter(c => !existingPhones.has(c.phone)).length;
-        const duplicatesSkipped = newContacts.length - actuallyAdded;
-
+        const duplicatesSkipped = newContacts.length - uniqueNewContacts.length;
         if (response.data.errors && response.data.errors.length > 0) {
           setUploadErrors(response.data.errors);
-          let message = `Successfully added ${actuallyAdded} contact(s)`;
+          let message = `Successfully added ${uniqueNewContacts.length} contact(s)`;
           if (duplicatesSkipped > 0) {
             message += ` (${duplicatesSkipped} duplicate(s) skipped)`;
           }
           message += `. ${response.data.errors.length} row(s) had errors.`;
           showError(message);
         } else {
-          let message = `Successfully added ${actuallyAdded} contact(s)`;
+          let message = `Successfully added ${uniqueNewContacts.length} contact(s)`;
           if (duplicatesSkipped > 0) {
             message += ` (${duplicatesSkipped} duplicate(s) skipped)`;
           }
@@ -190,19 +311,67 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
   };
 
   const handleDeleteContact = (index) => {
-    const updatedContacts = contacts.filter((_, i) => i !== index);
-    setContacts(updatedContacts);
+    const contactToDelete = contacts[index];
+    if (!contactToDelete) return;
+
+    const contactId = contactToDelete._id || contactToDelete.id || `${contactToDelete.phone}_${contactToDelete.name}`;
+    
+    // Check if it's a locally added contact (can remove directly)
+    const isLocallyAdded = localModifications.added.some(c => 
+      (c._id || c.id || `${c.phone}_${c.name}`) === contactId
+    );
+
+    if (isLocallyAdded) {
+      setLocalModifications(prev => ({
+        ...prev,
+        added: prev.added.filter(c => 
+          (c._id || c.id || `${c.phone}_${c.name}`) !== contactId
+        )
+      }));
+      setContacts(prev => prev.filter((_, i) => i !== index));
+      setPagination(prev => ({
+        ...prev,
+        total: prev.total - 1,
+        totalPages: Math.ceil((prev.total - 1) / itemsPerPage)
+      }));
+    } else {
+      setLocalModifications(prev => ({
+        ...prev,
+        deleted: [...prev.deleted, contactId]
+      }));
+      setContacts(prev => prev.filter((_, i) => i !== index));
+      setPagination(prev => ({
+        ...prev,
+        total: prev.total - 1,
+        totalPages: Math.ceil((prev.total - 1) / itemsPerPage)
+      }));
+    }
+    
+    setLoadedPagesCache(new Map());
     showSuccess('Contact removed successfully');
   };
 
-  const handleDeleteAll = () => {
+  const handleDeleteAll = async () => {
     if (window.confirm('Are you sure you want to delete all contacts?')) {
+      const allContactIds = contacts.map(c => c._id || c.id || `${c.phone}_${c.name}`);
+      setLocalModifications(prev => ({
+        added: [],
+        deleted: [...prev.deleted, ...allContactIds]
+      }));
+      
       setContacts([]);
+      setLoadedPagesCache(new Map());
+      setPagination({
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false
+      });
+      setCurrentPage(1);
       showSuccess('All contacts removed');
     }
   };
 
-  // Validate manual form
   const validateManualForm = () => {
     const errors = {};
     
@@ -231,13 +400,11 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle manual form input change
   const handleManualFormChange = (field, value) => {
     setManualForm(prev => ({
       ...prev,
       [field]: value
     }));
-    // Clear error for this field when user starts typing
     if (formErrors[field]) {
       setFormErrors(prev => {
         const newErrors = { ...prev };
@@ -247,14 +414,12 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
     }
   };
 
-  // Add manual contact
   const handleAddManualContact = () => {
     if (!validateManualForm()) {
       showError('Please fix the errors in the form');
       return;
     }
 
-    // Check for duplicate phone number
     const phoneNumber = manualForm.phone.replace(/\D/g, '');
     const existingPhones = contacts.map(c => c.phone?.replace(/\D/g, ''));
     
@@ -276,9 +441,26 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
       addedAt: new Date()
     };
 
-    setContacts(prev => [...prev, newContact]);
+    setLocalModifications(prev => ({
+      ...prev,
+      added: [...prev.added, newContact]
+    }));
+
+    if (currentPage === 1) {
+      setContacts(prev => [newContact, ...prev]);
+      setPagination(prev => ({
+        ...prev,
+        total: prev.total + 1,
+        totalPages: Math.ceil((prev.total + 1) / itemsPerPage)
+      }));
+    } else {
+      setPagination(prev => ({
+        ...prev,
+        total: prev.total + 1,
+        totalPages: Math.ceil((prev.total + 1) / itemsPerPage)
+      }));
+    }
     
-    // Reset form
     setManualForm({
       name: '',
       countryCode: '+91',
@@ -335,7 +517,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
         {/* Upload Tab */}
         {activeTab === 'upload' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Download Template */}
           <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <FileSpreadsheet className="w-6 h-6 text-green-600" />
@@ -353,7 +534,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
             </button>
           </div>
 
-          {/* Upload File */}
           <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
               <Upload className="w-6 h-6 text-blue-600" />
@@ -396,7 +576,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
             </div>
           </div>
 
-          {/* Upload Errors */}
           {uploadErrors.length > 0 && (
             <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 col-span-2">
               <div className="flex items-center gap-2 mb-2">
@@ -422,7 +601,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Name <span className="text-red-500">*</span>
@@ -441,7 +619,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                 )}
               </div>
 
-              {/* Country Code */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Country Code <span className="text-red-500">*</span>
@@ -460,7 +637,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                 )}
               </div>
 
-              {/* Phone */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phone Number <span className="text-red-500">*</span>
@@ -483,7 +659,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                 )}
               </div>
 
-              {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Email <span className="text-gray-400 text-xs">(Optional)</span>
@@ -502,7 +677,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                 )}
               </div>
 
-              {/* Address */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Address <span className="text-gray-400 text-xs">(Optional)</span>
@@ -516,7 +690,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                 />
               </div>
 
-              {/* City */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   City <span className="text-gray-400 text-xs">(Optional)</span>
@@ -530,7 +703,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                 />
               </div>
 
-              {/* AC (Assembly Constituency) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   AC (Assembly Constituency) <span className="text-gray-400 text-xs">(Optional)</span>
@@ -544,7 +716,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                 />
               </div>
 
-              {/* PC (Parliamentary Constituency) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   PC (Parliamentary Constituency) <span className="text-gray-400 text-xs">(Optional)</span>
@@ -558,7 +729,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                 />
               </div>
 
-              {/* PS (Polling Station) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   PS (Polling Station) <span className="text-gray-400 text-xs">(Optional)</span>
@@ -573,7 +743,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
               </div>
             </div>
 
-            {/* Add Button */}
             <div className="mt-6 flex justify-end">
               <button
                 onClick={handleAddManualContact}
@@ -593,10 +762,11 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
           <div className="flex items-center gap-3">
             <Users className="w-5 h-5 text-gray-600" />
             <h3 className="font-semibold text-gray-800">
-              Respondent Contacts ({contacts.length})
+              Respondent Contacts ({pagination.total || contacts.length})
+              {loadingContacts && <span className="text-sm text-gray-500 ml-2">(Loading...)</span>}
             </h3>
           </div>
-          {contacts.length > 0 && (
+          {(pagination.total > 0 || contacts.length > 0) && (
             <button
               onClick={handleDeleteAll}
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -615,11 +785,10 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
           </div>
         ) : (
           <>
-            {/* Pagination Controls - Top */}
             <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">
-                  Showing {startIndex + 1} to {Math.min(endIndex, contacts.length)} of {contacts.length} contacts
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, pagination.total || contacts.length)} of {pagination.total || contacts.length} contacts
                 </span>
                 <select
                   value={itemsPerPage}
@@ -638,18 +807,18 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
+                  disabled={!pagination.hasPrev}
                   className="p-2 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   title="Previous page"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <span className="text-sm text-gray-600 px-3">
-                  Page {currentPage} of {totalPages}
+                  Page {currentPage} of {pagination.totalPages || 1}
                 </span>
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
+                  disabled={!pagination.hasNext}
                   className="p-2 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   title="Next page"
                 >
@@ -658,7 +827,6 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
               </div>
             </div>
 
-            {/* Contacts Table */}
             <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
@@ -677,8 +845,8 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {paginatedContacts.map((contact, index) => {
-                    const actualIndex = startIndex + index;
+                  {contacts.map((contact, index) => {
+                    const actualIndex = (currentPage - 1) * itemsPerPage + index;
                     return (
                       <tr key={actualIndex} className="hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-3 text-sm text-gray-500">{actualIndex + 1}</td>
@@ -693,7 +861,7 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
                         <td className="px-4 py-3 text-sm text-gray-600">{contact.ps || '-'}</td>
                         <td className="px-4 py-3">
                           <button
-                            onClick={() => handleDeleteContact(actualIndex)}
+                            onClick={() => handleDeleteContact(index)}
                             className="text-red-600 hover:text-red-800 transition-colors"
                             title="Delete contact"
                           >
@@ -707,44 +875,43 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
               </table>
             </div>
 
-            {/* Pagination Controls - Bottom */}
-            {totalPages > 1 && (
+            {(pagination.totalPages > 1 || (pagination.totalPages === 0 && contacts.length > itemsPerPage)) && (
               <div className="p-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-gray-600">
-                    Showing {startIndex + 1} to {Math.min(endIndex, contacts.length)} of {contacts.length} contacts
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, pagination.total || contacts.length)} of {pagination.total || contacts.length} contacts
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handlePageChange(1)}
-                    disabled={currentPage === 1}
+                    disabled={!pagination.hasPrev}
                     className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     First
                   </button>
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
+                    disabled={!pagination.hasPrev}
                     className="p-2 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title="Previous page"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <span className="text-sm text-gray-600 px-3">
-                    Page {currentPage} of {totalPages}
+                    Page {currentPage} of {pagination.totalPages || 1}
                   </span>
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
+                    disabled={!pagination.hasNext}
                     className="p-2 border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     title="Next page"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handlePageChange(totalPages)}
-                    disabled={currentPage === totalPages}
+                    onClick={() => handlePageChange(pagination.totalPages || 1)}
+                    disabled={!pagination.hasNext}
                     className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Last
@@ -760,4 +927,3 @@ const RespondentUpload = ({ onUpdate, initialData }) => {
 };
 
 export default RespondentUpload;
-

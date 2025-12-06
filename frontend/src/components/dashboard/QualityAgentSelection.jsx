@@ -486,11 +486,48 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
     }
   };
 
-  const getFilteredACs = (agentId, allACs) => {
+  // Helper function to extract numeric AC code (remove state prefix and leading zeros)
+  // e.g., "WB001" -> "1", "WB010" -> "10", "WB100" -> "100"
+  const getNumericACCode = (acCode) => {
+    if (!acCode || typeof acCode !== 'string') return '';
+    
+    // Remove state prefix (alphabets at the start) and extract numeric part
+    const numericPart = acCode.replace(/^[A-Z]+/, '');
+    
+    // Remove leading zeros and return as string
+    // If all zeros, return "0", otherwise return the number without leading zeros
+    const numericValue = parseInt(numericPart, 10);
+    return isNaN(numericValue) ? '' : numericValue.toString();
+  };
+
+  const getFilteredACs = (agentId, allACs, allACObjects) => {
     const searchTerm = searchACs[agentId] || '';
-    return allACs.filter(ac => 
-      ac.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    if (!searchTerm.trim()) {
+      return allACs;
+    }
+    
+    const searchLower = searchTerm.toLowerCase();
+    const searchNumeric = searchTerm.trim(); // For numeric search, don't lowercase
+    
+    return allACs.filter(acName => {
+      // Search by AC name (case-insensitive)
+      const nameMatch = acName.toLowerCase().includes(searchLower);
+      
+      // Search by numeric AC code
+      const acData = allACObjects.find(ac => ac.acName === acName);
+      if (acData && acData.acCode) {
+        const numericCode = getNumericACCode(acData.acCode);
+        const numericCodeMatch = numericCode && (
+          numericCode === searchNumeric || 
+          numericCode.includes(searchNumeric) ||
+          searchNumeric.includes(numericCode)
+        );
+        
+        return nameMatch || numericCodeMatch;
+      }
+      
+      return nameMatch;
+    });
   };
 
   // Close dropdown when clicking outside
@@ -1059,7 +1096,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
                                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                                 <input
                                                   type="text"
-                                                  placeholder="Search ACs..."
+                                                  placeholder="Search by AC name or code..."
                                                   value={searchACs[currentAgent.id] || ''}
                                                   onChange={(e) => {
                                                     e.stopPropagation();
@@ -1073,8 +1110,8 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
 
                                             {/* AC Options */}
                                             <div className="max-h-48 overflow-y-auto">
-                                              {getFilteredACs(currentAgent.id, acs.map(ac => ac.acName)).length > 0 ? (
-                                                getFilteredACs(currentAgent.id, acs.map(ac => ac.acName)).map(acName => {
+                                              {getFilteredACs(currentAgent.id, acs.map(ac => ac.acName), acs).length > 0 ? (
+                                                getFilteredACs(currentAgent.id, acs.map(ac => ac.acName), acs).map(acName => {
                                                   const acData = acs.find(ac => ac.acName === acName);
                                                   const isSelected = currentAgent.assignedACs && currentAgent.assignedACs.includes(acName);
                                                   const assignmentCount = getACAssignmentCount(acName);

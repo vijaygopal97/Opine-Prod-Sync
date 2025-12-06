@@ -536,6 +536,26 @@ export const surveyAPI = {
     } catch (error) {
       throw error;
     }
+  },
+
+  // Get respondent contacts for a survey (with pagination)
+  getRespondentContacts: async (surveyId, params = {}) => {
+    try {
+      const response = await api.get(`/api/surveys/${surveyId}/respondent-contacts`, { params });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Save respondent contacts modifications (added/deleted)
+  saveRespondentContacts: async (surveyId, modifications) => {
+    try {
+      const response = await api.put(`/api/surveys/${surveyId}/respondent-contacts`, modifications);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 

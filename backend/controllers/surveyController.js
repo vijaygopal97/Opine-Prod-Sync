@@ -1668,6 +1668,348 @@ exports.uploadRespondentContacts = async (req, res) => {
   }
 };
 
+// @desc    Get respondent contacts for a survey (from JSON file or database)
+// @route   GET /api/surveys/:id/respondent-contacts
+// @access  Private (Company Admin, Project Manager)
+exports.getRespondentContacts = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 50 } = req.query;
+    
+    // Find the survey
+    const survey = await Survey.findById(id);
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // Check if user has permission
+    const currentUser = await User.findById(req.user.id).populate('company');
+    if (!currentUser || !currentUser.company) {
+      return res.status(400).json({
+        success: false,
+        message: 'User not associated with any company'
+      });
+    }
+
+    if (survey.company.toString() !== currentUser.company._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view contacts from your company surveys.'
+      });
+    }
+
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    let contacts = [];
+    let total = 0;
+
+    // Check if contacts are stored in JSON file
+    const possiblePaths = [];
+    
+    if (survey.respondentContactsFile) {
+      if (path.isAbsolute(survey.respondentContactsFile)) {
+        possiblePaths.push(survey.respondentContactsFile);
+      } else {
+        // Try relative to backend directory
+        possiblePaths.push(path.join(__dirname, '..', survey.respondentContactsFile));
+        // Try relative to project root
+        possiblePaths.push(path.join('/var/www/opine', survey.respondentContactsFile));
+      }
+    }
+    
+    // Also try default paths
+    possiblePaths.push(path.join('/var/www/opine', 'data', 'respondent-contacts', `${id}.json`));
+    possiblePaths.push(path.join(__dirname, '..', 'data', 'respondent-contacts', `${id}.json`));
+    
+    // Also check Optimised-backup directory
+    possiblePaths.push(path.join('/var/www/Optimised-backup', 'opine', 'data', 'respondent-contacts', `${id}.json`));
+    
+    let fileRead = false;
+    console.log(`🔍 Looking for respondent contacts file for survey: ${id}`);
+    console.log(`🔍 Possible paths:`, possiblePaths);
+    
+    for (const filePath of possiblePaths) {
+      try {
+        await fs.access(filePath);
+        console.log(`✅ File found at: ${filePath}`);
+        
+        const fileContent = await fs.readFile(filePath, 'utf8');
+        contacts = JSON.parse(fileContent);
+        
+        if (!Array.isArray(contacts)) {
+          console.warn(`⚠️ File content is not an array, got:`, typeof contacts);
+          contacts = [];
+        }
+        
+        total = contacts.length;
+        fileRead = true;
+        console.log(`✅ Successfully read ${total} contacts from file: ${filePath}`);
+        break;
+      } catch (fileError) {
+        console.log(`❌ Could not read file at ${filePath}:`, fileError.message);
+        continue;
+      }
+    }
+    
+    if (!fileRead) {
+      console.log(`⚠️ No JSON file found, will check database array`);
+    }
+    
+    if (fileRead) {
+      // Apply pagination
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      const skip = (pageNum - 1) * limitNum;
+      const paginatedContacts = contacts.slice(skip, skip + limitNum);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Respondent contacts retrieved successfully',
+        data: {
+          contacts: paginatedContacts,
+          pagination: {
+            current: pageNum,
+            pages: Math.ceil(total / limitNum),
+            total: total,
+            limit: limitNum,
+            hasNext: skip + limitNum < total,
+            hasPrev: pageNum > 1
+          }
+        }
+      });
+    }
+
+    // Fallback: Check if contacts are in database array
+    if (survey.respondentContacts && Array.isArray(survey.respondentContacts) && survey.respondentContacts.length > 0) {
+      contacts = survey.respondentContacts;
+      total = contacts.length;
+      
+      // Apply pagination
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      const skip = (pageNum - 1) * limitNum;
+      const paginatedContacts = contacts.slice(skip, skip + limitNum);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Respondent contacts retrieved successfully',
+        data: {
+          contacts: paginatedContacts,
+          pagination: {
+            current: pageNum,
+            pages: Math.ceil(total / limitNum),
+            total: total,
+            limit: limitNum,
+            hasNext: skip + limitNum < total,
+            hasPrev: pageNum > 1
+          }
+        }
+      });
+    }
+
+    // No contacts found
+    return res.status(200).json({
+      success: true,
+      message: 'No respondent contacts found',
+      data: {
+        contacts: [],
+        pagination: {
+          current: parseInt(page),
+          pages: 0,
+          total: 0,
+          limit: parseInt(limit),
+          hasNext: false,
+          hasPrev: false
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching respondent contacts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+// @desc    Save respondent contacts modifications (added/deleted)
+// @route   PUT /api/surveys/:id/respondent-contacts
+// @access  Private (Company Admin, Project Manager)
+exports.saveRespondentContacts = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { added = [], deleted = [] } = req.body;
+    
+    // Find the survey
+    const survey = await Survey.findById(id);
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // Check if user has permission
+    const currentUser = await User.findById(req.user.id).populate('company');
+    if (!currentUser || !currentUser.company) {
+      return res.status(400).json({
+        success: false,
+        message: 'User not associated with any company'
+      });
+    }
+
+    if (survey.company.toString() !== currentUser.company._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only modify contacts from your company surveys.'
+      });
+    }
+
+    const fs = require('fs').promises;
+    const path = require('path');
+    
+    // Determine file path
+    let filePath = path.join('/var/www/opine', 'data', 'respondent-contacts', `${id}.json`);
+    
+    // Ensure directory exists
+    const dirPath = path.dirname(filePath);
+    await fs.mkdir(dirPath, { recursive: true });
+    
+    // Read existing contacts from JSON file or database
+    let allContacts = [];
+    try {
+      const fileContent = await fs.readFile(filePath, 'utf8');
+      allContacts = JSON.parse(fileContent);
+      if (!Array.isArray(allContacts)) {
+        allContacts = [];
+      }
+    } catch (fileError) {
+      // File doesn't exist, try database array
+      if (survey.respondentContacts && Array.isArray(survey.respondentContacts)) {
+        allContacts = survey.respondentContacts;
+      }
+    }
+    
+    // Get phone numbers for deleted contacts BEFORE applying deletions
+    const deletedPhones = [];
+    if (deleted && deleted.length > 0) {
+      const deletedIds = new Set(deleted);
+      allContacts.forEach(contact => {
+        const contactId = contact._id || contact.id || `${contact.phone}_${contact.name}`;
+        if (deletedIds.has(contactId) && contact.phone) {
+          deletedPhones.push(contact.phone);
+        }
+      });
+      
+      // Apply deletions
+      allContacts = allContacts.filter(contact => {
+        const contactId = contact._id || contact.id || `${contact.phone}_${contact.name}`;
+        return !deletedIds.has(contactId);
+      });
+    }
+    
+    // Apply additions
+    if (added && added.length > 0) {
+      const newContacts = added.map(contact => ({
+        name: contact.name || '',
+        phone: contact.phone || '',
+        countryCode: contact.countryCode || '',
+        email: contact.email || '',
+        address: contact.address || '',
+        city: contact.city || '',
+        ac: contact.ac || '',
+        pc: contact.pc || '',
+        ps: contact.ps || '',
+        addedAt: contact.addedAt || new Date().toISOString(),
+        addedBy: req.user.id
+      }));
+      
+      allContacts = [...newContacts, ...allContacts];
+    }
+    
+    // Save updated contacts to JSON file
+    await fs.writeFile(filePath, JSON.stringify(allContacts, null, 2), 'utf8');
+    
+    // Update survey to reference the JSON file if not already set
+    if (!survey.respondentContactsFile) {
+      await Survey.findByIdAndUpdate(id, {
+        respondentContactsFile: `data/respondent-contacts/${id}.json`
+      });
+    }
+    
+    // Update CATI respondent queue entries
+    const CatiRespondentQueue = require('../models/CatiRespondentQueue');
+    
+    // Delete queue entries for deleted contacts
+    if (deletedPhones.length > 0) {
+      const deleteResult = await CatiRespondentQueue.deleteMany({
+        survey: id,
+        'respondentContact.phone': { $in: deletedPhones },
+        status: { $in: ['pending', 'call_failed', 'busy', 'no_answer', 'switched_off', 'not_reachable', 'does_not_exist', 'rejected'] }
+      });
+    }
+    
+    // Create queue entries for added contacts
+    if (added && added.length > 0) {
+      const existingQueueEntries = await CatiRespondentQueue.find({ survey: id })
+        .select('respondentContact.phone');
+      const existingPhones = new Set(
+        existingQueueEntries.map(e => e.respondentContact?.phone).filter(Boolean)
+      );
+      
+      const newContactsForQueue = added.filter(contact => {
+        const phone = contact.phone || '';
+        return phone && !existingPhones.has(phone);
+      });
+      
+      if (newContactsForQueue.length > 0) {
+        const queueEntries = newContactsForQueue.map(contact => ({
+          survey: id,
+          respondentContact: {
+            name: contact.name || '',
+            countryCode: contact.countryCode || '',
+            phone: contact.phone || '',
+            email: contact.email || '',
+            address: contact.address || '',
+            city: contact.city || '',
+            ac: contact.ac || '',
+            pc: contact.pc || '',
+            ps: contact.ps || ''
+          },
+          status: 'pending',
+          currentAttemptNumber: 0
+        }));
+        
+        await CatiRespondentQueue.insertMany(queueEntries);
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Respondent contacts saved successfully',
+      data: {
+        total: allContacts.length,
+        added: added?.length || 0,
+        deleted: deleted?.length || 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Error saving respondent contacts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 // @desc    Get CATI performance stats for a survey
 // @route   GET /api/surveys/:id/cati-stats
 // @access  Private (Company Admin, Project Manager)

@@ -28,6 +28,7 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [contactsModified, setContactsModified] = useState(false); // Track if respondentContacts have been modified
+  const [respondentContactsModifications, setRespondentContactsModifications] = useState(null); // Track modifications from RespondentUpload
   const { showSuccess, showError } = useToast();
   const [surveyData, setSurveyData] = useState({
     mode: '',
@@ -649,6 +650,23 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
       }
       
       if (response && response.success) {
+        const savedSurveyId = response.data?.survey?._id || response.data?.survey?.id || editingSurvey?._id || editingSurvey?.id;
+        
+        // Save respondent contacts modifications if any
+        if (respondentContactsModifications && savedSurveyId && 
+            (respondentContactsModifications.added.length > 0 || respondentContactsModifications.deleted.length > 0)) {
+          try {
+            await surveyAPI.saveRespondentContacts(savedSurveyId, {
+              added: respondentContactsModifications.added,
+              deleted: respondentContactsModifications.deleted
+            });
+            setRespondentContactsModifications(null);
+          } catch (contactsError) {
+            console.error('Error saving respondent contacts modifications:', contactsError);
+            // Don't fail the entire save, just log the error
+          }
+        }
+        
         // Reset contactsModified flag after successful save
         setContactsModified(false);
         // Check if this is a multi-mode survey
@@ -1003,6 +1021,23 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
       }
       
       if (response && response.success) {
+        const savedSurveyId = response.data?.survey?._id || response.data?.survey?.id || editingSurvey?._id || editingSurvey?.id;
+        
+        // Save respondent contacts modifications if any
+        if (respondentContactsModifications && savedSurveyId && 
+            (respondentContactsModifications.added.length > 0 || respondentContactsModifications.deleted.length > 0)) {
+          try {
+            await surveyAPI.saveRespondentContacts(savedSurveyId, {
+              added: respondentContactsModifications.added,
+              deleted: respondentContactsModifications.deleted
+            });
+            setRespondentContactsModifications(null);
+          } catch (contactsError) {
+            console.error('Error saving respondent contacts modifications:', contactsError);
+            // Don't fail the entire save, just log the error
+          }
+        }
+        
         // Check if this is a multi-mode survey
         const isMultiMode = surveyData.mode === 'multi_mode' || (surveyData.modes && surveyData.modes.length > 1);
         
@@ -1321,8 +1356,18 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             // Single CATI mode: Upload Respondents step
             return (
               <RespondentUpload 
-                onUpdate={(data) => updateSurveyData('respondentContacts', data)}
+                onUpdate={(data) => {
+                  // Handle modifications from new implementation
+                  if (data.hasModifications !== undefined) {
+                    setRespondentContactsModifications(data.modifications);
+                    setContactsModified(data.hasModifications);
+                  } else {
+                    // Fallback for old implementation
+                    updateSurveyData('respondentContacts', data);
+                  }
+                }}
                 initialData={surveyData.respondentContacts}
+                surveyId={editingSurvey?._id || editingSurvey?.id}
               />
             );
           } else {
@@ -1346,8 +1391,18 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             // Multi-mode with CATI: Upload Respondents step
             return (
               <RespondentUpload 
-                onUpdate={(data) => updateSurveyData('respondentContacts', data)}
+                onUpdate={(data) => {
+                  // Handle modifications from new implementation
+                  if (data.hasModifications !== undefined) {
+                    setRespondentContactsModifications(data.modifications);
+                    setContactsModified(data.hasModifications);
+                  } else {
+                    // Fallback for old implementation
+                    updateSurveyData('respondentContacts', data);
+                  }
+                }}
                 initialData={surveyData.respondentContacts}
+                surveyId={editingSurvey?._id || editingSurvey?.id}
               />
             );
           } else {
@@ -1539,8 +1594,18 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
           if (hasCATIStep6) {
             return (
               <RespondentUpload 
-                onUpdate={(data) => updateSurveyData('respondentContacts', data)}
+                onUpdate={(data) => {
+                  // Handle modifications from new implementation
+                  if (data.hasModifications !== undefined) {
+                    setRespondentContactsModifications(data.modifications);
+                    setContactsModified(data.hasModifications);
+                  } else {
+                    // Fallback for old implementation
+                    updateSurveyData('respondentContacts', data);
+                  }
+                }}
                 initialData={surveyData.respondentContacts}
+                surveyId={editingSurvey?._id || editingSurvey?.id}
               />
             );
           } else {

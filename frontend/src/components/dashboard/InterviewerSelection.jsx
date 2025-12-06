@@ -61,54 +61,141 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
 
   // Initialize selectedInterviewers from initialData only once
   useEffect(() => {
-    console.log('🔧 InterviewerSelection useEffect - initialData received:', initialData, 'mode:', mode);
+    const modeValue = typeof mode === 'object' ? mode.mode : mode;
+    console.log('🔧 InterviewerSelection useEffect - initialData received:', initialData?.length || 0, 'items, mode:', modeValue, 'isMultiMode:', isMultiMode);
+    console.log('🔧 InitialData sample:', initialData?.slice(0, 3)?.map(i => ({ id: i.id || i._id, name: i.name || `${i.firstName} ${i.lastName}` })));
     // Only update if initialData has actually changed
     if (initialData && Array.isArray(initialData) && initialData.length > 0) {
-      const processedData = initialData.map(interviewer => ({
-        ...interviewer,
-        selectedState: interviewer.selectedState || '',
-        selectedCountry: interviewer.selectedCountry || '',
-        assignedACs: interviewer.assignedACs || [],
-        assignedMode: interviewer.assignedMode || mode // Set assignedMode to current mode
-      }));
-      
-      // Only update if the data is actually different
-      setSelectedInterviewers(prev => {
-        const isDifferent = JSON.stringify(prev) !== JSON.stringify(processedData);
-        if (isDifferent) {
-          return processedData;
-        }
-        return prev;
+      const processedData = initialData.map(interviewer => {
+        // Normalize ID - handle both _id and id fields, and convert to string for consistency
+        const normalizedId = interviewer.id?.toString() || interviewer._id?.toString() || interviewer.id || interviewer._id;
+        return {
+          ...interviewer,
+          id: normalizedId, // Ensure consistent ID format (string)
+          _id: normalizedId, // Also set _id for compatibility
+          selectedState: interviewer.selectedState || '',
+          selectedCountry: interviewer.selectedCountry || '',
+          assignedACs: interviewer.assignedACs || [],
+          assignedMode: interviewer.assignedMode || modeValue // Set assignedMode to current mode
+        };
       });
+      
+      console.log('🔧 Processed initialData:', processedData.length, 'interviewers');
+      console.log('🔧 Processed IDs (first 5):', processedData.slice(0, 5).map(i => i.id));
+      
+      // For multi-mode, update the appropriate state based on mode prop (not currentAssignmentStep)
+      if (isMultiMode) {
+        if (modeValue === 'capi') {
+          // CAPI step
+          setCapiInterviewers(prev => {
+            const prevIds = new Set(prev.map(p => p.id?.toString() || p._id?.toString()).filter(Boolean));
+            const newIds = new Set(processedData.map(p => p.id?.toString()).filter(Boolean));
+            const isDifferent = prevIds.size !== newIds.size || 
+              !Array.from(prevIds).every(id => newIds.has(id)) ||
+              !Array.from(newIds).every(id => prevIds.has(id));
+            
+            if (isDifferent) {
+              console.log('🔧 Updating capiInterviewers from initialData');
+              return processedData;
+            }
+            console.log('🔧 No change detected in capiInterviewers initialData');
+            return prev;
+          });
+        } else if (modeValue === 'cati') {
+          // CATI step
+          setCatiInterviewers(prev => {
+            const prevIds = new Set(prev.map(p => p.id?.toString() || p._id?.toString()).filter(Boolean));
+            const newIds = new Set(processedData.map(p => p.id?.toString()).filter(Boolean));
+            const isDifferent = prevIds.size !== newIds.size || 
+              !Array.from(prevIds).every(id => newIds.has(id)) ||
+              !Array.from(newIds).every(id => prevIds.has(id));
+            
+            if (isDifferent) {
+              console.log('🔧 Updating catiInterviewers from initialData');
+              return processedData;
+            }
+            console.log('🔧 No change detected in catiInterviewers initialData');
+            return prev;
+          });
+        }
+      } else {
+        // Single mode: use selectedInterviewers
+        setSelectedInterviewers(prev => {
+          const prevIds = new Set(prev.map(p => p.id?.toString() || p._id?.toString()).filter(Boolean));
+          const newIds = new Set(processedData.map(p => p.id?.toString()).filter(Boolean));
+          const isDifferent = prevIds.size !== newIds.size || 
+            !Array.from(prevIds).every(id => newIds.has(id)) ||
+            !Array.from(newIds).every(id => prevIds.has(id));
+          
+          if (isDifferent) {
+            console.log('🔧 Updating selectedInterviewers from initialData');
+            return processedData;
+          }
+          console.log('🔧 No change detected in selectedInterviewers initialData');
+          return prev;
+        });
+      }
     } else if (!initialData || initialData.length === 0) {
       // Only clear if we actually have data to clear
-      setSelectedInterviewers(prev => {
-        if (prev.length > 0) {
-          return [];
+      if (isMultiMode) {
+        const modeValue = typeof mode === 'object' ? mode.mode : mode;
+        if (modeValue === 'capi') {
+          setCapiInterviewers(prev => {
+            if (prev.length > 0) {
+              console.log('🔧 Clearing capiInterviewers (no initialData)');
+              return [];
+            }
+            return prev;
+          });
+        } else if (modeValue === 'cati') {
+          setCatiInterviewers(prev => {
+            if (prev.length > 0) {
+              console.log('🔧 Clearing catiInterviewers (no initialData)');
+              return [];
+            }
+            return prev;
+          });
         }
-        return prev;
-      });
+      } else {
+        setSelectedInterviewers(prev => {
+          if (prev.length > 0) {
+            console.log('🔧 Clearing selectedInterviewers (no initialData)');
+            return [];
+          }
+          return prev;
+        });
+      }
     }
-  }, [initialData, mode]); // Include mode in dependencies
+  }, [initialData, mode, isMultiMode]); // Use mode prop, not currentAssignmentStep
 
   // Update parent component whenever selected interviewers change
   useEffect(() => {
     // Use a timeout to debounce updates and prevent infinite loops
     const timeoutId = setTimeout(() => {
-      // Only update if we have actual changes and avoid calling onUpdate with empty arrays unnecessarily
-      if (selectedInterviewers.length > 0) {
-        if (mode === 'multi_mode') {
-          // For multi-mode, combine CAPI and CATI interviewers
-          const allInterviewers = [...capiInterviewers, ...catiInterviewers];
-          onUpdate(allInterviewers);
-        } else {
+      if (isMultiMode) {
+        // For multi-mode, use the appropriate state based on mode prop
+        const modeValue = typeof mode === 'object' ? mode.mode : mode;
+        if (modeValue === 'capi') {
+          // CAPI step: update capiInterviewers
+          if (capiInterviewers.length > 0) {
+            onUpdate(capiInterviewers);
+          }
+        } else if (modeValue === 'cati') {
+          // CATI step: update catiInterviewers
+          if (catiInterviewers.length > 0) {
+            onUpdate(catiInterviewers);
+          }
+        }
+      } else {
+        // Single mode: use selectedInterviewers
+        if (selectedInterviewers.length > 0) {
           onUpdate(selectedInterviewers);
         }
       }
     }, 100); // 100ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [selectedInterviewers, capiInterviewers, catiInterviewers, mode, onUpdate]);
+  }, [selectedInterviewers, capiInterviewers, catiInterviewers, mode, isMultiMode, onUpdate]);
 
   // Update parent component whenever AC settings change
   useEffect(() => {
@@ -217,25 +304,111 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
           }));
 
           // Filter interviewers based on survey mode
+          // Determine filter mode - use mode prop directly (parent passes "capi" or "cati" explicitly)
+          let filterMode = modeValue;
+          if (isMultiMode) {
+            // For multi-mode, the parent component passes mode="capi" or mode="cati" explicitly
+            // So we use that directly
+            filterMode = modeValue;
+          }
+          
           let filteredInterviewers = transformedInterviewers;
           
-          if (modeValue === 'capi') {
+          if (filterMode === 'capi') {
             // For CAPI mode: show interviewers who can do CAPI or Both
-            filteredInterviewers = transformedInterviewers.filter(interviewer => 
-              interviewer.interviewModes === 'CAPI (Face To Face)' || 
-              interviewer.interviewModes === 'Both'
-            );
-            console.log(`Filtered for CAPI mode: ${filteredInterviewers.length} interviewers`);
-          } else if (modeValue === 'cati') {
+            // Also include interviewers with null/undefined interviewModes (default to Both)
+            filteredInterviewers = transformedInterviewers.filter(interviewer => {
+              const modes = interviewer.interviewModes;
+              return modes === 'CAPI (Face To Face)' || 
+                     modes === 'Both' ||
+                     !modes || // Include if null/undefined (defaults to Both)
+                     modes === null ||
+                     modes === undefined;
+            });
+            console.log(`Filtered for CAPI mode: ${filteredInterviewers.length} interviewers out of ${transformedInterviewers.length} total`);
+          } else if (filterMode === 'cati') {
             // For CATI mode: show interviewers who can do CATI or Both
-            filteredInterviewers = transformedInterviewers.filter(interviewer => 
-              interviewer.interviewModes === 'CATI (Telephonic interview)' || 
-              interviewer.interviewModes === 'Both'
-            );
-            console.log(`Filtered for CATI mode: ${filteredInterviewers.length} interviewers`);
+            // Also include interviewers with null/undefined interviewModes (default to Both)
+            filteredInterviewers = transformedInterviewers.filter(interviewer => {
+              const modes = interviewer.interviewModes;
+              return modes === 'CATI (Telephonic interview)' || 
+                     modes === 'Both' ||
+                     !modes || // Include if null/undefined (defaults to Both)
+                     modes === null ||
+                     modes === undefined;
+            });
+            console.log(`Filtered for CATI mode: ${filteredInterviewers.length} interviewers out of ${transformedInterviewers.length} total`);
           } else {
             // For other modes or no mode specified: show all interviewers
             console.log(`No mode filtering applied: ${filteredInterviewers.length} interviewers`);
+          }
+          
+          // IMPORTANT: Ensure assigned interviewers from initialData are included even if they don't match filter
+          // This handles cases where an interviewer's mode was changed after assignment
+          if (initialData && Array.isArray(initialData) && initialData.length > 0) {
+            // Normalize IDs for comparison
+            const normalizeId = (id) => {
+              if (!id) return null;
+              const str = id.toString();
+              return str;
+            };
+            
+            const assignedIds = new Set(
+              initialData.map(i => {
+                const id = normalizeId(i.id || i._id);
+                return id;
+              }).filter(Boolean)
+            );
+            console.log('🔧 Assigned interviewer IDs from initialData:', Array.from(assignedIds).slice(0, 10));
+            console.log('🔧 Total assigned interviewers:', assignedIds.size);
+            console.log('🔧 Total fetched interviewers:', transformedInterviewers.length);
+            console.log('🔧 Filtered interviewers before adding assigned:', filteredInterviewers.length);
+            
+            // Create a map of fetched interviewers by ID for quick lookup
+            const fetchedInterviewersMap = new Map();
+            transformedInterviewers.forEach(interviewer => {
+              const id = normalizeId(interviewer.id);
+              if (id) {
+                fetchedInterviewersMap.set(id, interviewer);
+              }
+            });
+            
+            // Add assigned interviewers that aren't already in filtered list
+            const filteredIds = new Set(filteredInterviewers.map(i => normalizeId(i.id)).filter(Boolean));
+            initialData.forEach(assignedInterviewer => {
+              const assignedId = normalizeId(assignedInterviewer.id || assignedInterviewer._id);
+              if (assignedId && !filteredIds.has(assignedId)) {
+                // This interviewer is assigned but not in filtered list (mode mismatch)
+                // Find them in the full list and add them
+                const fullInterviewer = fetchedInterviewersMap.get(assignedId);
+                if (fullInterviewer) {
+                  // Merge assigned data (ACs, state, etc.) with fetched interviewer data
+                  filteredInterviewers.push({
+                    ...fullInterviewer,
+                    ...assignedInterviewer,
+                    id: assignedId, // Ensure consistent ID
+                    selectedState: assignedInterviewer.selectedState || '',
+                    selectedCountry: assignedInterviewer.selectedCountry || '',
+                    assignedACs: assignedInterviewer.assignedACs || []
+                  });
+                  filteredIds.add(assignedId);
+                  console.log(`➕ Added assigned interviewer (not in filter): ${assignedInterviewer.name || fullInterviewer.name}`);
+                } else {
+                  // Interviewer not found in fetched list, add assigned data as-is
+                  filteredInterviewers.push({
+                    ...assignedInterviewer,
+                    id: assignedId,
+                    selectedState: assignedInterviewer.selectedState || '',
+                    selectedCountry: assignedInterviewer.selectedCountry || '',
+                    assignedACs: assignedInterviewer.assignedACs || []
+                  });
+                  filteredIds.add(assignedId);
+                  console.log(`➕ Added assigned interviewer (not in fetched list): ${assignedInterviewer.name || 'Unknown'}`);
+                }
+              }
+            });
+            
+            console.log('🔧 Filtered interviewers after adding assigned:', filteredInterviewers.length);
           }
           
           setInterviewers(filteredInterviewers);
@@ -309,25 +482,108 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
   }, [interviewers, searchTerm, filterLocation, filterRating, sortBy]);
 
   const handleInterviewerSelect = (interviewer) => {
-    setSelectedInterviewers(prev => {
-      const isSelected = prev.some(selected => selected.id === interviewer.id);
-      const currentAssignment = prev.find(selected => selected.id === interviewer.id);
-      
-      if (isSelected) {
-        return prev.filter(selected => selected.id !== interviewer.id);
-      } else {
-        // Add interviewer with default AC assignment fields
-        const newInterviewer = {
-          ...interviewer,
-          selectedState: currentAssignment?.selectedState || '',
-          selectedCountry: currentAssignment?.selectedCountry || '',
-          assignedACs: currentAssignment?.assignedACs || [],
-          assignedMode: mode, // Set assignedMode to current mode (capi or cati)
-          status: 'assigned'
-        };
-        return [...prev, newInterviewer];
+    const modeValue = typeof mode === 'object' ? mode.mode : mode;
+    const normalizeId = (id) => id?.toString() || '';
+    const interviewerId = normalizeId(interviewer.id);
+    
+    if (isMultiMode) {
+      // For multi-mode, update the appropriate state based on mode prop
+      if (modeValue === 'capi') {
+        setCapiInterviewers(prev => {
+          const isSelected = prev.some(selected => {
+            const selectedId = normalizeId(selected.id || selected._id);
+            return selectedId === interviewerId;
+          });
+          const currentAssignment = prev.find(selected => {
+            const selectedId = normalizeId(selected.id || selected._id);
+            return selectedId === interviewerId;
+          });
+          
+          if (isSelected) {
+            return prev.filter(selected => {
+              const selectedId = normalizeId(selected.id || selected._id);
+              return selectedId !== interviewerId;
+            });
+          } else {
+            // Add interviewer with default AC assignment fields
+            const newInterviewer = {
+              ...interviewer,
+              id: interviewerId,
+              selectedState: currentAssignment?.selectedState || '',
+              selectedCountry: currentAssignment?.selectedCountry || '',
+              assignedACs: currentAssignment?.assignedACs || [],
+              assignedMode: modeValue,
+              status: 'assigned'
+            };
+            console.log('🔍 Adding new CAPI interviewer:', newInterviewer);
+            return [...prev, newInterviewer];
+          }
+        });
+      } else if (modeValue === 'cati') {
+        setCatiInterviewers(prev => {
+          const isSelected = prev.some(selected => {
+            const selectedId = normalizeId(selected.id || selected._id);
+            return selectedId === interviewerId;
+          });
+          const currentAssignment = prev.find(selected => {
+            const selectedId = normalizeId(selected.id || selected._id);
+            return selectedId === interviewerId;
+          });
+          
+          if (isSelected) {
+            return prev.filter(selected => {
+              const selectedId = normalizeId(selected.id || selected._id);
+              return selectedId !== interviewerId;
+            });
+          } else {
+            // Add interviewer with default AC assignment fields
+            const newInterviewer = {
+              ...interviewer,
+              id: interviewerId,
+              selectedState: currentAssignment?.selectedState || '',
+              selectedCountry: currentAssignment?.selectedCountry || '',
+              assignedACs: currentAssignment?.assignedACs || [],
+              assignedMode: modeValue,
+              status: 'assigned'
+            };
+            console.log('🔍 Adding new CATI interviewer:', newInterviewer);
+            return [...prev, newInterviewer];
+          }
+        });
       }
-    });
+    } else {
+      // Single mode: use selectedInterviewers
+      setSelectedInterviewers(prev => {
+        const isSelected = prev.some(selected => {
+          const selectedId = normalizeId(selected.id || selected._id);
+          return selectedId === interviewerId;
+        });
+        const currentAssignment = prev.find(selected => {
+          const selectedId = normalizeId(selected.id || selected._id);
+          return selectedId === interviewerId;
+        });
+        
+        if (isSelected) {
+          return prev.filter(selected => {
+            const selectedId = normalizeId(selected.id || selected._id);
+            return selectedId !== interviewerId;
+          });
+        } else {
+          // Add interviewer with default AC assignment fields
+          const newInterviewer = {
+            ...interviewer,
+            id: interviewerId,
+            selectedState: currentAssignment?.selectedState || '',
+            selectedCountry: currentAssignment?.selectedCountry || '',
+            assignedACs: currentAssignment?.assignedACs || [],
+            assignedMode: modeValue,
+            status: 'assigned'
+          };
+          console.log('🔍 Adding new interviewer:', newInterviewer);
+          return [...prev, newInterviewer];
+        }
+      });
+    }
   };
 
   const handleSelectAll = () => {
@@ -532,52 +788,134 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
 
   // Function to handle AC assignment for an interviewer
   const handleACAssignment = (interviewerId, acs) => {
+    const modeValue = typeof mode === 'object' ? mode.mode : mode;
+    const normalizeId = (id) => id?.toString() || '';
+    const targetId = normalizeId(interviewerId);
     
-    // Update selected interviewers
-    setSelectedInterviewers(prev => 
-      prev.map(interviewer => {
-        if (interviewer.id === interviewerId) {
-          const updatedInterviewer = { ...interviewer, assignedACs: acs };
-          return updatedInterviewer;
-        }
-        return interviewer;
-      })
-    );
+    if (isMultiMode) {
+      if (modeValue === 'capi') {
+        setCapiInterviewers(prev => 
+          prev.map(interviewer => {
+            const interviewerIdNormalized = normalizeId(interviewer.id || interviewer._id);
+            if (interviewerIdNormalized === targetId) {
+              return { ...interviewer, assignedACs: acs };
+            }
+            return interviewer;
+          })
+        );
+      } else if (modeValue === 'cati') {
+        setCatiInterviewers(prev => 
+          prev.map(interviewer => {
+            const interviewerIdNormalized = normalizeId(interviewer.id || interviewer._id);
+            if (interviewerIdNormalized === targetId) {
+              return { ...interviewer, assignedACs: acs };
+            }
+            return interviewer;
+          })
+        );
+      }
+    } else {
+      setSelectedInterviewers(prev => 
+        prev.map(interviewer => {
+          const interviewerIdNormalized = normalizeId(interviewer.id || interviewer._id);
+          if (interviewerIdNormalized === targetId) {
+            return { ...interviewer, assignedACs: acs };
+          }
+          return interviewer;
+        })
+      );
+    }
   };
 
   // Function to handle individual state selection for an interviewer
   const handleInterviewerStateSelection = (interviewerId, state) => {
+    const modeValue = typeof mode === 'object' ? mode.mode : mode;
+    const normalizeId = (id) => id?.toString() || '';
+    const targetId = normalizeId(interviewerId);
     
-    // Update selected interviewers
-    setSelectedInterviewers(prev => 
-      prev.map(interviewer => {
-        if (interviewer.id === interviewerId) {
-          const updatedInterviewer = { ...interviewer, selectedState: state, assignedACs: [] };
-          console.log('🔍 Updated interviewer with state:', updatedInterviewer);
-          return updatedInterviewer;
-        }
-        return interviewer;
-      })
-    );
+    if (isMultiMode) {
+      if (modeValue === 'capi') {
+        setCapiInterviewers(prev => 
+          prev.map(interviewer => {
+            const interviewerIdNormalized = normalizeId(interviewer.id || interviewer._id);
+            if (interviewerIdNormalized === targetId) {
+              const updatedInterviewer = { ...interviewer, selectedState: state, assignedACs: [] };
+              console.log('🔍 Updated CAPI interviewer with state:', updatedInterviewer);
+              return updatedInterviewer;
+            }
+            return interviewer;
+          })
+        );
+      } else if (modeValue === 'cati') {
+        setCatiInterviewers(prev => 
+          prev.map(interviewer => {
+            const interviewerIdNormalized = normalizeId(interviewer.id || interviewer._id);
+            if (interviewerIdNormalized === targetId) {
+              const updatedInterviewer = { ...interviewer, selectedState: state, assignedACs: [] };
+              console.log('🔍 Updated CATI interviewer with state:', updatedInterviewer);
+              return updatedInterviewer;
+            }
+            return interviewer;
+          })
+        );
+      }
+    } else {
+      setSelectedInterviewers(prev => 
+        prev.map(interviewer => {
+          const interviewerIdNormalized = normalizeId(interviewer.id || interviewer._id);
+          if (interviewerIdNormalized === targetId) {
+            const updatedInterviewer = { ...interviewer, selectedState: state, assignedACs: [] };
+            console.log('🔍 Updated interviewer with state:', updatedInterviewer);
+            return updatedInterviewer;
+          }
+          return interviewer;
+        })
+      );
+    }
   };
 
   // Function to handle bulk state selection (from main AC section)
   const handleBulkStateSelection = (state) => {
     console.log('🔍 handleBulkStateSelection called:', { state });
+    const modeValue = typeof mode === 'object' ? mode.mode : mode;
     setSelectedState(state);
     if (state) {
       fetchACsForState(state);
       
       // Pre-fill this state for all selected interviewers (but don't lock them)
-      setSelectedInterviewers(prev => {
-        const updated = prev.map(interviewer => ({
-          ...interviewer,
-          selectedState: state,
-          assignedACs: [] // Reset ACs when state changes
-        }));
-        console.log('🔍 Bulk updated all interviewers:', updated);
-        return updated;
-      });
+      if (isMultiMode) {
+        if (modeValue === 'capi') {
+          setCapiInterviewers(prev => {
+            const updated = prev.map(interviewer => ({
+              ...interviewer,
+              selectedState: state,
+              assignedACs: [] // Reset ACs when state changes
+            }));
+            console.log('🔍 Bulk updated all CAPI interviewers:', updated);
+            return updated;
+          });
+        } else if (modeValue === 'cati') {
+          setCatiInterviewers(prev => {
+            const updated = prev.map(interviewer => ({
+              ...interviewer,
+              selectedState: state,
+              assignedACs: [] // Reset ACs when state changes
+            }));
+            console.log('🔍 Bulk updated all CATI interviewers:', updated);
+            return updated;
+          });
+        }
+      } else {
+        setSelectedInterviewers(prev => {
+          const updated = prev.map(interviewer => ({
+            ...interviewer,
+            selectedState: state,
+            assignedACs: [] // Reset ACs when state changes
+          }));
+          console.log('🔍 Bulk updated all interviewers:', updated);
+          return updated;
+        });
+      }
     } else {
       // If bulk state is cleared, don't change individual selections
       setAvailableACs([]);
@@ -608,7 +946,21 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
   };
 
   const addAC = (interviewerId, ac) => {
-    const currentInterviewer = selectedInterviewers.find(i => i.id === interviewerId);
+    const modeValue = typeof mode === 'object' ? mode.mode : mode;
+    const normalizeId = (id) => id?.toString() || '';
+    const targetId = normalizeId(interviewerId);
+    
+    let currentInterviewer = null;
+    if (isMultiMode) {
+      if (modeValue === 'capi') {
+        currentInterviewer = capiInterviewers.find(i => normalizeId(i.id || i._id) === targetId);
+      } else if (modeValue === 'cati') {
+        currentInterviewer = catiInterviewers.find(i => normalizeId(i.id || i._id) === targetId);
+      }
+    } else {
+      currentInterviewer = selectedInterviewers.find(i => normalizeId(i.id || i._id) === targetId);
+    }
+    
     if (currentInterviewer && currentInterviewer.assignedACs && !currentInterviewer.assignedACs.includes(ac)) {
       const updatedACs = [...currentInterviewer.assignedACs, ac];
       handleACAssignment(interviewerId, updatedACs);
@@ -634,18 +986,69 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
   };
 
   const removeAC = (interviewerId, ac) => {
-    const currentInterviewer = selectedInterviewers.find(i => i.id === interviewerId);
+    const modeValue = typeof mode === 'object' ? mode.mode : mode;
+    const normalizeId = (id) => id?.toString() || '';
+    const targetId = normalizeId(interviewerId);
+    
+    let currentInterviewer = null;
+    if (isMultiMode) {
+      if (modeValue === 'capi') {
+        currentInterviewer = capiInterviewers.find(i => normalizeId(i.id || i._id) === targetId);
+      } else if (modeValue === 'cati') {
+        currentInterviewer = catiInterviewers.find(i => normalizeId(i.id || i._id) === targetId);
+      }
+    } else {
+      currentInterviewer = selectedInterviewers.find(i => normalizeId(i.id || i._id) === targetId);
+    }
+    
     if (currentInterviewer && currentInterviewer.assignedACs) {
       const updatedACs = currentInterviewer.assignedACs.filter(assignedAC => assignedAC !== ac);
       handleACAssignment(interviewerId, updatedACs);
     }
   };
 
-  const getFilteredACs = (interviewerId, allACs) => {
+  // Helper function to extract numeric AC code (remove state prefix and leading zeros)
+  // e.g., "WB001" -> "1", "WB010" -> "10", "WB100" -> "100"
+  const getNumericACCode = (acCode) => {
+    if (!acCode || typeof acCode !== 'string') return '';
+    
+    // Remove state prefix (alphabets at the start) and extract numeric part
+    const numericPart = acCode.replace(/^[A-Z]+/, '');
+    
+    // Remove leading zeros and return as string
+    // If all zeros, return "0", otherwise return the number without leading zeros
+    const numericValue = parseInt(numericPart, 10);
+    return isNaN(numericValue) ? '' : numericValue.toString();
+  };
+
+  const getFilteredACs = (interviewerId, allACs, allACObjects) => {
     const searchTerm = searchACs[interviewerId] || '';
-    return allACs.filter(ac => 
-      ac.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    if (!searchTerm.trim()) {
+      return allACs;
+    }
+    
+    const searchLower = searchTerm.toLowerCase();
+    const searchNumeric = searchTerm.trim(); // For numeric search, don't lowercase
+    
+    return allACs.filter(acName => {
+      // Search by AC name (case-insensitive)
+      const nameMatch = acName.toLowerCase().includes(searchLower);
+      
+      // Search by numeric AC code
+      const acData = allACObjects.find(ac => ac.acName === acName);
+      if (acData && acData.acCode) {
+        const numericCode = getNumericACCode(acData.acCode);
+        const numericCodeMatch = numericCode && (
+          numericCode === searchNumeric || 
+          numericCode.includes(searchNumeric) ||
+          searchNumeric.includes(numericCode)
+        );
+        
+        return nameMatch || numericCodeMatch;
+      }
+      
+      return nameMatch;
+    });
   };
 
   // Close dropdown when clicking outside
@@ -1015,24 +1418,66 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
             let isSelectedInCurrentMode = false;
             let isSelectedInOtherMode = false;
             
-            if (mode === 'multi_mode') {
-              const currentMode = currentAssignmentStep === 0 ? 'capi' : 'cati';
-              const currentModeInterviewers = currentMode === 'capi' ? capiInterviewers : catiInterviewers;
-              const otherModeInterviewers = currentMode === 'capi' ? catiInterviewers : capiInterviewers;
-              
-              isSelectedInCurrentMode = currentModeInterviewers.some(selected => selected.id === interviewer.id);
-              isSelectedInOtherMode = otherModeInterviewers.some(selected => selected.id === interviewer.id);
-              isSelected = isSelectedInCurrentMode;
+            const modeValue = typeof mode === 'object' ? mode.mode : mode;
+            const normalizeId = (id) => id?.toString() || '';
+            const interviewerId = normalizeId(interviewer.id);
+            
+            if (isMultiMode) {
+              // For multi-mode, check the appropriate state based on mode prop
+              if (modeValue === 'capi') {
+                isSelectedInCurrentMode = capiInterviewers.some(selected => {
+                  const selectedId = normalizeId(selected.id || selected._id);
+                  return selectedId === interviewerId;
+                });
+                isSelectedInOtherMode = catiInterviewers.some(selected => {
+                  const selectedId = normalizeId(selected.id || selected._id);
+                  return selectedId === interviewerId;
+                });
+                isSelected = isSelectedInCurrentMode;
+              } else if (modeValue === 'cati') {
+                isSelectedInCurrentMode = catiInterviewers.some(selected => {
+                  const selectedId = normalizeId(selected.id || selected._id);
+                  return selectedId === interviewerId;
+                });
+                isSelectedInOtherMode = capiInterviewers.some(selected => {
+                  const selectedId = normalizeId(selected.id || selected._id);
+                  return selectedId === interviewerId;
+                });
+                isSelected = isSelectedInCurrentMode;
+              }
             } else {
-              isSelected = selectedInterviewers.some(selected => selected.id === interviewer.id);
+              isSelected = selectedInterviewers.some(selected => {
+                const selectedId = normalizeId(selected.id || selected._id);
+                return selectedId === interviewerId;
+              });
             }
             
-            const isAvailable = interviewer.availability === 'Available';
+            // For selected interviewers, always show as available (they can be edited/unselected)
+            // Only check availability for unselected interviewers
+            const isAvailable = isSelected ? true : (interviewer.availability === 'Available');
             
-            // Get the updated interviewer data from selectedInterviewers if selected
-            const currentInterviewer = isSelected 
-              ? selectedInterviewers.find(selected => selected.id === interviewer.id) 
-              : interviewer;
+            // Get the updated interviewer data from the correct state if selected
+            let currentInterviewer = interviewer;
+            if (isSelected) {
+              if (isMultiMode) {
+                if (modeValue === 'capi') {
+                  currentInterviewer = capiInterviewers.find(selected => {
+                    const selectedId = normalizeId(selected.id || selected._id);
+                    return selectedId === interviewerId;
+                  }) || interviewer;
+                } else if (modeValue === 'cati') {
+                  currentInterviewer = catiInterviewers.find(selected => {
+                    const selectedId = normalizeId(selected.id || selected._id);
+                    return selectedId === interviewerId;
+                  }) || interviewer;
+                }
+              } else {
+                currentInterviewer = selectedInterviewers.find(selected => {
+                  const selectedId = normalizeId(selected.id || selected._id);
+                  return selectedId === interviewerId;
+                }) || interviewer;
+              }
+            }
             
             // Check if this interviewer has a rejected status
             const isRejected = currentInterviewer && currentInterviewer.status === 'rejected';
@@ -1074,20 +1519,20 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                       {/* Interviewer Info */}
                       <div className="flex-1">
                         {/* Multi-Mode Status Indicators */}
-                        {mode === 'multi_mode' && (isSelectedInCurrentMode || isSelectedInOtherMode) && (
+                        {isMultiMode && (isSelectedInCurrentMode || isSelectedInOtherMode) && (
                           <div className="flex items-center space-x-2 mb-2">
                             {isSelectedInCurrentMode && (
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                currentAssignmentStep === 0 
+                                modeValue === 'capi'
                                   ? 'bg-blue-100 text-blue-800' 
                                   : 'bg-green-100 text-green-800'
                               }`}>
-                                {currentAssignmentStep === 0 ? 'CAPI' : 'CATI'} - Current Step
+                                {modeValue === 'capi' ? 'CAPI' : 'CATI'} - Current Step
                               </span>
                             )}
                             {isSelectedInOtherMode && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                {currentAssignmentStep === 0 ? 'CATI' : 'CAPI'} - Other Step
+                                {modeValue === 'capi' ? 'CATI' : 'CAPI'} - Other Step
                               </span>
                             )}
                           </div>
@@ -1099,16 +1544,49 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const updated = selectedInterviewers.map((inv) => {
-                                  if (inv.id === interviewer.id) {
-                                    return {
-                                      ...inv,
-                                      locationControlBooster: !(inv.locationControlBooster || false)
-                                    };
+                                const modeValue = typeof mode === 'object' ? mode.mode : mode;
+                                const normalizeId = (id) => id?.toString() || '';
+                                const interviewerIdNormalized = normalizeId(interviewer.id);
+                                
+                                if (isMultiMode) {
+                                  if (modeValue === 'capi') {
+                                    const updated = capiInterviewers.map((inv) => {
+                                      const invId = normalizeId(inv.id || inv._id);
+                                      if (invId === interviewerIdNormalized) {
+                                        return {
+                                          ...inv,
+                                          locationControlBooster: !(inv.locationControlBooster || false)
+                                        };
+                                      }
+                                      return inv;
+                                    });
+                                    setCapiInterviewers(updated);
+                                  } else if (modeValue === 'cati') {
+                                    const updated = catiInterviewers.map((inv) => {
+                                      const invId = normalizeId(inv.id || inv._id);
+                                      if (invId === interviewerIdNormalized) {
+                                        return {
+                                          ...inv,
+                                          locationControlBooster: !(inv.locationControlBooster || false)
+                                        };
+                                      }
+                                      return inv;
+                                    });
+                                    setCatiInterviewers(updated);
                                   }
-                                  return inv;
-                                });
-                                setSelectedInterviewers(updated);
+                                } else {
+                                  const updated = selectedInterviewers.map((inv) => {
+                                    const invId = normalizeId(inv.id || inv._id);
+                                    if (invId === interviewerIdNormalized) {
+                                      return {
+                                        ...inv,
+                                        locationControlBooster: !(inv.locationControlBooster || false)
+                                      };
+                                    }
+                                    return inv;
+                                  });
+                                  setSelectedInterviewers(updated);
+                                }
                               }}
                               className={`p-1.5 rounded-lg transition-colors ${
                                 currentInterviewer?.locationControlBooster
@@ -1324,7 +1802,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                                 <input
                                                   type="text"
-                                                  placeholder="Search ACs..."
+                                                  placeholder="Search by AC name or code..."
                                                   value={searchACs[currentInterviewer.id] || ''}
                                                   onChange={(e) => {
                                                     e.stopPropagation();
@@ -1338,8 +1816,8 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
 
                                             {/* AC Options */}
                                             <div className="max-h-48 overflow-y-auto">
-                                              {getFilteredACs(currentInterviewer.id, acs.map(ac => ac.acName)).length > 0 ? (
-                                                getFilteredACs(currentInterviewer.id, acs.map(ac => ac.acName)).map(acName => {
+                                              {getFilteredACs(currentInterviewer.id, acs.map(ac => ac.acName), acs).length > 0 ? (
+                                                getFilteredACs(currentInterviewer.id, acs.map(ac => ac.acName), acs).map(acName => {
                                                   const acData = acs.find(ac => ac.acName === acName);
                                                   const isSelected = currentInterviewer.assignedACs && currentInterviewer.assignedACs.includes(acName);
                                                   const assignmentCount = getACAssignmentCount(acName);
@@ -1416,7 +1894,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                       >
                         View Profile
                       </button>
-                      {!isAvailable && (
+                      {!isAvailable && !isSelected && (
                         <div className="flex items-center space-x-1 text-xs text-yellow-600">
                           <AlertCircle className="w-3 h-3" />
                           <span>Currently Busy</span>

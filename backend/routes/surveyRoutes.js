@@ -16,7 +16,9 @@ const {
   debugSurveyResponses,
   downloadRespondentTemplate,
   uploadRespondentContacts,
-  uploadRespondentContactsMiddleware
+  uploadRespondentContactsMiddleware,
+  getRespondentContacts,
+  saveRespondentContacts
 } = require('../controllers/surveyController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -60,6 +62,11 @@ router.route('/:surveyId/debug-responses')
 // CATI stats route (must come before /:id route)
 router.route('/:id/cati-stats')
   .get(protect, authorize('company_admin', 'project_manager'), getCatiStats);
+
+// Respondent contacts route (must come before /:id route)
+router.route('/:id/respondent-contacts')
+  .get(protect, authorize('company_admin', 'project_manager'), getRespondentContacts)
+  .put(protect, authorize('company_admin', 'project_manager'), saveRespondentContacts);
 
 router.route('/:id')
   .get(protect, authorize('company_admin', 'project_manager', 'interviewer'), getSurvey)

@@ -2744,7 +2744,7 @@ const getSurveyResponses = async (req, res) => {
     
     // Get responses with pagination
     const responses = await SurveyResponse.find(filter)
-      .populate('interviewer', 'firstName lastName email')
+      .populate('interviewer', 'firstName lastName email phone memberId companyCode')
       .populate('verificationData.reviewer', 'firstName lastName email')
       .sort({ createdAt: -1 })
       .skip(skip)
