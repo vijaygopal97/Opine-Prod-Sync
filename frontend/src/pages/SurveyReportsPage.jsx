@@ -1590,6 +1590,9 @@ const SurveyReportsPage = () => {
 
   // All interviewers from ALL responses (Approved, Rejected, Pending_Approval) - for dropdown/search
   // This should NOT be filtered by current filters, so users can always see all available interviewers
+  // Get all unique interviewers from responses
+  // NOTE: For project managers, the backend already filters responses to only include
+  // responses from assigned interviewers, so this list will only contain assigned interviewers
   const allInterviewerObjects = useMemo(() => {
     if (!responses || responses.length === 0) return [];
 
@@ -1597,6 +1600,8 @@ const SurveyReportsPage = () => {
 
     responses.forEach(response => {
       // Only include responses with Approved, Rejected, or Pending_Approval status
+      // The backend already filters responses for project managers, so this list
+      // will only contain interviewers assigned to the project manager
       if (response.interviewer && 
           (response.status === 'Approved' || 
            response.status === 'Rejected' || 
@@ -1618,6 +1623,9 @@ const SurveyReportsPage = () => {
       }
     });
 
+    console.log('🔍 Frontend - allInterviewerObjects count:', interviewerMap.size);
+    console.log('🔍 Frontend - Interviewer IDs:', Array.from(interviewerMap.keys()));
+    
     return Array.from(interviewerMap.values());
   }, [responses]);
 

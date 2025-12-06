@@ -2657,6 +2657,7 @@ const getSurveyResponseById = async (req, res) => {
 // Get survey responses for View Responses modal
 const getSurveyResponses = async (req, res) => {
   try {
+    const mongoose = require('mongoose');
     const { surveyId } = req.params;
     const { page = 1, limit = 10, status, gender, ageMin, ageMax, ac, city, district, lokSabha, interviewerIds } = req.query;
     
@@ -2665,17 +2666,39 @@ const getSurveyResponses = async (req, res) => {
     
     // For project managers: if interviewerIds not provided, get from assignedTeamMembers
     let finalInterviewerIds = interviewerIds;
-    if (!finalInterviewerIds) {
-      const currentUser = await User.findById(req.user.id);
-      if (currentUser && currentUser.userType === 'project_manager') {
-        if (currentUser.assignedTeamMembers && currentUser.assignedTeamMembers.length > 0) {
+    let projectManagerInterviewerIds = [];
+    if (!finalInterviewerIds && req.user.userType === 'project_manager') {
+      try {
+        console.log('🔍 getSurveyResponses - Project Manager detected, fetching assigned interviewers');
+        const currentUser = await User.findById(req.user.id);
+        console.log('🔍 getSurveyResponses - Current user:', currentUser?._id, currentUser?.userType);
+        console.log('🔍 getSurveyResponses - Assigned team members count:', currentUser?.assignedTeamMembers?.length || 0);
+        
+        if (currentUser && currentUser.assignedTeamMembers && currentUser.assignedTeamMembers.length > 0) {
           const assignedInterviewers = currentUser.assignedTeamMembers
-            .filter(tm => tm.userType === 'interviewer')
-            .map(tm => tm.user.toString());
+            .filter(tm => tm.userType === 'interviewer' && tm.user)
+            .map(tm => {
+              // Handle both ObjectId and populated user object
+              const userId = tm.user._id ? tm.user._id : tm.user;
+              return userId.toString();
+            })
+            .filter(id => mongoose.Types.ObjectId.isValid(id));
+          
+          console.log('🔍 getSurveyResponses - Assigned interviewer IDs:', assignedInterviewers);
+          
           if (assignedInterviewers.length > 0) {
+            projectManagerInterviewerIds = assignedInterviewers.map(id => new mongoose.Types.ObjectId(id));
             finalInterviewerIds = assignedInterviewers.join(',');
+            console.log('🔍 getSurveyResponses - Filtering by', projectManagerInterviewerIds.length, 'assigned interviewers');
+          } else {
+            console.log('⚠️ getSurveyResponses - No assigned interviewers found for project manager');
           }
+        } else {
+          console.log('⚠️ getSurveyResponses - Project manager has no assigned team members');
         }
+      } catch (error) {
+        console.error('❌ Error fetching project manager assigned interviewers:', error);
+        // Continue without filtering if there's an error
       }
     }
     
@@ -2685,8 +2708,36 @@ const getSurveyResponses = async (req, res) => {
         ? finalInterviewerIds 
         : finalInterviewerIds.split(',').filter(id => id.trim());
       if (interviewerIdArray.length > 0) {
-        filter.interviewer = { $in: interviewerIdArray.map(id => new mongoose.Types.ObjectId(id.trim())) };
+        const interviewerObjectIds = interviewerIdArray.map(id => new mongoose.Types.ObjectId(id.trim()));
+        filter.interviewer = { $in: interviewerObjectIds };
+        // Store for use in filterOptions query
+        projectManagerInterviewerIds = interviewerObjectIds;
+        console.log('🔍 getSurveyResponses - Applied interviewer filter:', interviewerObjectIds.length, 'interviewers');
       }
+    } else if (req.user.userType === 'project_manager') {
+      console.log('⚠️ getSurveyResponses - Project manager but no interviewer filter applied - returning empty results');
+      // For project managers with no assigned interviewers, return empty results
+      return res.json({
+        success: true,
+        data: {
+          responses: [],
+          pagination: {
+            currentPage: parseInt(page),
+            totalPages: 0,
+            totalResponses: 0,
+            hasNext: false,
+            hasPrev: false
+          },
+          filterOptions: {
+            gender: [],
+            age: [],
+            ac: [],
+            city: [],
+            district: [],
+            lokSabha: []
+          }
+        }
+      });
     }
     
     // Handle status filter: 
@@ -2759,7 +2810,11 @@ const getSurveyResponses = async (req, res) => {
     console.log('🔍 getSurveyResponses - Total responses count:', totalResponses);
     
     // Get filter options for dropdowns (include Approved, Rejected, and Pending_Approval for comprehensive options)
+    // Apply project manager filter if applicable
     const statusFilterForOptions = { survey: surveyId, status: { $in: ['Approved', 'Rejected', 'Pending_Approval'] } };
+    if (projectManagerInterviewerIds.length > 0) {
+      statusFilterForOptions.interviewer = { $in: projectManagerInterviewerIds };
+    }
     const genderOptions = await SurveyResponse.distinct('responses.gender', statusFilterForOptions);
     const ageOptions = await SurveyResponse.distinct('responses.age', statusFilterForOptions);
     const acOptions = await SurveyResponse.distinct('responses.assemblyConstituency', statusFilterForOptions);
@@ -2891,7 +2946,11 @@ const getACPerformanceStats = async (req, res) => {
     }
 
     // Check access
-    if (req.user.userType !== 'company_admin' && req.user.company?.toString() !== survey.company?.toString()) {
+    const isCompanyAdmin = req.user.userType === 'company_admin';
+    const isProjectManager = req.user.userType === 'project_manager';
+    const isSameCompany = req.user.company?.toString() === survey.company?.toString();
+    
+    if (!isCompanyAdmin && !isSameCompany) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -2900,8 +2959,68 @@ const getACPerformanceStats = async (req, res) => {
 
     const state = survey.acAssignmentState || 'West Bengal';
 
-    // Get all responses for this survey
-    const allResponses = await SurveyResponse.find({ survey: surveyId })
+    // Build response filter - for project managers, filter by assigned interviewers
+    const responseFilter = { survey: surveyId };
+    if (isProjectManager && !isCompanyAdmin) {
+      try {
+        const currentUser = await User.findById(req.user.id);
+        if (currentUser && currentUser.assignedTeamMembers && currentUser.assignedTeamMembers.length > 0) {
+          const assignedInterviewers = currentUser.assignedTeamMembers
+            .filter(tm => tm.userType === 'interviewer' && tm.user)
+            .map(tm => {
+              // Handle both ObjectId and populated user object
+              const userId = tm.user._id ? tm.user._id : tm.user;
+              return userId.toString();
+            })
+            .filter(id => mongoose.Types.ObjectId.isValid(id))
+            .map(id => new mongoose.Types.ObjectId(id));
+          
+          if (assignedInterviewers.length > 0) {
+            responseFilter.interviewer = { $in: assignedInterviewers };
+          } else {
+            // No assigned interviewers, return empty stats
+            return res.json({
+              success: true,
+              data: {
+                acStats: [],
+                totalResponses: 0,
+                totalApproved: 0,
+                totalRejected: 0,
+                totalPending: 0
+              }
+            });
+          }
+        } else {
+          // No assigned team members, return empty stats
+          return res.json({
+            success: true,
+            data: {
+              acStats: [],
+              totalResponses: 0,
+              totalApproved: 0,
+              totalRejected: 0,
+              totalPending: 0
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching project manager assigned interviewers for AC stats:', error);
+        // Return empty stats on error
+        return res.json({
+          success: true,
+          data: {
+            acStats: [],
+            totalResponses: 0,
+            totalApproved: 0,
+            totalRejected: 0,
+            totalPending: 0
+          }
+        });
+      }
+    }
+
+    // Get all responses for this survey (filtered by project manager if applicable)
+    const allResponses = await SurveyResponse.find(responseFilter)
       .populate('interviewer', 'firstName lastName')
       .populate('qcBatch', 'status')
       .lean();
@@ -3289,6 +3408,7 @@ const getACPerformanceStats = async (req, res) => {
 // @access  Private (Company Admin)
 const getInterviewerPerformanceStats = async (req, res) => {
   try {
+    const mongoose = require('mongoose');
     const { surveyId } = req.params;
     const QCBatch = require('../models/QCBatch');
 
@@ -3302,15 +3422,59 @@ const getInterviewerPerformanceStats = async (req, res) => {
     }
 
     // Check access
-    if (req.user.userType !== 'company_admin' && req.user.company?.toString() !== survey.company?.toString()) {
+    const isCompanyAdmin = req.user.userType === 'company_admin';
+    const isProjectManager = req.user.userType === 'project_manager';
+    const isSameCompany = req.user.company?.toString() === survey.company?.toString();
+    
+    if (!isCompanyAdmin && !isSameCompany) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
       });
     }
 
-    // Get all responses for this survey
-    const allResponses = await SurveyResponse.find({ survey: surveyId })
+    // Build response filter - for project managers, filter by assigned interviewers
+    const responseFilter = { survey: surveyId };
+    if (isProjectManager && !isCompanyAdmin) {
+      try {
+        const currentUser = await User.findById(req.user.id);
+        if (currentUser && currentUser.assignedTeamMembers && currentUser.assignedTeamMembers.length > 0) {
+          const assignedInterviewers = currentUser.assignedTeamMembers
+            .filter(tm => tm.userType === 'interviewer' && tm.user)
+            .map(tm => {
+              const userId = tm.user._id ? tm.user._id : tm.user;
+              return userId.toString();
+            })
+            .filter(id => mongoose.Types.ObjectId.isValid(id))
+            .map(id => new mongoose.Types.ObjectId(id));
+          
+          if (assignedInterviewers.length > 0) {
+            responseFilter.interviewer = { $in: assignedInterviewers };
+          } else {
+            // No assigned interviewers, return empty stats
+            return res.json({
+              success: true,
+              data: []
+            });
+          }
+        } else {
+          // No assigned team members, return empty stats
+          return res.json({
+            success: true,
+            data: []
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching project manager assigned interviewers for interviewer stats:', error);
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
+    }
+
+    // Get all responses for this survey (filtered by project manager if applicable)
+    const allResponses = await SurveyResponse.find(responseFilter)
       .populate('interviewer', 'firstName lastName')
       .populate('qcBatch', 'status')
       .lean();
