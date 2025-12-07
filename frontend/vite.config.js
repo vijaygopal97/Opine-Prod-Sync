@@ -12,6 +12,22 @@ export default defineConfig({
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0'
+    },
+    hmr: {
+      // Suppress HMR errors for source files
+      overlay: false
     }
   },
+  // Suppress source file fetch errors in console
+  build: {
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress warnings about source file fetches
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE' || warning.message?.includes('.jsx')) {
+          return;
+        }
+        warn(warning);
+      }
+    }
+  }
 })

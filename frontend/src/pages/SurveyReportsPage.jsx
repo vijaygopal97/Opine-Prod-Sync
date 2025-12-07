@@ -120,10 +120,15 @@ const SurveyReportsPage = () => {
     const loadAssemblyData = async () => {
       try {
         const response = await fetch('/src/data/assemblyConstituencies.json');
+        if (!response.ok) {
+          throw new Error(`Failed to load assembly constituencies: ${response.status}`);
+        }
         const data = await response.json();
         setAssemblyConstituencies(data);
       } catch (error) {
         console.error('Error loading assembly constituencies:', error);
+        // Set empty object to prevent further errors
+        setAssemblyConstituencies({});
       }
     };
     loadAssemblyData();
@@ -466,7 +471,10 @@ const SurveyReportsPage = () => {
         if (isCatiSurvey) {
           try {
             console.log('🔍🔍🔍 Fetching CATI stats for survey:', surveyId);
-            const catiStatsResponse = await surveyAPI.getCatiStats(surveyId);
+            // Pass date range filters if available
+            const startDate = filters.startDate || null;
+            const endDate = filters.endDate || null;
+            const catiStatsResponse = await surveyAPI.getCatiStats(surveyId, startDate, endDate);
             console.log('🔍🔍🔍 CATI stats response:', catiStatsResponse);
             console.log('🔍🔍🔍 CATI stats response success:', catiStatsResponse?.success);
             console.log('🔍🔍🔍 CATI stats response data:', catiStatsResponse?.data);
@@ -511,7 +519,14 @@ const SurveyReportsPage = () => {
       }
     } catch (error) {
       console.error('Error fetching survey data:', error);
-      showError('Failed to load survey reports', error.message);
+      // Only show error if it's not a network/abort error (which are often harmless)
+      // Also suppress errors related to source file fetches (HMR issues)
+      if (error.name !== 'AbortError' && 
+          !error.message?.includes('Failed to fetch') && 
+          !error.message?.includes('.jsx') &&
+          !error.stack?.includes('.jsx')) {
+        showError('Failed to load survey reports', error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -1157,19 +1172,16 @@ const SurveyReportsPage = () => {
           numberStats: {
             callNotReceived: 0,
             ringing: 0,
-            notRinging: 0,
-            noResponseByTelecaller: 0
+            notRinging: 0
           },
           callNotRingStatus: {
             switchOff: 0,
             numberNotReachable: 0,
-            numberDoesNotExist: 0,
-            noResponseByTelecaller: 0
+            numberDoesNotExist: 0
           },
           callRingStatus: {
             callsConnected: 0,
-            callsNotConnected: 0,
-            noResponseByTelecaller: 0
+            callsNotConnected: 0
           }
         }
       };
@@ -1429,19 +1441,16 @@ const SurveyReportsPage = () => {
       numberStats: {
         callNotReceived: 0,
         ringing: 0,
-        notRinging: 0,
-        noResponseByTelecaller: 0
+        notRinging: 0
       },
       callNotRingStatus: {
         switchOff: 0,
         numberNotReachable: 0,
-        numberDoesNotExist: 0,
-        noResponseByTelecaller: 0
+        numberDoesNotExist: 0
       },
       callRingStatus: {
         callsConnected: 0,
-        callsNotConnected: 0,
-        noResponseByTelecaller: 0
+        callsNotConnected: 0
       }
     };
 
@@ -2553,7 +2562,6 @@ const SurveyReportsPage = () => {
             </div>
           </div>
         </div>
-        </div>
 
         {/* CAPI Performance Section */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-8">
@@ -2631,7 +2639,7 @@ const SurveyReportsPage = () => {
           {/* Number Stats */}
           <div className="mb-8">
             <h4 className="text-md font-semibold text-gray-800 mb-4">Number Stats</h4>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="text-2xl font-bold text-gray-600 mb-1">{analytics.catiPerformance.numberStats.callNotReceived}</div>
                 <div className="text-xs font-medium text-gray-800">Call Not Received</div>
@@ -2644,17 +2652,13 @@ const SurveyReportsPage = () => {
                 <div className="text-2xl font-bold text-red-600 mb-1">{analytics.catiPerformance.numberStats.notRinging}</div>
                 <div className="text-xs font-medium text-red-800">Not Ringing</div>
               </div>
-              <div className="text-center p-3 bg-pink-50 rounded-lg border border-pink-200">
-                <div className="text-2xl font-bold text-pink-600 mb-1">{analytics.catiPerformance.numberStats.noResponseByTelecaller}</div>
-                <div className="text-xs font-medium text-pink-800">No Response by Telecaller</div>
-              </div>
             </div>
           </div>
 
           {/* Call Not Ring Status */}
           <div className="mb-8">
             <h4 className="text-md font-semibold text-gray-800 mb-4">Call Not Ring Status</h4>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="text-2xl font-bold text-gray-600 mb-1">{analytics.catiPerformance.callNotRingStatus.switchOff}</div>
                 <div className="text-xs font-medium text-gray-800">Switch Off</div>
@@ -2667,17 +2671,13 @@ const SurveyReportsPage = () => {
                 <div className="text-2xl font-bold text-orange-600 mb-1">{analytics.catiPerformance.callNotRingStatus.numberDoesNotExist}</div>
                 <div className="text-xs font-medium text-orange-800">Number Does Not Exist</div>
               </div>
-              <div className="text-center p-3 bg-pink-50 rounded-lg border border-pink-200">
-                <div className="text-2xl font-bold text-pink-600 mb-1">{analytics.catiPerformance.callNotRingStatus.noResponseByTelecaller}</div>
-                <div className="text-xs font-medium text-pink-800">No Response by Telecaller</div>
-              </div>
             </div>
           </div>
 
           {/* Call Ring Status */}
-          <div>
+          <div className="mb-8">
             <h4 className="text-md font-semibold text-gray-800 mb-4">Call Ring Status</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
                 <div className="text-2xl font-bold text-green-600 mb-1">{analytics.catiPerformance.callRingStatus.callsConnected}</div>
                 <div className="text-xs font-medium text-green-800">Calls Connected</div>
@@ -2685,10 +2685,6 @@ const SurveyReportsPage = () => {
               <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
                 <div className="text-2xl font-bold text-red-600 mb-1">{analytics.catiPerformance.callRingStatus.callsNotConnected}</div>
                 <div className="text-xs font-medium text-red-800">Calls Not Connected</div>
-              </div>
-              <div className="text-center p-3 bg-pink-50 rounded-lg border border-pink-200">
-                <div className="text-2xl font-bold text-pink-600 mb-1">{analytics.catiPerformance.callRingStatus.noResponseByTelecaller}</div>
-                <div className="text-xs font-medium text-pink-800">No Response by Telecaller</div>
               </div>
             </div>
           </div>
@@ -2909,7 +2905,62 @@ const SurveyReportsPage = () => {
               )}
             </div>
           )}
-        </div>
+
+          {/* Interviewer Performance Table */}
+          {catiStats?.interviewerStats && catiStats.interviewerStats.length > 0 && (
+            <div className="mt-8">
+              <h4 className="text-md font-semibold text-gray-800 mb-4">Interviewer Performance</h4>
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">S.No</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Interviewer ID</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Caller Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Caller Mobile No.</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Number of Dials</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Completed</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Successful</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Under QC</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Rejected</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Form Duration</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Call Not Received to Telecaller</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Ringing</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Not Ringing</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Switch Off</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Number Not Reachable</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Number Does Not Exist</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">No Response by Telecaller</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {catiStats.interviewerStats.map((stat, index) => (
+                      <tr key={stat.interviewerId || index} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.sNo || index + 1}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.memberID || 'N/A'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.interviewerName || 'N/A'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.interviewerPhone || 'N/A'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.numberOfDials || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.completed || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.successful || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.underQC || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.rejected || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.formDuration || '0:00:00'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.callNotReceivedToTelecaller || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.ringing || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.notRinging || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.switchOff || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.numberNotReachable || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.numberDoesNotExist || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.noResponseByTelecaller || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          </div>
         )}
 
         {/* AC Performance Modal */}
@@ -3452,6 +3503,7 @@ const SurveyReportsPage = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
     </>
   );

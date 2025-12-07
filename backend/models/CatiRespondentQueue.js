@@ -97,6 +97,7 @@ const catiRespondentQueueSchema = new mongoose.Schema({
       'does_not_exist',
       'rejected',
       'technical_issue',
+      'consent_refused',
       'other'
     ]
   },

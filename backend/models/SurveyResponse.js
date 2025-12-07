@@ -135,6 +135,34 @@ const surveyResponseSchema = new mongoose.Schema({
     index: true
   },
   
+  // Known Call Status - Call status selected by interviewer in Call Status question (CATI only)
+  // This is separate from metadata.callStatus for accurate stats calculation
+  knownCallStatus: {
+    type: String,
+    trim: true,
+    enum: ['call_connected', 'busy', 'switched_off', 'not_reachable', 'did_not_pick_up', 
+           'number_does_not_exist', 'didnt_get_call', 'unknown'],
+    default: null,
+    index: true
+  },
+  
+  // Consent Response - Consent form answer (yes/no) for easy filtering and reporting
+  consentResponse: {
+    type: String,
+    trim: true,
+    enum: ['yes', 'no', null],
+    default: null,
+    index: true
+  },
+  
+  // Abandoned Reason - Reason for abandoning the interview (for both CAPI and CATI)
+  abandonedReason: {
+    type: String,
+    trim: true,
+    default: null,
+    index: true
+  },
+  
   // Assembly Constituency Selection (for surveys with AC assignment)
   selectedAC: {
     type: String,

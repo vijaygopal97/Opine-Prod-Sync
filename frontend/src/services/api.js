@@ -472,9 +472,12 @@ export const surveyAPI = {
   },
 
   // Get CATI performance stats for a survey
-  getCatiStats: async (surveyId) => {
+  getCatiStats: async (surveyId, startDate, endDate) => {
     try {
-      const response = await api.get(`/api/surveys/${surveyId}/cati-stats`);
+      const params = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      const response = await api.get(`/api/surveys/${surveyId}/cati-stats`, { params });
       return response.data;
     } catch (error) {
       throw error;
@@ -1316,12 +1319,13 @@ export const catiInterviewAPI = {
   },
 
   // Abandon interview
-  abandonInterview: async (queueId, reason, notes, callLaterDate) => {
+  abandonInterview: async (queueId, reason, notes, callLaterDate, callStatus = null) => {
     try {
       const response = await api.post(`/api/cati-interview/abandon/${queueId}`, {
         reason,
         notes,
-        callLaterDate
+        callLaterDate,
+        callStatus // Pass call status for stats tracking
       });
       return response.data;
     } catch (error) {
@@ -1330,7 +1334,7 @@ export const catiInterviewAPI = {
   },
 
   // Complete CATI interview
-  completeCatiInterview: async (queueId, sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions, answeredQuestions, completionPercentage, setNumber = null, OldinterviewerID = null) => {
+  completeCatiInterview: async (queueId, sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions, answeredQuestions, completionPercentage, setNumber = null, OldinterviewerID = null, callStatus = null, supervisorID = null) => {
     try {
       const response = await api.post(`/api/cati-interview/complete/${queueId}`, {
         sessionId,
@@ -1344,7 +1348,9 @@ export const catiInterviewAPI = {
         answeredQuestions,
         completionPercentage,
         setNumber, // Save which Set was shown in this CATI interview
-        OldinterviewerID // Save old interviewer ID
+        OldinterviewerID, // Save old interviewer ID
+        callStatus, // Send call status (success, busy, switched_off, etc.)
+        supervisorID // Save supervisor ID
       });
       return response.data;
     } catch (error) {

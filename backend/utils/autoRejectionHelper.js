@@ -46,8 +46,34 @@ const normalizeResponseValue = (response) => {
 const checkAutoRejection = async (surveyResponse, responses, surveyId) => {
   const rejectionReasons = [];
   
+  // EXCEPTION FOR CATI RESPONSES:
+  // Skip auto-rejection for CATI responses that are:
+  // 1. Already marked as "abandoned" status
+  // 2. Have call status other than "call_connected" or "success" (abandoned calls)
+  // 3. Have metadata.abandoned = true
+  const isCatiAbandoned = surveyResponse.interviewMode === 'cati' && (
+    surveyResponse.status === 'abandoned' ||
+    surveyResponse.metadata?.abandoned === true ||
+    surveyResponse.metadata?.callStatus !== 'call_connected' && 
+    surveyResponse.metadata?.callStatus !== 'success' &&
+    surveyResponse.metadata?.callStatus !== null &&
+    surveyResponse.metadata?.callStatus !== undefined ||
+    surveyResponse.knownCallStatus !== 'call_connected' && 
+    surveyResponse.knownCallStatus !== 'success' &&
+    surveyResponse.knownCallStatus !== null &&
+    surveyResponse.knownCallStatus !== undefined
+  );
+  
+  if (isCatiAbandoned) {
+    console.log(`⏭️  Skipping auto-rejection for CATI abandoned response: ${surveyResponse._id}`);
+    return null; // Don't auto-reject abandoned CATI interviews
+  }
+  
   // Condition 1: Duration check - must be more than 3 minutes (180 seconds)
-  if (surveyResponse.totalTimeSpent && surveyResponse.totalTimeSpent < 180) {
+  // Apply to all interview modes (CAPI and CATI) for completed interviews
+  // Note: Abandoned CATI interviews are already filtered out above (isCatiAbandoned check)
+  if (surveyResponse.totalTimeSpent && 
+      surveyResponse.totalTimeSpent < 180) {
     rejectionReasons.push({
       reason: 'Interview Too Short',
       condition: 'duration'

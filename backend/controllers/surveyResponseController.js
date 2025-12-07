@@ -614,6 +614,9 @@ const abandonInterview = async (req, res) => {
       // Extract audioRecording from metadata if available
       const audioRecording = metadata?.audioRecording || {};
       
+      // Extract abandonment reason from metadata
+      const abandonedReason = metadata?.abandonedReason || null;
+      
       // Create terminated survey response
       const surveyResponse = await SurveyResponse.createCompleteResponse({
         survey: session.survey._id,
@@ -636,11 +639,13 @@ const abandonInterview = async (req, res) => {
           totalPauses: 0
         },
         setNumber: metadata?.setNumber || null,
+        abandonedReason: abandonedReason, // Store abandonment reason
         metadata: {
           ...session.metadata,
           ...metadata,
           abandoned: true,
-          terminationReason: 'Interview abandoned by interviewer'
+          terminationReason: 'Interview abandoned by interviewer',
+          abandonmentNotes: metadata?.abandonmentNotes || null
         }
       });
       

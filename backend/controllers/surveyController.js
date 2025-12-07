@@ -2016,8 +2016,10 @@ exports.saveRespondentContacts = async (req, res) => {
 exports.getCatiStats = async (req, res) => {
   try {
     const { id } = req.params;
+    const { startDate, endDate } = req.query; // Get date range from query params
     
     console.log(`🔍🔍🔍 getCatiStats - START - Request for survey ID: ${id}`);
+    console.log(`🔍🔍🔍 getCatiStats - Date range:`, { startDate, endDate });
     console.log(`🔍🔍🔍 getCatiStats - User:`, req.user?.email, req.user?.userType);
     
     // Get current user and their company
@@ -2055,6 +2057,33 @@ exports.getCatiStats = async (req, res) => {
 
     console.log(`🔍 getCatiStats - Survey ID: ${id}, ObjectId: ${surveyObjectId}`);
 
+    // Build date filter
+    const dateFilter = {};
+    if (startDate) {
+      dateFilter.createdAt = { $gte: new Date(startDate) };
+    }
+    if (endDate) {
+      dateFilter.createdAt = { 
+        ...dateFilter.createdAt, 
+        $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) // Include entire end date
+      };
+    }
+
+    // Get CATI responses to extract call status from metadata
+    const catiResponsesQuery = {
+      survey: surveyObjectId,
+      interviewMode: 'cati',
+      ...dateFilter
+    };
+    
+    console.log(`🔍 getCatiStats - Query filter:`, JSON.stringify(catiResponsesQuery, null, 2));
+    
+    const catiResponses = await SurveyResponse.find(catiResponsesQuery)
+      .populate('interviewer', 'firstName lastName phone memberID')
+      .select('_id interviewer metadata callStatus responses totalTimeSpent status createdAt');
+    
+    console.log(`🔍 getCatiStats - Found ${catiResponses.length} CATI responses`);
+
     // Get queue entries first to find all related call records
     const queueEntries = await CatiRespondentQueue.find({
       survey: surveyObjectId
@@ -2075,12 +2104,27 @@ exports.getCatiStats = async (req, res) => {
     let callRecords = [];
     
     // Approach 1: Query by ObjectId (primary method - should find all calls)
-    console.log(`🔍🔍🔍 getCatiStats - Querying CatiCall with survey: ${surveyObjectId}`);
-    const callsByObjectId = await CatiCall.find({
+    // Apply date filter to call records as well
+    const callRecordsQuery = {
       survey: surveyObjectId
-    })
-      .populate('createdBy', 'firstName lastName email')
-      .populate('queueEntry');
+    };
+    if (startDate || endDate) {
+      callRecordsQuery.createdAt = {};
+      if (startDate) {
+        callRecordsQuery.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        callRecordsQuery.createdAt.$lte = new Date(new Date(endDate).setHours(23, 59, 59, 999));
+      }
+    }
+    
+    console.log(`🔍🔍🔍 getCatiStats - Querying CatiCall with survey: ${surveyObjectId}`);
+    console.log(`🔍🔍🔍 getCatiStats - Call records query:`, JSON.stringify(callRecordsQuery, null, 2));
+    
+    const callsByObjectId = await CatiCall.find(callRecordsQuery)
+      .populate('createdBy', 'firstName lastName phone memberID')
+      .populate('queueEntry')
+      .lean(); // Use lean() for better performance
 
     console.log(`🔍🔍🔍 getCatiStats - Calls found by ObjectId: ${callsByObjectId.length}`);
     if (callsByObjectId.length > 0) {
@@ -2092,23 +2136,27 @@ exports.getCatiStats = async (req, res) => {
         originalStatusCode: callsByObjectId[0].originalStatusCode
       });
     }
-    // Convert Mongoose documents to plain objects for processing
-    callRecords = callsByObjectId.map(c => {
-      if (c.toObject) {
-        return c.toObject();
-      } else if (c.toJSON) {
-        return c.toJSON();
-      }
-      return c;
-    });
+    // Since we're using lean(), callsByObjectId is already plain objects
+    callRecords = callsByObjectId;
     
     // Approach 2: Get calls linked via queueEntry (in case some don't have survey field set)
     if (queueEntryIds.length > 0) {
-      const callsViaQueue = await CatiCall.find({
+      const callsViaQueueQuery = {
         queueEntry: { $in: queueEntryIds },
         _id: { $nin: callRecords.map(c => c._id) }  // Exclude already found calls
-      })
-        .populate('createdBy', 'firstName lastName email')
+      };
+      if (startDate || endDate) {
+        callsViaQueueQuery.createdAt = {};
+        if (startDate) {
+          callsViaQueueQuery.createdAt.$gte = new Date(startDate);
+        }
+        if (endDate) {
+          callsViaQueueQuery.createdAt.$lte = new Date(new Date(endDate).setHours(23, 59, 59, 999));
+        }
+      }
+      
+      const callsViaQueue = await CatiCall.find(callsViaQueueQuery)
+        .populate('createdBy', 'firstName lastName phone memberID')
         .populate('queueEntry');
       
       console.log(`🔍 getCatiStats - Calls found via queueEntry: ${callsViaQueue.length}`);
@@ -2116,16 +2164,9 @@ exports.getCatiStats = async (req, res) => {
       // Add calls not already in the list
       const existingCallIds = new Set(callRecords.map(c => c._id.toString()));
       callsViaQueue.forEach(call => {
-        let callObj;
-        if (call.toObject) {
-          callObj = call.toObject();
-        } else if (call.toJSON) {
-          callObj = call.toJSON();
-        } else {
-          callObj = call;
-        }
-        if (!existingCallIds.has(callObj._id.toString())) {
-          callRecords.push(callObj);
+        // Already plain object from lean()
+        if (!existingCallIds.has(call._id.toString())) {
+          callRecords.push(call);
         }
       });
     }
@@ -2412,75 +2453,358 @@ exports.getCatiStats = async (req, res) => {
       }
     });
 
-    // Calculate number stats based on DeepCall status codes
-    // Call Not Received = no_answer (status 6,7,8,9) + failed (status 13,14,15,16,18) that didn't connect
-    const callNotReceived = callStatusBreakdown.no_answer + 
-                            callRecords.filter(c => {
-                              const status = getCallStatus(c);
-                              return status === 'failed' && status !== 'answered' && status !== 'completed';
-                            }).length;
+    // Calculate stats based on call status from responses (primary source)
+    // Extract call status from responses metadata
+    let ringingFromResponses = 0;
+    let notRingingFromResponses = 0;
+    let switchOffFromResponses = 0;
+    let numberNotReachableFromResponses = 0;
+    let numberDoesNotExistFromResponses = 0;
+    let callNotReceivedFromResponses = 0;
+    let callsConnectedFromResponses = 0;
+    let callsNotConnectedFromResponses = 0;
+    let didntGetCallFromResponses = 0;
     
-    // Ringing = calls that reached ringing status (status 1, 2, or ringing status)
-    const ringing = callStatusBreakdown.ringing;
+    catiResponses.forEach(response => {
+      // Get call status from metadata.callStatus (stored when response was submitted)
+      const callStatus = response.metadata?.callStatus || 
+                        (response.responses?.find(r => r.questionId === 'call-status')?.response);
+      
+      if (!callStatus) return; // Skip if no call status
+      
+      // Count based on call status from responses
+      if (callStatus === 'success' || callStatus === 'call_connected') {
+        callsConnectedFromResponses++;
+        ringingFromResponses++; // Success counts as ringing
+      } else if (callStatus === 'busy' || callStatus === 'did_not_pick_up') {
+        ringingFromResponses++; // Busy and didn't pick up count as ringing
+        callsNotConnectedFromResponses++;
+      } else if (callStatus === 'switched_off') {
+        notRingingFromResponses++;
+        switchOffFromResponses++;
+        callNotReceivedFromResponses++;
+      } else if (callStatus === 'not_reachable') {
+        notRingingFromResponses++;
+        numberNotReachableFromResponses++;
+        callNotReceivedFromResponses++;
+      } else if (callStatus === 'number_does_not_exist') {
+        notRingingFromResponses++;
+        numberDoesNotExistFromResponses++;
+        callNotReceivedFromResponses++;
+      } else if (callStatus === 'didnt_get_call') {
+        didntGetCallFromResponses++;
+        // This doesn't count as a dial attempt (API failure)
+      }
+    });
     
-    // Not Ringing = switch off + not reachable + does not exist (from status code analysis)
-    // Status 18 = does not exist, Status 13/15/16 = failed (could be switch off or not reachable)
-    const notRinging = switchOffCount + numberNotReachableCount + numberDoesNotExistCount;
+    // Calculate "No Response by Telecaller" from CatiCall objects
+    // Check for calls where hangupBySource === 1 or status code === 7 (agent didn't pick up)
+    let noResponseByTelecallerCount = 0;
+    const interviewerPhoneMap = new Map(); // Map phone numbers to interviewer IDs
     
-    // No Response by Telecaller = 0 (not tracked currently)
-    const noResponseByTelecaller = 0;
-
-    // Call Not Ring Status breakdown (from webhook data analysis)
+    // Build map of interviewer phone numbers
+    catiResponses.forEach(response => {
+      if (response.interviewer && response.interviewer.phone) {
+        const phone = response.interviewer.phone.replace(/[^0-9]/g, '');
+        const interviewerId = response.interviewer._id.toString();
+        if (!interviewerPhoneMap.has(phone)) {
+          interviewerPhoneMap.set(phone, interviewerId);
+        }
+      }
+    });
+    
+    // Check CatiCall objects for "No Response by Telecaller"
+    callRecords.forEach(call => {
+      const fromNumber = call.fromNumber?.replace(/[^0-9]/g, '');
+      if (fromNumber && interviewerPhoneMap.has(fromNumber)) {
+        // Check if hangupBySource === 1 or status code === 7
+        const hangupBySource = call.hangupBySource;
+        const statusCode = call.originalStatusCode || call.webhookData?.callStatus || call.webhookData?.status;
+        const statusCodeNum = typeof statusCode === 'number' ? statusCode : parseInt(statusCode);
+        
+        if (hangupBySource === 1 || hangupBySource === '1' || statusCodeNum === 7) {
+          noResponseByTelecallerCount++;
+        }
+      }
+    });
+    
+    // Use response-based stats (primary) with fallback to call record stats
+    const ringing = ringingFromResponses || callStatusBreakdown.ringing;
+    const notRinging = notRingingFromResponses || (switchOffCount + numberNotReachableCount + numberDoesNotExistCount);
+    const callNotReceived = callNotReceivedFromResponses || callStatusBreakdown.no_answer;
+    
+    // Call Not Ring Status breakdown (from responses)
     const callNotRingStatus = {
-      switchOff: switchOffCount,
-      numberNotReachable: numberNotReachableCount,
-      numberDoesNotExist: numberDoesNotExistCount,
-      noResponseByTelecaller: 0
+      switchOff: switchOffFromResponses || switchOffCount,
+      numberNotReachable: numberNotReachableFromResponses || numberNotReachableCount,
+      numberDoesNotExist: numberDoesNotExistFromResponses || numberDoesNotExistCount
+      // Removed noResponseByTelecaller from here
     };
 
-    // Call Ring Status breakdown (from call records)
-    // Calls that rang but didn't connect = no_answer status
-    const callsNotConnected = callRecords.filter(c => {
-      const status = getCallStatus(c);
-      return status === 'no-answer';
-    }).length;
-    
+    // Call Ring Status breakdown (from responses)
     const callRingStatus = {
-      callsConnected: callsConnected,
-      callsNotConnected: callsNotConnected,
-      noResponseByTelecaller: 0
+      callsConnected: callsConnectedFromResponses || callsConnected,
+      callsNotConnected: callsNotConnectedFromResponses || callRecords.filter(c => {
+        const status = getCallStatus(c);
+        return status === 'no-answer';
+      }).length
+      // Removed noResponseByTelecaller from here
     };
 
-    // Interviewer performance - aggregate from call records (primary source)
+    // ============================================
+    // INTERVIEWER PERFORMANCE STATS - REBUILT LOGIC
+    // ============================================
+    // Source of Truth: CatiCall objects for call attempts
+    // Link: SurveyResponse objects for interview outcomes
+    // ============================================
+    
     const interviewerStatsMap = new Map();
     
-    // Count calls by interviewer from call records
+    // Step 1: Get all interviewers who made calls (from CatiCall objects)
+    // Build map of interviewer phone -> interviewer ID
+    const interviewerPhoneToIdMap = new Map();
+    const interviewerIdToInfoMap = new Map();
+    
+    // Get unique interviewers from call records
     callRecords.forEach(call => {
-      if (call.createdBy) {
+      if (call.createdBy && call.createdBy._id) {
         const interviewerId = call.createdBy._id.toString();
-        if (!interviewerStatsMap.has(interviewerId)) {
-          interviewerStatsMap.set(interviewerId, {
+        const phone = call.fromNumber?.replace(/[^0-9]/g, '');
+        
+        if (!interviewerIdToInfoMap.has(interviewerId)) {
+          interviewerIdToInfoMap.set(interviewerId, {
             interviewerId: call.createdBy._id,
-            interviewerName: `${call.createdBy.firstName} ${call.createdBy.lastName}`,
-            callsMade: 0,
-            callsConnected: 0,
-            totalTalkDuration: 0
+            interviewerName: `${call.createdBy.firstName || ''} ${call.createdBy.lastName || ''}`.trim(),
+            interviewerPhone: call.createdBy.phone || phone || '',
+            memberID: call.createdBy.memberID || ''
           });
         }
-        const stat = interviewerStatsMap.get(interviewerId);
         
-        // Count this call
-        stat.callsMade += 1;
-        
-        // Count connected calls (using status code mapping)
-        const callStatus = getCallStatus(call);
-        if (callStatus === 'answered' || callStatus === 'completed') {
-          stat.callsConnected += 1;
+        if (phone) {
+          interviewerPhoneToIdMap.set(phone, interviewerId);
         }
+      }
+    });
+    
+    // Also get interviewers from responses (in case some calls don't have createdBy populated)
+    catiResponses.forEach(response => {
+      if (response.interviewer && response.interviewer._id) {
+        const interviewerId = response.interviewer._id.toString();
+        if (!interviewerIdToInfoMap.has(interviewerId)) {
+          interviewerIdToInfoMap.set(interviewerId, {
+            interviewerId: response.interviewer._id,
+            interviewerName: `${response.interviewer.firstName || ''} ${response.interviewer.lastName || ''}`.trim(),
+            interviewerPhone: response.interviewer.phone || '',
+            memberID: response.interviewer.memberID || ''
+          });
+        }
+      }
+    });
+    
+    // Initialize stats for all interviewers
+    interviewerIdToInfoMap.forEach((info, interviewerId) => {
+      interviewerStatsMap.set(interviewerId, {
+        interviewerId: info.interviewerId,
+        interviewerName: info.interviewerName,
+        interviewerPhone: info.interviewerPhone,
+        memberID: info.memberID || '',
+        numberOfDials: 0, // Total calls attempted (from CatiCall)
+        completed: 0, // Interviews completed (call_connected status)
+        successful: 0, // SurveyResponse with Approved status
+        underQC: 0, // SurveyResponse with Pending_Approval status
+        rejected: 0, // SurveyResponse with Rejected status (from completed interviews only)
+        formDuration: 0, // Total duration from SurveyResponse + CatiCall talkDuration
+        callNotReceivedToTelecaller: 0, // Call status: didnt_get_call
+        ringing: 0, // Call status: success, busy, did_not_pick_up
+        notRinging: 0, // Call status: switched_off, not_reachable, number_does_not_exist
+        switchOff: 0,
+        numberNotReachable: 0,
+        numberDoesNotExist: 0,
+        noResponseByTelecaller: 0 // From CatiCall: hangupBySource=1 or statusCode=7
+      });
+    });
+    
+    // Step 2: Count Total Dials from SurveyResponse objects (BETTER APPROACH)
+    // This ensures we count ALL call attempts including abandoned interviews
+    // SurveyResponse objects are created for every call attempt (completed or abandoned)
+    // This is more accurate than counting CatiCall objects because:
+    // 1. SurveyResponse captures ALL attempts (even if CatiCall wasn't created)
+    // 2. SurveyResponse has call status from interviewer's selection
+    // 3. Includes abandoned interviews mid-way
+    catiResponses.forEach(response => {
+      if (!response.interviewer || !response.interviewer._id) return;
+      
+      const interviewerId = response.interviewer._id.toString();
+      if (!interviewerStatsMap.has(interviewerId)) return;
+      
+      const stat = interviewerStatsMap.get(interviewerId);
+      
+      // Get call status from response - PRIORITY ORDER:
+      // 1. knownCallStatus field (dedicated field for call status)
+      // 2. metadata.callStatus (legacy)
+      // 3. responses array (from call-status question)
+      let callStatus = null;
+      
+      // Priority 1: knownCallStatus field (most reliable)
+      if (response.knownCallStatus) {
+        callStatus = response.knownCallStatus;
+      }
+      // Priority 2: metadata.callStatus (legacy)
+      else if (response.metadata && response.metadata.callStatus) {
+        callStatus = response.metadata.callStatus;
+      } 
+      // Priority 3: Check responses array (from call-status question)
+      else if (response.responses && Array.isArray(response.responses)) {
+        const callStatusResponse = response.responses.find(r => 
+          r.questionId === 'call-status' || r.questionId === 'call_status'
+        );
+        if (callStatusResponse && callStatusResponse.response) {
+          callStatus = callStatusResponse.response;
+        }
+      }
+      
+      // Normalize call status
+      const normalizedCallStatus = callStatus ? callStatus.toLowerCase().trim() : 'unknown';
+      
+      // Count ALL dials EXCEPT "didnt_get_call" (API failure, not interviewer's fault)
+      // This includes ALL statuses: call_connected, busy, switched_off, not_reachable, 
+      // number_does_not_exist, did_not_pick_up, abandoned mid-way, etc.
+      // Even if call status is 'unknown', count it as a dial attempt
+      if (normalizedCallStatus !== 'didnt_get_call' && normalizedCallStatus !== 'didn\'t_get_call') {
+        stat.numberOfDials += 1;
+      }
+    });
+    
+    // Step 3: Process SurveyResponse objects to get interview outcomes
+    // Include BOTH completed interviews AND abandoned interviews (with call status)
+    // Create a map of callId/callRecordId -> SurveyResponse for linking
+    const callIdToResponseMap = new Map();
+    const responseToCallIdMap = new Map();
+    
+    catiResponses.forEach(response => {
+      if (!response.interviewer || !response.interviewer._id) return;
+      
+      const interviewerId = response.interviewer._id.toString();
+      if (!interviewerStatsMap.has(interviewerId)) return;
+      
+      const stat = interviewerStatsMap.get(interviewerId);
+      
+      // Get call status from response - PRIORITY ORDER:
+      // 1. knownCallStatus field (dedicated field for call status)
+      // 2. metadata.callStatus (legacy)
+      // 3. responses array (from call-status question)
+      let callStatus = null;
+      
+      // Priority 1: knownCallStatus field (most reliable)
+      if (response.knownCallStatus) {
+        callStatus = response.knownCallStatus;
+      }
+      // Priority 2: metadata.callStatus (legacy)
+      else if (response.metadata && response.metadata.callStatus) {
+        callStatus = response.metadata.callStatus;
+      } 
+      // Priority 3: Check responses array (from call-status question)
+      else if (response.responses && Array.isArray(response.responses)) {
+        const callStatusResponse = response.responses.find(r => 
+          r.questionId === 'call-status' || r.questionId === 'call_status'
+        );
+        if (callStatusResponse && callStatusResponse.response) {
+          callStatus = callStatusResponse.response;
+        }
+      }
+      
+      // IMPORTANT: Include ALL responses, even if no call status (for abandoned without status)
+      // But prioritize responses WITH call status for accurate stats
+      if (!callStatus) {
+        // If no call status but response exists, it might be an old abandoned response
+        // Still count it but mark as 'unknown'
+        callStatus = 'unknown';
+      }
+      
+      const normalizedCallStatus = callStatus.toLowerCase().trim();
+      
+      // Link response to call record (for duration calculation)
+      const callRecordId = response.metadata?.callRecordId;
+      const callId = response.metadata?.callId;
+      if (callRecordId || callId) {
+        responseToCallIdMap.set(response._id.toString(), { callRecordId, callId });
+      }
+      
+      // Completed: Call was connected and interview completed
+      if (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected') {
+        stat.completed += 1;
         
-        // Add talk duration
-        if (call.talkDuration) {
-          stat.totalTalkDuration += call.talkDuration;
+        // Form Duration - Sum of all CATI interview durations (totalTimeSpent from timer)
+        // This shows total time spent by interviewer on calls (from the timer in CATI interface)
+        // Only use totalTimeSpent from SurveyResponse, NOT CatiCall.talkDuration
+        stat.formDuration += (response.totalTimeSpent || 0);
+        console.log(`⏱️  Adding form duration: ${response.totalTimeSpent || 0}s for interviewer ${interviewerId}, total now: ${stat.formDuration}s`);
+      }
+      
+      // Successful: SurveyResponse with Approved status (only from completed interviews)
+      if (response.status === 'Approved' && 
+          (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected')) {
+        stat.successful += 1;
+      }
+      
+      // Under QC: SurveyResponse with Pending_Approval status
+      if (response.status === 'Pending_Approval') {
+        stat.underQC += 1;
+      }
+      
+      // Rejected: SurveyResponse with Rejected status (only from completed interviews)
+      if (response.status === 'Rejected' && 
+          (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected')) {
+        stat.rejected += 1;
+      }
+      
+      // Call Status Breakdown
+      if (normalizedCallStatus === 'didnt_get_call' || normalizedCallStatus === 'didn\'t_get_call') {
+        stat.callNotReceivedToTelecaller += 1;
+      }
+      
+      if (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected' || 
+          normalizedCallStatus === 'busy' || normalizedCallStatus === 'did_not_pick_up') {
+        stat.ringing += 1;
+      }
+      
+      if (normalizedCallStatus === 'switched_off' || normalizedCallStatus === 'not_reachable' || 
+          normalizedCallStatus === 'number_does_not_exist') {
+        stat.notRinging += 1;
+      }
+      
+      if (normalizedCallStatus === 'switched_off') {
+        stat.switchOff += 1;
+      }
+      
+      if (normalizedCallStatus === 'not_reachable') {
+        stat.numberNotReachable += 1;
+      }
+      
+      if (normalizedCallStatus === 'number_does_not_exist') {
+        stat.numberDoesNotExist += 1;
+      }
+    });
+    
+    // Step 4: Calculate "No Response by Telecaller" from CatiCall objects
+    callRecords.forEach(call => {
+      let interviewerId = null;
+      
+      if (call.createdBy && call.createdBy._id) {
+        interviewerId = call.createdBy._id.toString();
+      } else if (call.fromNumber) {
+        const phone = call.fromNumber.replace(/[^0-9]/g, '');
+        interviewerId = interviewerPhoneToIdMap.get(phone);
+      }
+      
+      if (interviewerId && interviewerStatsMap.has(interviewerId)) {
+        const stat = interviewerStatsMap.get(interviewerId);
+        const hangupBySource = call.hangupBySource;
+        const statusCode = call.originalStatusCode || call.webhookData?.callStatus || call.webhookData?.status;
+        const statusCodeNum = typeof statusCode === 'number' ? statusCode : parseInt(statusCode);
+        
+        if (hangupBySource === 1 || hangupBySource === '1' || statusCodeNum === 7) {
+          stat.noResponseByTelecaller += 1;
         }
       }
     });
@@ -2514,19 +2838,32 @@ exports.getCatiStats = async (req, res) => {
       numberStats: {
         callNotReceived: callNotReceived,
         ringing: ringing,
-        notRinging: notRinging,
-        noResponseByTelecaller: noResponseByTelecaller
+        notRinging: notRinging
+        // Removed noResponseByTelecaller from Number Stats
       },
       callNotRingStatus: callNotRingStatus,
       callRingStatus: callRingStatus,
       statusBreakdown: statusCounts,
       callStatusBreakdown: callStatusBreakdown,
-      interviewerStats: interviewerStats.map(stat => ({
+      interviewerStats: interviewerStats.map((stat, index) => ({
+        sNo: index + 1,
         interviewerId: stat.interviewerId,
         interviewerName: stat.interviewerName,
-        callsMade: stat.callsMade,
-        callsConnected: stat.callsConnected,
-        totalTalkDuration: formatDuration(stat.totalTalkDuration || 0)
+        interviewerPhone: stat.interviewerPhone,
+        memberID: stat.memberID || stat.interviewerId?.toString() || 'N/A', // Use memberID, fallback to interviewerId
+        numberOfDials: stat.numberOfDials,
+        completed: stat.completed,
+        successful: stat.successful,
+        underQC: stat.underQC,
+        rejected: stat.rejected,
+        formDuration: formatDuration(stat.formDuration || 0),
+        callNotReceivedToTelecaller: stat.callNotReceivedToTelecaller,
+        ringing: stat.ringing,
+        notRinging: stat.notRinging,
+        switchOff: stat.switchOff,
+        noResponseByTelecaller: stat.noResponseByTelecaller,
+        numberNotReachable: stat.numberNotReachable,
+        numberDoesNotExist: stat.numberDoesNotExist
       })),
       callRecords: callRecords.map(call => ({
         _id: call._id,

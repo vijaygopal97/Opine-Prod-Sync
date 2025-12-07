@@ -7,6 +7,8 @@ const SurveyResponse = require('../models/SurveyResponse');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs').promises;
+const path = require('path');
 
 // DeepCall API Configuration
 const DEEPCALL_API_BASE_URL = 'https://s-ct3.sarv.com/v2/clickToCall/para';
@@ -198,18 +200,83 @@ const startCatiInterview = async (req, res) => {
 
     // Check if survey has respondent contacts
     console.log('🔍 Checking respondent contacts...');
-    console.log('🔍 Respondent contacts:', survey.respondentContacts ? survey.respondentContacts.length : 0);
-    if (!survey.respondentContacts || survey.respondentContacts.length === 0) {
-      console.log('❌ No respondent contacts, returning 400');
+    console.log('🔍 Respondent contacts in DB:', survey.respondentContacts ? survey.respondentContacts.length : 0);
+    
+    let respondentContacts = survey.respondentContacts || [];
+    
+    // If no contacts in DB, try loading from JSON file
+    if (!respondentContacts || respondentContacts.length === 0) {
+      console.log('🔍 No contacts in DB, checking JSON file...');
+      
+      const possiblePaths = [];
+      
+      // Check if survey has respondentContactsFile field
+      if (survey.respondentContactsFile) {
+        if (path.isAbsolute(survey.respondentContactsFile)) {
+          possiblePaths.push(survey.respondentContactsFile);
+        } else {
+          // Try relative to backend directory
+          possiblePaths.push(path.join(__dirname, '..', survey.respondentContactsFile));
+          // Try relative to project root
+          possiblePaths.push(path.join('/var/www/opine', survey.respondentContactsFile));
+        }
+      }
+      
+      // Also try default paths
+      possiblePaths.push(path.join('/var/www/opine', 'data', 'respondent-contacts', `${surveyId}.json`));
+      possiblePaths.push(path.join(__dirname, '..', 'data', 'respondent-contacts', `${surveyId}.json`));
+      
+      // Also check Optimised-backup directory
+      possiblePaths.push(path.join('/var/www/Optimised-backup', 'opine', 'data', 'respondent-contacts', `${surveyId}.json`));
+      
+      console.log(`🔍 Looking for respondent contacts file for survey: ${surveyId}`);
+      console.log(`🔍 Possible paths:`, possiblePaths);
+      
+      let fileRead = false;
+      for (const filePath of possiblePaths) {
+        try {
+          await fs.access(filePath);
+          console.log(`✅ File found at: ${filePath}`);
+          
+          const fileContent = await fs.readFile(filePath, 'utf8');
+          respondentContacts = JSON.parse(fileContent);
+          
+          if (!Array.isArray(respondentContacts)) {
+            console.warn(`⚠️ File content is not an array, got:`, typeof respondentContacts);
+            respondentContacts = [];
+          }
+          
+          fileRead = true;
+          console.log(`✅ Successfully read ${respondentContacts.length} contacts from file: ${filePath}`);
+          break;
+        } catch (fileError) {
+          console.log(`❌ Could not read file at ${filePath}:`, fileError.message);
+          continue;
+        }
+      }
+      
+      if (!fileRead) {
+        console.log('❌ No JSON file found and no contacts in DB');
+        return res.status(400).json({
+          success: false,
+          message: 'No respondents available. Please upload respondent contacts first.'
+        });
+      }
+    }
+    
+    if (!respondentContacts || respondentContacts.length === 0) {
+      console.log('❌ No respondent contacts found (neither in DB nor JSON file)');
       return res.status(400).json({
         success: false,
         message: 'No respondents available. Please upload respondent contacts first.'
       });
     }
 
+    console.log(`✅ Found ${respondentContacts.length} respondent contacts`);
+
     // Initialize queue if not already done
     console.log('🔍 Initializing respondent queue...');
-    await initializeRespondentQueue(surveyId, survey.respondentContacts);
+    await initializeRespondentQueue(surveyId, respondentContacts);
     console.log('🔍 Queue initialized');
 
     // Get next available respondent from queue
@@ -505,11 +572,12 @@ const makeCallToRespondent = async (req, res) => {
 const abandonInterview = async (req, res) => {
   try {
     const { queueId } = req.params;
-    const { reason, notes, callLaterDate } = req.body;
+    const { reason, notes, callLaterDate, callStatus } = req.body;
     const interviewerId = req.user._id;
 
     const queueEntry = await CatiRespondentQueue.findById(queueId)
-      .populate('assignedTo', '_id');
+      .populate('assignedTo', '_id')
+      .populate('callRecord', 'callId fromNumber toNumber'); // Populate callRecord to get call details
     if (!queueEntry) {
       return res.status(404).json({
         success: false,
@@ -545,13 +613,20 @@ const abandonInterview = async (req, res) => {
 
     // Update queue entry
     queueEntry.status = newStatus;
-    queueEntry.abandonmentReason = reason;
+    // Map consent_refused to rejected status for queue entry
+    const queueAbandonmentReason = reason === 'consent_refused' ? 'rejected' : reason;
+    queueEntry.abandonmentReason = queueAbandonmentReason;
     queueEntry.abandonmentNotes = notes;
     if (reason === 'call_later' && callLaterDate) {
       queueEntry.callLaterDate = new Date(callLaterDate);
       // If call later, add back to queue with higher priority
       queueEntry.status = 'pending';
       queueEntry.priority = 10; // Higher priority for scheduled calls
+      queueEntry.assignedTo = null;
+      queueEntry.assignedAt = null;
+    } else if (reason === 'consent_refused') {
+      // If consent refused, mark as rejected (don't retry)
+      queueEntry.status = 'rejected';
       queueEntry.assignedTo = null;
       queueEntry.assignedAt = null;
     } else if (newStatus === 'call_failed') {
@@ -573,6 +648,173 @@ const abandonInterview = async (req, res) => {
     }
 
     await queueEntry.save();
+
+    // ALWAYS create a SurveyResponse for abandoned interviews to track call status stats
+    // This is critical for accurate reporting of call attempts
+    console.log(`📊 Starting SurveyResponse creation for abandoned interview`);
+    console.log(`📊 Queue Entry ID: ${queueEntry._id}, Survey ID: ${queueEntry.survey?._id || queueEntry.survey}`);
+    console.log(`📊 Interviewer ID: ${interviewerId}, Call Status from request: ${callStatus}, Reason: ${reason}`);
+    
+    try {
+      const SurveyResponse = require('../models/SurveyResponse');
+      const { v4: uuidv4 } = require('uuid');
+      
+      // Ensure survey reference exists
+      const surveyId = queueEntry.survey?._id || queueEntry.survey;
+      if (!surveyId) {
+        throw new Error('Survey reference is missing from queue entry');
+      }
+      
+      // Get call status from request body (from Call Status question)
+      // If not provided, try to infer from reason
+      let finalCallStatus = callStatus;
+      if (!finalCallStatus && reason) {
+        // Map abandonment reason back to call status if callStatus wasn't provided
+        const reasonToCallStatusMap = {
+          'busy': 'busy',
+          'switched_off': 'switched_off',
+          'not_reachable': 'not_reachable',
+          'no_answer': 'did_not_pick_up',
+          'does_not_exist': 'number_does_not_exist',
+          'technical_issue': 'didnt_get_call',
+          'call_failed': 'didnt_get_call',
+          'consent_refused': 'call_connected' // If consent was refused, call was connected
+        };
+        finalCallStatus = reasonToCallStatusMap[reason] || 'unknown';
+      }
+      
+      // If still no call status, use 'unknown' to ensure we still create the record
+      if (!finalCallStatus) {
+        finalCallStatus = 'unknown';
+      }
+      
+      console.log(`📊 Final Call Status determined: ${finalCallStatus}`);
+      
+      // Normalize call status for knownCallStatus field
+      const normalizedCallStatus = finalCallStatus.toLowerCase().trim();
+      const knownCallStatusMap = {
+        'call_connected': 'call_connected',
+        'success': 'call_connected',
+        'busy': 'busy',
+        'switched_off': 'switched_off',
+        'not_reachable': 'not_reachable',
+        'did_not_pick_up': 'did_not_pick_up',
+        'number_does_not_exist': 'number_does_not_exist',
+        'didnt_get_call': 'didnt_get_call',
+        'didn\'t_get_call': 'didnt_get_call'
+      };
+      const knownCallStatus = knownCallStatusMap[normalizedCallStatus] || 'unknown';
+      
+      console.log(`📊 Known Call Status mapped: ${knownCallStatus}`);
+      
+      // Generate unique responseId using UUID
+      const responseId = uuidv4();
+      
+      // Create unique sessionId to avoid conflicts
+      const uniqueSessionId = `abandoned-${queueEntry._id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      console.log(`📊 Creating SurveyResponse with Response ID: ${responseId}, Session ID: ${uniqueSessionId}`);
+      
+      // Build responses array - include call status and consent form if consent was refused
+      const responsesArray = [{
+        sectionIndex: -4,
+        questionIndex: -4,
+        questionId: 'call-status',
+        questionType: 'single_choice',
+        questionText: 'Call Status {কলের অবস্থা}',
+        questionDescription: 'Please select the status of the call attempt.',
+        questionOptions: [],
+        response: finalCallStatus, // Store the call status as the response
+        responseTime: 0,
+        isRequired: true,
+        isSkipped: false
+      }];
+      
+      // If consent was refused, also include consent form response
+      if (reason === 'consent_refused') {
+        responsesArray.push({
+          sectionIndex: -2,
+          questionIndex: -2,
+          questionId: 'consent-form',
+          questionType: 'single_choice',
+          questionText: 'Consent Form {সম্মতিপত্র}',
+          questionDescription: '',
+          questionOptions: [],
+          response: '2', // '2' = No
+          responseTime: 0,
+          isRequired: true,
+          isSkipped: false
+        });
+      }
+      
+      // Map abandonment reason to standardized AbandonedReason
+      // Special cases: consent_refused -> Consent_Form_Disagree, call not connected -> Call_Not_Connected
+      let abandonedReason = null;
+      if (reason === 'consent_refused') {
+        abandonedReason = 'Consent_Form_Disagree';
+      } else if (finalCallStatus && finalCallStatus !== 'call_connected' && finalCallStatus !== 'success' && finalCallStatus !== 'unknown') {
+        // Call not connected - map to Call_Not_Connected
+        // This covers cases where call status question was answered with non-connected status
+        abandonedReason = 'Call_Not_Connected';
+      } else if (reason) {
+        // Use the reason provided (from top bar abandonment modal)
+        abandonedReason = reason;
+      }
+      
+      const surveyResponse = new SurveyResponse({
+        responseId: responseId, // Use UUID directly
+        survey: surveyId, // Use the survey ID we verified
+        interviewer: interviewerId,
+        sessionId: uniqueSessionId, // Ensure unique sessionId
+        interviewMode: 'cati',
+        status: 'abandoned', // Use 'abandoned' status to distinguish from completed interviews
+        knownCallStatus: reason === 'consent_refused' ? 'call_connected' : knownCallStatus, // If consent refused, call was connected
+        consentResponse: reason === 'consent_refused' ? 'no' : null, // Store consent response if consent was refused
+        abandonedReason: abandonedReason, // Store standardized abandonment reason
+        responses: responsesArray,
+        metadata: {
+          respondentQueueId: queueEntry._id,
+          respondentName: queueEntry.respondentContact?.name || null,
+          respondentPhone: queueEntry.respondentContact?.phone || null,
+          callRecordId: queueEntry.callRecord?._id || null,
+          callId: queueEntry.callRecord?.callId || null, // Also store callId if available
+          callStatus: finalCallStatus, // PRIMARY field for stats calculation (legacy)
+          abandoned: true,
+          abandonmentReason: reason,
+          abandonmentNotes: notes,
+          fromNumber: queueEntry.callRecord?.fromNumber || null, // Store from number
+          toNumber: queueEntry.callRecord?.toNumber || queueEntry.respondentContact?.phone || null // Store to number
+        },
+        totalTimeSpent: 0,
+        startTime: new Date(),
+        endTime: new Date(),
+        totalQuestions: 1,
+        answeredQuestions: 1,
+        skippedQuestions: 0,
+        completionPercentage: 0
+      });
+      
+      console.log(`📊 SurveyResponse object created, attempting to save...`);
+      
+      // Save the response - wrap in try-catch to handle any save errors
+      await surveyResponse.save();
+      console.log(`✅ Successfully created abandoned SurveyResponse for stats tracking: ${surveyResponse._id}`);
+      console.log(`📊 Response ID: ${responseId}, Call Status: ${finalCallStatus}, Known Call Status: ${knownCallStatus}`);
+      console.log(`📊 Reason: ${reason}, Interviewer: ${interviewerId}`);
+      console.log(`📊 From Number: ${surveyResponse.metadata.fromNumber}, To Number: ${surveyResponse.metadata.toNumber}`);
+      console.log(`📊 Session ID: ${uniqueSessionId}`);
+    } catch (statsError) {
+      console.error('❌ CRITICAL ERROR creating abandoned SurveyResponse for stats:', statsError);
+      console.error('❌ Error name:', statsError.name);
+      console.error('❌ Error message:', statsError.message);
+      console.error('❌ Error code:', statsError.code);
+      if (statsError.errors) {
+        console.error('❌ Validation errors:', JSON.stringify(statsError.errors, null, 2));
+      }
+      console.error('❌ Stack:', statsError.stack);
+      // IMPORTANT: Still return success for abandonment, but log the error
+      // The abandonment itself succeeded, only stats tracking failed
+    }
 
     res.status(200).json({
       success: true,
@@ -599,7 +841,7 @@ const abandonInterview = async (req, res) => {
 const completeCatiInterview = async (req, res) => {
   try {
     const { queueId } = req.params;
-    const { sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions: frontendTotalQuestions, answeredQuestions: frontendAnsweredQuestions, completionPercentage: frontendCompletionPercentage, setNumber, OldinterviewerID } = req.body;
+    const { sessionId, responses, selectedAC, selectedPollingStation, totalTimeSpent, startTime, endTime, totalQuestions: frontendTotalQuestions, answeredQuestions: frontendAnsweredQuestions, completionPercentage: frontendCompletionPercentage, setNumber, OldinterviewerID, callStatus, supervisorID } = req.body;
     
     // CRITICAL: Convert setNumber to number immediately at the top level so it's available everywhere
     // Try to get setNumber from multiple possible locations (top level, nested, etc.)
@@ -704,6 +946,46 @@ const completeCatiInterview = async (req, res) => {
       }
     }
     
+    // Extract supervisorID from responses (for survey 68fd1915d41841da463f0d46)
+    let finalSupervisorID = null;
+    if (supervisorID) {
+      finalSupervisorID = String(supervisorID);
+    } else {
+      // Also check in responses array as fallback
+      const supervisorIdResponse = allResponses.find(r => r.questionId === 'supervisor-id');
+      if (supervisorIdResponse && supervisorIdResponse.response !== null && supervisorIdResponse.response !== undefined && supervisorIdResponse.response !== '') {
+        finalSupervisorID = String(supervisorIdResponse.response);
+      }
+    }
+    
+    // Extract consent form response (consent-form question)
+    // Value '1' or 'yes' = Yes, Value '2' or 'no' = No
+    let consentResponse = null;
+    const consentFormResponse = allResponses.find(r => r.questionId === 'consent-form');
+    if (consentFormResponse && consentFormResponse.response !== null && consentFormResponse.response !== undefined) {
+      // Handle different response formats: string, number, object with value property
+      let consentValue = consentFormResponse.response;
+      
+      // If it's an object, try to extract the value
+      if (typeof consentValue === 'object' && consentValue !== null) {
+        consentValue = consentValue.value || consentValue.text || consentValue;
+      }
+      
+      // Convert to string and normalize
+      const consentValueStr = String(consentValue).trim();
+      const consentValueLower = consentValueStr.toLowerCase();
+      
+      // Check for "yes" values: '1', 'yes', 'true', 'y'
+      if (consentValueStr === '1' || consentValueLower === 'yes' || consentValueLower === 'true' || consentValueLower === 'y') {
+        consentResponse = 'yes';
+      } 
+      // Check for "no" values: '2', 'no', 'false', 'n'
+      else if (consentValueStr === '2' || consentValueLower === 'no' || consentValueLower === 'false' || consentValueLower === 'n') {
+        consentResponse = 'no';
+      }
+    }
+    console.log(`📋 Consent Form Response: ${consentResponse} (raw: ${JSON.stringify(consentFormResponse?.response)}, type: ${typeof consentFormResponse?.response})`);
+    
     // Use frontend-provided values if available, otherwise calculate
     let totalQuestions = frontendTotalQuestions;
     let answeredQuestions = frontendAnsweredQuestions;
@@ -742,6 +1024,33 @@ const completeCatiInterview = async (req, res) => {
     }
     
     console.log('🔍 Completion stats - Total:', totalQuestions, 'Answered:', answeredQuestions, 'Percentage:', completionPercentage);
+    
+    // Handle call status from frontend
+    // Normalize call status
+    const finalCallStatus = callStatus || 'unknown';
+    const normalizedCallStatus = finalCallStatus.toLowerCase().trim();
+    
+    // Map to knownCallStatus enum values
+    const knownCallStatusMap = {
+      'call_connected': 'call_connected',
+      'success': 'call_connected',
+      'busy': 'busy',
+      'switched_off': 'switched_off',
+      'not_reachable': 'not_reachable',
+      'did_not_pick_up': 'did_not_pick_up',
+      'number_does_not_exist': 'number_does_not_exist',
+      'didnt_get_call': 'didnt_get_call',
+      'didn\'t_get_call': 'didnt_get_call'
+    };
+    const knownCallStatus = knownCallStatusMap[normalizedCallStatus] || 'unknown';
+    
+    // IMPORTANT: For CATI interviews, if call status is NOT 'call_connected' or 'success',
+    // the interview should be marked as "abandoned", NOT auto-rejected
+    // Auto-rejection should only apply to completed interviews (call_connected) that fail quality checks
+    const isCallConnected = normalizedCallStatus === 'call_connected' || normalizedCallStatus === 'success';
+    const shouldAutoReject = false; // Don't auto-reject based on call status - use quality checks instead
+    
+    console.log(`📞 Call Status received: ${finalCallStatus}, KnownCallStatus: ${knownCallStatus}, Is Connected: ${isCallConnected}`);
 
     // Get callId from queueEntry's callRecord
     let callId = null;
@@ -787,6 +1096,7 @@ const completeCatiInterview = async (req, res) => {
       surveyResponse.skippedQuestions = totalQuestions - answeredQuestions;
       surveyResponse.completionPercentage = completionPercentage;
       surveyResponse.OldinterviewerID = oldInterviewerID || null; // Update old interviewer ID
+      surveyResponse.supervisorID = finalSupervisorID || null; // Save supervisor ID
       // Always update setNumber if provided (even if it's 1)
       const finalSetNumber = (setNumber !== null && setNumber !== undefined && setNumber !== '') 
         ? Number(setNumber) 
@@ -801,13 +1111,49 @@ const completeCatiInterview = async (req, res) => {
       if (callId) {
         surveyResponse.call_id = callId;
       }
-      surveyResponse.metadata = {
-        ...surveyResponse.metadata,
-        respondentQueueId: queueEntry._id,
-        respondentName: queueEntry.respondentContact?.name || queueEntry.respondentContact?.name,
-        respondentPhone: queueEntry.respondentContact?.phone || queueEntry.respondentContact?.phone,
-        callRecordId: queueEntry.callRecord?._id
-      };
+      
+      // Update knownCallStatus field - ALWAYS save it correctly
+      // IMPORTANT: If call was connected, knownCallStatus should be 'call_connected' 
+      // even if consent is "No" - this ensures accurate stats
+      if (isCallConnected) {
+        surveyResponse.knownCallStatus = 'call_connected'; // Force to 'call_connected' if call was connected
+        console.log(`✅ Setting knownCallStatus to 'call_connected' (call was connected, consent: ${consentResponse})`);
+      } else {
+        surveyResponse.knownCallStatus = knownCallStatus; // Save other statuses (busy, switched_off, etc.)
+      }
+      
+      // Update consentResponse field
+      surveyResponse.consentResponse = consentResponse;
+      
+      // IMPORTANT: Mark as "abandoned" if:
+      // 1. Call is NOT connected, OR
+      // 2. Consent form is "No" (even if call was connected)
+      const shouldMarkAsAbandoned = !isCallConnected || consentResponse === 'no';
+      
+      if (shouldMarkAsAbandoned) {
+        surveyResponse.status = 'abandoned';
+        surveyResponse.metadata = {
+          ...surveyResponse.metadata,
+          abandoned: true,
+          abandonmentReason: consentResponse === 'no' ? 'consent_refused' : reason,
+          callStatus: finalCallStatus,
+          respondentQueueId: queueEntry._id,
+          respondentName: queueEntry.respondentContact?.name || queueEntry.respondentContact?.name,
+          respondentPhone: queueEntry.respondentContact?.phone || queueEntry.respondentContact?.phone,
+          callRecordId: queueEntry.callRecord?._id
+        };
+        console.log(`🚫 Marking existing interview as abandoned - Call Connected: ${isCallConnected}, Consent: ${consentResponse}`);
+      } else {
+        // Call was connected AND consent is "Yes" - proceed normally
+        surveyResponse.metadata = {
+          ...surveyResponse.metadata,
+          respondentQueueId: queueEntry._id,
+          respondentName: queueEntry.respondentContact?.name || queueEntry.respondentContact?.name,
+          respondentPhone: queueEntry.respondentContact?.phone || queueEntry.respondentContact?.phone,
+          callRecordId: queueEntry.callRecord?._id,
+          callStatus: finalCallStatus // Store call status in metadata
+        };
+      }
       // Log before saving
       console.log(`💾 About to update EXISTING SurveyResponse - setNumber in object: ${surveyResponse.setNumber}, type: ${typeof surveyResponse.setNumber}`);
       
@@ -858,41 +1204,53 @@ const completeCatiInterview = async (req, res) => {
         console.log(`✅ setNumber correctly saved: ${savedDoc.setNumber}`);
       }
       
-      // Check for auto-rejection conditions
+      // Check for auto-rejection conditions ONLY if call was connected AND consent is "Yes"
+      // Abandoned calls (status = 'abandoned') should NOT go through auto-rejection
       const { checkAutoRejection, applyAutoRejection } = require('../utils/autoRejectionHelper');
       try {
-        // IMPORTANT: Save setNumber before auto-rejection check to ensure it's preserved
-        const setNumberToPreserve = surveyResponse.setNumber;
-        console.log(`💾 Preserving setNumber before auto-rejection check: ${setNumberToPreserve}`);
-        
-        const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
-        if (rejectionInfo) {
-          await applyAutoRejection(surveyResponse, rejectionInfo);
-          // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
-          if (setNumberToPreserve !== null && setNumberToPreserve !== undefined) {
-            surveyResponse.setNumber = setNumberToPreserve;
-            surveyResponse.markModified('setNumber');
-            await surveyResponse.save();
-            console.log(`💾 Restored setNumber after auto-rejection: ${surveyResponse.setNumber}`);
+        // IMPORTANT: Skip auto-rejection if:
+        // 1. Status is 'abandoned' (call not connected OR consent refused), OR
+        // 2. Consent is "No" (even if call was connected)
+        const shouldSkipAutoRejection = surveyResponse.status === 'abandoned' || consentResponse === 'no';
+        if (!shouldSkipAutoRejection && isCallConnected) {
+          // IMPORTANT: Save setNumber before auto-rejection check to ensure it's preserved
+          const setNumberToPreserve = surveyResponse.setNumber;
+          console.log(`💾 Preserving setNumber before auto-rejection check: ${setNumberToPreserve}`);
+          
+          const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
+          if (rejectionInfo) {
+            await applyAutoRejection(surveyResponse, rejectionInfo);
+            // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
+            if (setNumberToPreserve !== null && setNumberToPreserve !== undefined) {
+              surveyResponse.setNumber = setNumberToPreserve;
+              surveyResponse.markModified('setNumber');
+              await surveyResponse.save();
+              console.log(`💾 Restored setNumber after auto-rejection: ${surveyResponse.setNumber}`);
+            }
+            // Refresh the response to get updated status
+            await surveyResponse.populate('survey');
           }
-          // Refresh the response to get updated status
-          await surveyResponse.populate('survey');
+        } else {
+          console.log(`⏭️  Skipping auto-rejection for abandoned CATI response (existing): ${surveyResponse._id} (status: ${surveyResponse.status})`);
         }
       } catch (autoRejectError) {
         console.error('Error checking auto-rejection:', autoRejectError);
         // Continue even if auto-rejection check fails
       }
       
-      // Add response to QC batch only if NOT auto-rejected and not already in one
-      // Auto-rejected responses are already decided and don't need QC processing
+      // Add response to QC batch only if NOT auto-rejected, NOT abandoned, and not already in one
+      // Auto-rejected and abandoned responses are already decided and don't need QC processing
       const isAutoRejected = surveyResponse.verificationData?.autoRejected || false;
-      if (!surveyResponse.qcBatch && !isAutoRejected) {
+      const isAbandoned = surveyResponse.status === 'abandoned' || surveyResponse.metadata?.abandoned === true;
+      if (!surveyResponse.qcBatch && !isAutoRejected && !isAbandoned) {
         try {
           const { addResponseToBatch } = require('../utils/qcBatchHelper');
           await addResponseToBatch(surveyResponse._id, queueEntry.survey._id, interviewerId.toString());
         } catch (batchError) {
           console.error('Error adding existing CATI response to batch:', batchError);
         }
+      } else {
+        console.log(`⏭️  Skipping batch addition for ${isAbandoned ? 'abandoned' : 'auto-rejected'} existing response ${surveyResponse._id}`);
       }
     } else {
       // Create new survey response (similar to CAPI flow)
@@ -915,6 +1273,20 @@ const completeCatiInterview = async (req, res) => {
       
       // Use the finalSetNumber already calculated at the top level
       
+      // Determine status based on call connection AND consent form
+      // Mark as "abandoned" if:
+      // 1. Call is NOT connected, OR
+      // 2. Consent form is "No" (even if call was connected)
+      const shouldMarkAsAbandoned = !isCallConnected || consentResponse === 'no';
+      const responseStatus = shouldMarkAsAbandoned ? 'abandoned' : 'Pending_Approval';
+      
+      // IMPORTANT: If call was connected, knownCallStatus should be 'call_connected' 
+      // even if consent is "No" - this ensures accurate stats
+      const finalKnownCallStatus = isCallConnected ? 'call_connected' : knownCallStatus;
+      
+      console.log(`📋 Creating new SurveyResponse - Call Connected: ${isCallConnected}, Consent: ${consentResponse}, Status: ${responseStatus}`);
+      console.log(`📋 KnownCallStatus: ${finalKnownCallStatus} (original: ${knownCallStatus}, isCallConnected: ${isCallConnected})`);
+      
       surveyResponse = new SurveyResponse({
         responseId,
         survey: queueEntry.survey._id,
@@ -923,15 +1295,19 @@ const completeCatiInterview = async (req, res) => {
         interviewMode: 'cati',
         call_id: callId || null, // Store DeepCall callId
         setNumber: (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber))) ? Number(finalSetNumber) : null, // Save which Set was shown in this CATI interview (ensure it's a proper Number type or null)
+        knownCallStatus: finalKnownCallStatus, // Store call status - 'call_connected' if call was connected, even if consent is "No"
+        consentResponse: consentResponse, // Store consent form response (yes/no)
         responses: allResponses,
         selectedAC: finalSelectedAC || null,
         selectedPollingStation: finalSelectedPollingStation || null,
         location: null, // No GPS location for CATI
         OldinterviewerID: oldInterviewerID || null, // Save old interviewer ID
+        supervisorID: finalSupervisorID || null, // Save supervisor ID
         startTime: finalStartTime, // Required field
         endTime: finalEndTime, // Required field
-        totalTimeSpent: finalTotalTimeSpent, // Required field
-        status: 'Pending_Approval', // Valid enum value
+        totalTimeSpent: finalTotalTimeSpent, // Required field - Form Duration uses this
+        status: responseStatus, // Set to "abandoned" if call not connected OR consent is "No"
+        abandonedReason: consentResponse === 'no' ? 'Consent_Form_Disagree' : (!isCallConnected && finalCallStatus && finalCallStatus !== 'call_connected' && finalCallStatus !== 'success' ? 'Call_Not_Connected' : null), // Set standardized abandonment reason
         totalQuestions: totalQuestions || 0, // Required field - ensure it's not undefined
         answeredQuestions: answeredQuestions || 0, // Required field - ensure it's not undefined
         skippedQuestions: (totalQuestions || 0) - (answeredQuestions || 0), // Optional but good to have
@@ -940,7 +1316,10 @@ const completeCatiInterview = async (req, res) => {
           respondentQueueId: queueEntry._id,
           respondentName: queueEntry.respondentContact?.name || queueEntry.respondentContact?.name,
           respondentPhone: queueEntry.respondentContact?.phone || queueEntry.respondentContact?.phone,
-          callRecordId: queueEntry.callRecord?._id
+          callRecordId: queueEntry.callRecord?._id,
+          callStatus: finalCallStatus, // Store call status in metadata (legacy)
+          abandoned: shouldMarkAsAbandoned, // Mark as abandoned if call not connected OR consent is "No"
+          abandonmentReason: consentResponse === 'no' ? 'consent_refused' : (!isCallConnected ? reason : null)
         }
       });
       
@@ -998,48 +1377,57 @@ const completeCatiInterview = async (req, res) => {
       }
     }
     
-    // Check for auto-rejection conditions
+    // Check for auto-rejection conditions ONLY if call was connected AND consent is "Yes"
+    // Abandoned calls (status = 'abandoned') should NOT go through auto-rejection
     const { checkAutoRejection, applyAutoRejection } = require('../utils/autoRejectionHelper');
     try {
-      // CRITICAL: Preserve setNumber before auto-rejection check
-      // Ensure it's a proper Number type
-      const setNumberToPreserve = (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber)))
-        ? Number(finalSetNumber)
-        : ((surveyResponse.setNumber !== null && surveyResponse.setNumber !== undefined && !isNaN(Number(surveyResponse.setNumber)))
-          ? Number(surveyResponse.setNumber)
-          : null);
-      console.log(`💾 Preserving setNumber before auto-rejection check (new response): ${setNumberToPreserve} (type: ${typeof setNumberToPreserve}), finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
-      
-      const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
-      if (rejectionInfo) {
-        await applyAutoRejection(surveyResponse, rejectionInfo);
+      // IMPORTANT: Skip auto-rejection if:
+      // 1. Status is 'abandoned' (call not connected OR consent refused), OR
+      // 2. Consent is "No" (even if call was connected)
+      const shouldSkipAutoRejection = surveyResponse.status === 'abandoned' || consentResponse === 'no';
+      if (!shouldSkipAutoRejection && isCallConnected) {
+        // CRITICAL: Preserve setNumber before auto-rejection check
+        // Ensure it's a proper Number type
+        const setNumberToPreserve = (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber)))
+          ? Number(finalSetNumber)
+          : ((surveyResponse.setNumber !== null && surveyResponse.setNumber !== undefined && !isNaN(Number(surveyResponse.setNumber)))
+            ? Number(surveyResponse.setNumber)
+            : null);
+        console.log(`💾 Preserving setNumber before auto-rejection check (new response): ${setNumberToPreserve} (type: ${typeof setNumberToPreserve}), finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
         
-        // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
-        // ALWAYS re-apply, even if null, to ensure the field exists
-        // CRITICAL: Ensure it's a proper Number type
-        const setNumberToRestore = (setNumberToPreserve !== null && setNumberToPreserve !== undefined && !isNaN(Number(setNumberToPreserve))) 
-          ? Number(setNumberToPreserve) 
-          : null;
-        surveyResponse.setNumber = setNumberToRestore;
-        surveyResponse.markModified('setNumber');
-        await surveyResponse.save();
-        console.log(`💾 Restored setNumber after auto-rejection (new response): ${surveyResponse.setNumber} (type: ${typeof surveyResponse.setNumber}), original finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
-        
-        // Also update using native MongoDB to ensure it's persisted
-        try {
-          const mongoose = require('mongoose');
-          const collection = mongoose.connection.collection('surveyresponses');
-          await collection.updateOne(
-            { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
-            { $set: { setNumber: setNumberToRestore } }
-          );
-          console.log(`💾 Native MongoDB update after auto-rejection: ${setNumberToRestore} (type: ${typeof setNumberToRestore})`);
-        } catch (nativeUpdateError) {
-          console.error('Error in native MongoDB update after auto-rejection:', nativeUpdateError);
+        const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
+        if (rejectionInfo) {
+          await applyAutoRejection(surveyResponse, rejectionInfo);
+          
+          // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
+          // ALWAYS re-apply, even if null, to ensure the field exists
+          // CRITICAL: Ensure it's a proper Number type
+          const setNumberToRestore = (setNumberToPreserve !== null && setNumberToPreserve !== undefined && !isNaN(Number(setNumberToPreserve))) 
+            ? Number(setNumberToPreserve) 
+            : null;
+          surveyResponse.setNumber = setNumberToRestore;
+          surveyResponse.markModified('setNumber');
+          await surveyResponse.save();
+          console.log(`💾 Restored setNumber after auto-rejection (new response): ${surveyResponse.setNumber} (type: ${typeof surveyResponse.setNumber}), original finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
+          
+          // Also update using native MongoDB to ensure it's persisted
+          try {
+            const mongoose = require('mongoose');
+            const collection = mongoose.connection.collection('surveyresponses');
+            await collection.updateOne(
+              { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+              { $set: { setNumber: setNumberToRestore } }
+            );
+            console.log(`💾 Native MongoDB update after auto-rejection: ${setNumberToRestore} (type: ${typeof setNumberToRestore})`);
+          } catch (nativeUpdateError) {
+            console.error('Error in native MongoDB update after auto-rejection:', nativeUpdateError);
+          }
+          
+          // Refresh the response to get updated status
+          await surveyResponse.populate('survey');
         }
-        
-        // Refresh the response to get updated status
-        await surveyResponse.populate('survey');
+      } else {
+        console.log(`⏭️  Skipping auto-rejection for abandoned CATI response: ${surveyResponse._id} (status: ${surveyResponse.status})`);
       }
     } catch (autoRejectError) {
       console.error('Error checking auto-rejection:', autoRejectError);
@@ -1064,8 +1452,39 @@ const completeCatiInterview = async (req, res) => {
       // Continue even if batch addition fails - response is still saved
     }
 
-    // Update queue entry
-    queueEntry.status = 'interview_success';
+    // Update queue entry based on call status
+    if (finalCallStatus === 'success') {
+      // Call was successful - mark as interview success
+      queueEntry.status = 'interview_success';
+      queueEntry.response = surveyResponse._id;
+      queueEntry.completedAt = new Date();
+    } else if (finalCallStatus === 'number_does_not_exist') {
+      // Number does not exist - remove from queue (don't retry)
+      queueEntry.status = 'does_not_exist';
+      // Optionally delete the queue entry or mark it as inactive
+      // For now, just mark as does_not_exist so it won't be picked up again
+    } else if (finalCallStatus === 'busy' || finalCallStatus === 'did_not_pick_up') {
+      // Busy or didn't pick up - send to end of queue for retry
+      queueEntry.status = 'pending';
+      queueEntry.priority = -1; // Lowest priority to move to end
+      queueEntry.assignedTo = null;
+      queueEntry.assignedAt = null;
+      queueEntry.createdAt = new Date(); // Update createdAt to move to end
+    } else {
+      // Other statuses (switched_off, not_reachable, didnt_get_call, etc.) - mark appropriately
+      queueEntry.status = finalCallStatus === 'switched_off' ? 'switched_off' :
+                         finalCallStatus === 'not_reachable' ? 'not_reachable' :
+                         'pending'; // Default to pending for other statuses
+      if (finalCallStatus !== 'didnt_get_call') {
+        // For all except "didnt_get_call", send to end of queue
+        queueEntry.priority = -1;
+        queueEntry.assignedTo = null;
+        queueEntry.assignedAt = null;
+        queueEntry.createdAt = new Date();
+      }
+      // "didnt_get_call" is API failure, don't retry immediately but keep in queue
+    }
+    
     queueEntry.response = surveyResponse._id;
     queueEntry.completedAt = new Date();
     await queueEntry.save();
