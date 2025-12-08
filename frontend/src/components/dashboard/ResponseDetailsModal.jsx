@@ -119,11 +119,23 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
     return 'N/A';
   };
 
-  // Helper function to get state from GPS location
-  const getStateFromGPS = (location) => {
+  // Helper function to get state from GPS location or selectedPollingStation
+  const getStateFromGPS = (location, selectedPollingStation = null, interviewMode = null) => {
+    // First check GPS location
     if (location?.state) return location.state;
     if (location?.address?.state) return location.address.state;
     if (location?.administrative_area_level_1) return location.administrative_area_level_1;
+    
+    // For CATI responses, check selectedPollingStation.state as fallback
+    if (interviewMode === 'cati' && selectedPollingStation?.state) {
+      return selectedPollingStation.state;
+    }
+    
+    // Also check selectedPollingStation for CAPI responses if location doesn't have state
+    if (selectedPollingStation?.state) {
+      return selectedPollingStation.state;
+    }
+    
     return 'N/A';
   };
 
@@ -439,8 +451,8 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
     // Get Lok Sabha from AC using assemblyConstituencies.json
     const lokSabha = getLokSabhaFromAC(acName);
 
-    // Get state from GPS location
-    const state = getStateFromGPS(responseData?.location);
+    // Get state from GPS location or selectedPollingStation (for CATI responses)
+    const state = getStateFromGPS(responseData?.location, responseData?.selectedPollingStation, responseData?.interviewMode);
 
     // Get name and capitalize it
     // CRITICAL: Ensure nameResponse is not the gender response

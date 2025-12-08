@@ -761,6 +761,24 @@ const abandonInterview = async (req, res) => {
         abandonedReason = reason;
       }
       
+      // Auto-populate selectedAC and selectedPollingStation from respondent contact for CATI abandoned responses
+      let finalSelectedAC = queueEntry.respondentContact?.ac || null;
+      let finalSelectedPollingStation = null;
+      
+      // Load AC data helper to get district, state, PC from AC name
+      const { getAllACDetails } = require('../utils/acDataHelper');
+      
+      if (finalSelectedAC) {
+        const acDetails = getAllACDetails(finalSelectedAC);
+        finalSelectedPollingStation = {
+          acName: finalSelectedAC,
+          pcName: acDetails.pcName || queueEntry.respondentContact?.pc || null,
+          district: acDetails.district || null,
+          state: 'West Bengal' // All ACs in this survey belong to West Bengal
+        };
+        console.log(`✅ Auto-populated selectedPollingStation for abandoned CATI response from AC:`, finalSelectedPollingStation);
+      }
+      
       const surveyResponse = new SurveyResponse({
         responseId: responseId, // Use UUID directly
         survey: surveyId, // Use the survey ID we verified
@@ -771,6 +789,11 @@ const abandonInterview = async (req, res) => {
         knownCallStatus: reason === 'consent_refused' ? 'call_connected' : knownCallStatus, // If consent refused, call was connected
         consentResponse: reason === 'consent_refused' ? 'no' : null, // Store consent response if consent was refused
         abandonedReason: abandonedReason, // Store standardized abandonment reason
+        selectedAC: finalSelectedAC,
+        selectedPollingStation: finalSelectedPollingStation,
+        location: {
+          state: 'West Bengal' // Set state for abandoned CATI responses
+        },
         responses: responsesArray,
         metadata: {
           respondentQueueId: queueEntry._id,
@@ -900,14 +923,38 @@ const completeCatiInterview = async (req, res) => {
       console.log(`✅ Auto-populated selectedAC from respondent contact: ${finalSelectedAC}`);
     }
     
-    // If polling station is not provided but respondent has AC, we can at least set the AC in polling station
+    // Load AC data helper to get district, state, PC from AC name
+    const { getAllACDetails } = require('../utils/acDataHelper');
+    
+    // If polling station is not provided but respondent has AC, auto-populate from AC details
     if ((!finalSelectedPollingStation || Object.keys(finalSelectedPollingStation).length === 0) && finalSelectedAC) {
+      // Get district, state, PC from AC name using assemblyConstituencies.json
+      const acDetails = getAllACDetails(finalSelectedAC);
+      
       finalSelectedPollingStation = {
         acName: finalSelectedAC,
-        pcName: queueEntry.respondentContact?.pc || null,
-        state: queueEntry.survey?.acAssignmentState || null
+        pcName: acDetails.pcName || queueEntry.respondentContact?.pc || null,
+        district: acDetails.district || null,
+        state: 'West Bengal' // All ACs in this survey belong to West Bengal
       };
-      console.log(`✅ Auto-populated selectedPollingStation from respondent contact:`, finalSelectedPollingStation);
+      console.log(`✅ Auto-populated selectedPollingStation from AC details:`, finalSelectedPollingStation);
+    } else if (finalSelectedPollingStation && finalSelectedAC) {
+      // If polling station exists but missing district/state/PC, populate from AC details
+      const acDetails = getAllACDetails(finalSelectedAC);
+      
+          // Only update missing fields, don't overwrite existing ones
+          if (!finalSelectedPollingStation.district && acDetails.district) {
+            finalSelectedPollingStation.district = acDetails.district;
+          }
+          // Always set state to West Bengal for this survey
+          finalSelectedPollingStation.state = 'West Bengal';
+          if (!finalSelectedPollingStation.pcName && acDetails.pcName) {
+            finalSelectedPollingStation.pcName = acDetails.pcName;
+          }
+          if (!finalSelectedPollingStation.acName) {
+            finalSelectedPollingStation.acName = finalSelectedAC;
+          }
+      console.log(`✅ Enhanced selectedPollingStation with AC details:`, finalSelectedPollingStation);
     }
 
     if (queueEntry.assignedTo.toString() !== interviewerId.toString()) {
@@ -1089,6 +1136,15 @@ const completeCatiInterview = async (req, res) => {
       surveyResponse.responses = allResponses;
       surveyResponse.selectedAC = finalSelectedAC || null;
       surveyResponse.selectedPollingStation = finalSelectedPollingStation || null;
+      
+      // Also update location.state for CATI responses
+      if (!surveyResponse.location || Object.keys(surveyResponse.location).length === 0 || !surveyResponse.location.state) {
+        surveyResponse.location = {
+          ...(surveyResponse.location || {}),
+          state: 'West Bengal'
+        };
+      }
+      
       surveyResponse.endTime = finalEndTime;
       surveyResponse.totalTimeSpent = finalTotalTimeSpent;
       surveyResponse.totalQuestions = totalQuestions;
@@ -1132,16 +1188,16 @@ const completeCatiInterview = async (req, res) => {
       
       if (shouldMarkAsAbandoned) {
         surveyResponse.status = 'abandoned';
-        surveyResponse.metadata = {
-          ...surveyResponse.metadata,
+      surveyResponse.metadata = {
+        ...surveyResponse.metadata,
           abandoned: true,
           abandonmentReason: consentResponse === 'no' ? 'consent_refused' : reason,
           callStatus: finalCallStatus,
-          respondentQueueId: queueEntry._id,
-          respondentName: queueEntry.respondentContact?.name || queueEntry.respondentContact?.name,
-          respondentPhone: queueEntry.respondentContact?.phone || queueEntry.respondentContact?.phone,
-          callRecordId: queueEntry.callRecord?._id
-        };
+        respondentQueueId: queueEntry._id,
+        respondentName: queueEntry.respondentContact?.name || queueEntry.respondentContact?.name,
+        respondentPhone: queueEntry.respondentContact?.phone || queueEntry.respondentContact?.phone,
+        callRecordId: queueEntry.callRecord?._id
+      };
         console.log(`🚫 Marking existing interview as abandoned - Call Connected: ${isCallConnected}, Consent: ${consentResponse}`);
       } else {
         // Call was connected AND consent is "Yes" - proceed normally
@@ -1213,22 +1269,22 @@ const completeCatiInterview = async (req, res) => {
         // 2. Consent is "No" (even if call was connected)
         const shouldSkipAutoRejection = surveyResponse.status === 'abandoned' || consentResponse === 'no';
         if (!shouldSkipAutoRejection && isCallConnected) {
-          // IMPORTANT: Save setNumber before auto-rejection check to ensure it's preserved
-          const setNumberToPreserve = surveyResponse.setNumber;
-          console.log(`💾 Preserving setNumber before auto-rejection check: ${setNumberToPreserve}`);
-          
-          const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
-          if (rejectionInfo) {
-            await applyAutoRejection(surveyResponse, rejectionInfo);
-            // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
-            if (setNumberToPreserve !== null && setNumberToPreserve !== undefined) {
-              surveyResponse.setNumber = setNumberToPreserve;
-              surveyResponse.markModified('setNumber');
-              await surveyResponse.save();
-              console.log(`💾 Restored setNumber after auto-rejection: ${surveyResponse.setNumber}`);
-            }
-            // Refresh the response to get updated status
-            await surveyResponse.populate('survey');
+        // IMPORTANT: Save setNumber before auto-rejection check to ensure it's preserved
+        const setNumberToPreserve = surveyResponse.setNumber;
+        console.log(`💾 Preserving setNumber before auto-rejection check: ${setNumberToPreserve}`);
+        
+        const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
+        if (rejectionInfo) {
+          await applyAutoRejection(surveyResponse, rejectionInfo);
+          // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
+          if (setNumberToPreserve !== null && setNumberToPreserve !== undefined) {
+            surveyResponse.setNumber = setNumberToPreserve;
+            surveyResponse.markModified('setNumber');
+            await surveyResponse.save();
+            console.log(`💾 Restored setNumber after auto-rejection: ${surveyResponse.setNumber}`);
+          }
+          // Refresh the response to get updated status
+          await surveyResponse.populate('survey');
           }
         } else {
           console.log(`⏭️  Skipping auto-rejection for abandoned CATI response (existing): ${surveyResponse._id} (status: ${surveyResponse.status})`);
@@ -1287,6 +1343,33 @@ const completeCatiInterview = async (req, res) => {
       console.log(`📋 Creating new SurveyResponse - Call Connected: ${isCallConnected}, Consent: ${consentResponse}, Status: ${responseStatus}`);
       console.log(`📋 KnownCallStatus: ${finalKnownCallStatus} (original: ${knownCallStatus}, isCallConnected: ${isCallConnected})`);
       
+      // Ensure selectedPollingStation has all AC-derived fields populated
+      let enhancedPollingStation = finalSelectedPollingStation;
+      if (finalSelectedAC) {
+        const acDetails = getAllACDetails(finalSelectedAC);
+        if (!enhancedPollingStation || Object.keys(enhancedPollingStation).length === 0) {
+          enhancedPollingStation = {
+            acName: finalSelectedAC,
+            pcName: acDetails.pcName || null,
+            district: acDetails.district || null,
+            state: 'West Bengal' // All ACs in this survey belong to West Bengal
+          };
+        } else {
+          // Enhance existing polling station with missing AC-derived fields
+          if (!enhancedPollingStation.district && acDetails.district) {
+            enhancedPollingStation.district = acDetails.district;
+          }
+          // Always set state to West Bengal for this survey
+          enhancedPollingStation.state = 'West Bengal';
+          if (!enhancedPollingStation.pcName && acDetails.pcName) {
+            enhancedPollingStation.pcName = acDetails.pcName;
+          }
+          if (!enhancedPollingStation.acName) {
+            enhancedPollingStation.acName = finalSelectedAC;
+          }
+        }
+      }
+      
       surveyResponse = new SurveyResponse({
         responseId,
         survey: queueEntry.survey._id,
@@ -1299,8 +1382,10 @@ const completeCatiInterview = async (req, res) => {
         consentResponse: consentResponse, // Store consent form response (yes/no)
         responses: allResponses,
         selectedAC: finalSelectedAC || null,
-        selectedPollingStation: finalSelectedPollingStation || null,
-        location: null, // No GPS location for CATI
+        selectedPollingStation: enhancedPollingStation || null,
+        location: {
+          state: 'West Bengal' // Set state for CATI responses (no GPS location)
+        }, // No GPS location for CATI, but set state field
         OldinterviewerID: oldInterviewerID || null, // Save old interviewer ID
         supervisorID: finalSupervisorID || null, // Save supervisor ID
         startTime: finalStartTime, // Required field
@@ -1386,45 +1471,45 @@ const completeCatiInterview = async (req, res) => {
       // 2. Consent is "No" (even if call was connected)
       const shouldSkipAutoRejection = surveyResponse.status === 'abandoned' || consentResponse === 'no';
       if (!shouldSkipAutoRejection && isCallConnected) {
-        // CRITICAL: Preserve setNumber before auto-rejection check
-        // Ensure it's a proper Number type
-        const setNumberToPreserve = (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber)))
-          ? Number(finalSetNumber)
-          : ((surveyResponse.setNumber !== null && surveyResponse.setNumber !== undefined && !isNaN(Number(surveyResponse.setNumber)))
-            ? Number(surveyResponse.setNumber)
-            : null);
-        console.log(`💾 Preserving setNumber before auto-rejection check (new response): ${setNumberToPreserve} (type: ${typeof setNumberToPreserve}), finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
+      // CRITICAL: Preserve setNumber before auto-rejection check
+      // Ensure it's a proper Number type
+      const setNumberToPreserve = (finalSetNumber !== null && finalSetNumber !== undefined && !isNaN(Number(finalSetNumber)))
+        ? Number(finalSetNumber)
+        : ((surveyResponse.setNumber !== null && surveyResponse.setNumber !== undefined && !isNaN(Number(surveyResponse.setNumber)))
+          ? Number(surveyResponse.setNumber)
+          : null);
+      console.log(`💾 Preserving setNumber before auto-rejection check (new response): ${setNumberToPreserve} (type: ${typeof setNumberToPreserve}), finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
+      
+      const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
+      if (rejectionInfo) {
+        await applyAutoRejection(surveyResponse, rejectionInfo);
         
-        const rejectionInfo = await checkAutoRejection(surveyResponse, allResponses, queueEntry.survey._id);
-        if (rejectionInfo) {
-          await applyAutoRejection(surveyResponse, rejectionInfo);
-          
-          // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
-          // ALWAYS re-apply, even if null, to ensure the field exists
-          // CRITICAL: Ensure it's a proper Number type
-          const setNumberToRestore = (setNumberToPreserve !== null && setNumberToPreserve !== undefined && !isNaN(Number(setNumberToPreserve))) 
-            ? Number(setNumberToPreserve) 
-            : null;
-          surveyResponse.setNumber = setNumberToRestore;
-          surveyResponse.markModified('setNumber');
-          await surveyResponse.save();
-          console.log(`💾 Restored setNumber after auto-rejection (new response): ${surveyResponse.setNumber} (type: ${typeof surveyResponse.setNumber}), original finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
-          
-          // Also update using native MongoDB to ensure it's persisted
-          try {
-            const mongoose = require('mongoose');
-            const collection = mongoose.connection.collection('surveyresponses');
-            await collection.updateOne(
-              { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
-              { $set: { setNumber: setNumberToRestore } }
-            );
-            console.log(`💾 Native MongoDB update after auto-rejection: ${setNumberToRestore} (type: ${typeof setNumberToRestore})`);
-          } catch (nativeUpdateError) {
-            console.error('Error in native MongoDB update after auto-rejection:', nativeUpdateError);
-          }
-          
-          // Refresh the response to get updated status
-          await surveyResponse.populate('survey');
+        // CRITICAL: Re-apply setNumber after auto-rejection (it might have been lost)
+        // ALWAYS re-apply, even if null, to ensure the field exists
+        // CRITICAL: Ensure it's a proper Number type
+        const setNumberToRestore = (setNumberToPreserve !== null && setNumberToPreserve !== undefined && !isNaN(Number(setNumberToPreserve))) 
+          ? Number(setNumberToPreserve) 
+          : null;
+        surveyResponse.setNumber = setNumberToRestore;
+        surveyResponse.markModified('setNumber');
+        await surveyResponse.save();
+        console.log(`💾 Restored setNumber after auto-rejection (new response): ${surveyResponse.setNumber} (type: ${typeof surveyResponse.setNumber}), original finalSetNumber: ${finalSetNumber} (type: ${typeof finalSetNumber})`);
+        
+        // Also update using native MongoDB to ensure it's persisted
+        try {
+          const mongoose = require('mongoose');
+          const collection = mongoose.connection.collection('surveyresponses');
+          await collection.updateOne(
+            { _id: new mongoose.Types.ObjectId(surveyResponse._id) },
+            { $set: { setNumber: setNumberToRestore } }
+          );
+          console.log(`💾 Native MongoDB update after auto-rejection: ${setNumberToRestore} (type: ${typeof setNumberToRestore})`);
+        } catch (nativeUpdateError) {
+          console.error('Error in native MongoDB update after auto-rejection:', nativeUpdateError);
+        }
+        
+        // Refresh the response to get updated status
+        await surveyResponse.populate('survey');
         }
       } else {
         console.log(`⏭️  Skipping auto-rejection for abandoned CATI response: ${surveyResponse._id} (status: ${surveyResponse.status})`);
@@ -1455,7 +1540,7 @@ const completeCatiInterview = async (req, res) => {
     // Update queue entry based on call status
     if (finalCallStatus === 'success') {
       // Call was successful - mark as interview success
-      queueEntry.status = 'interview_success';
+    queueEntry.status = 'interview_success';
       queueEntry.response = surveyResponse._id;
       queueEntry.completedAt = new Date();
     } else if (finalCallStatus === 'number_does_not_exist') {
