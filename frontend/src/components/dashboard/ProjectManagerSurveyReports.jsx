@@ -92,6 +92,10 @@ const ProjectManagerSurveyReports = () => {
     navigate(`/project-manager/surveys/${survey._id || survey.id}/qc-performance`);
   };
 
+  const handleViewResponses = (survey) => {
+    navigate(`/project-manager/surveys/${survey._id || survey.id}/responses`);
+  };
+
   const filteredSurveys = surveys.filter(survey => {
     const matchesSearch = !searchTerm || 
       (survey.surveyName || survey.title || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -222,6 +226,13 @@ const ProjectManagerSurveyReports = () => {
                           >
                             <BarChart3 className="w-4 h-4 mr-1.5" />
                             Reports
+                          </button>
+                          <button
+                            onClick={() => handleViewResponses(survey)}
+                            className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                          >
+                            <Eye className="w-4 h-4 mr-1.5" />
+                            Responses
                           </button>
                           <button
                             onClick={() => handleViewQCPerformance(survey)}

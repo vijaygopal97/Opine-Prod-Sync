@@ -116,6 +116,7 @@ function App() {
             {/* Project Manager routes */}
             <Route path="/project-manager/survey-reports" element={<AdminDashboard />} />
             <Route path="/project-manager/surveys/:surveyId/reports" element={<AdminDashboard />} />
+            <Route path="/project-manager/surveys/:surveyId/responses" element={<ViewResponsesPage />} />
             <Route path="/project-manager/surveys/:surveyId/qc-performance" element={<AdminDashboard />} />
             
             {/* Interviewer routes */}

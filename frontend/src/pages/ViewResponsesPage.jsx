@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { 
@@ -26,6 +26,11 @@ import { getMainText } from '../utils/translations';
 const ViewResponsesPage = () => {
   const { surveyId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Determine if we're in project manager route
+  const isProjectManagerRoute = location.pathname.includes('/project-manager/');
+  const backPath = isProjectManagerRoute ? '/project-manager/survey-reports' : '/company/surveys';
   const [survey, setSurvey] = useState(null);
   const [responses, setResponses] = useState([]);
   const [originalResponses, setOriginalResponses] = useState([]); // Store original unfiltered responses
@@ -2010,7 +2015,7 @@ const ViewResponsesPage = () => {
         <div className="text-center">
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Survey Not Found</h2>
           <button
-            onClick={() => navigate('/company/surveys')}
+            onClick={() => navigate(isProjectManagerRoute ? '/project-manager/survey-reports' : '/company/surveys')}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Back to Surveys
@@ -2029,7 +2034,7 @@ const ViewResponsesPage = () => {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-4 flex-1 min-w-0">
                 <button
-                  onClick={() => navigate('/company/surveys')}
+                  onClick={() => navigate(backPath)}
                   className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors flex-shrink-0"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -2055,13 +2060,15 @@ const ViewResponsesPage = () => {
                   <span className="hidden sm:inline">Filters</span>
                 </button>
                 
-                <button
-                  onClick={handleCSVDownload}
-                  className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">Download CSV</span>
-                </button>
+                {!isProjectManagerRoute && (
+                  <button
+                    onClick={handleCSVDownload}
+                    className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Download CSV</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
