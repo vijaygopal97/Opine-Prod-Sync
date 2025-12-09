@@ -9,15 +9,17 @@
     "mlaName": "Sushil Barman",
     "hasByeElection": false
   },
-  "Cooch Behar Uttar": {
+  "COOCHBEHAR UTTAR (SC)": {
     "mpName": "NISITH PRAMANIK",
     "mlaName": "SUKUMAR ROY",
-    "hasByeElection": false
+    "hasByeElection": false,
+    "acName": "COOCHBEHAR UTTAR (SC)"
   },
-  "Cooch Behar Dakshin": {
+  "COOCHBEHAR DAKSHIN": {
     "mpName": "JAGADISH CHANDRA BARMA BASUNIA",
     "mlaName": "Nikhil Ranjan Dey",
-    "hasByeElection": false
+    "hasByeElection": false,
+    "acName": "COOCHBEHAR DAKSHIN"
   },
   "Sitalkuchi": {
     "mpName": "JAGADISH CHANDRA BARMA BASUNIA",

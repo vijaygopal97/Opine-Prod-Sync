@@ -3085,15 +3085,15 @@ const SurveyReportsPage = () => {
                     window.URL.revokeObjectURL(url);
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                >
+                            >
                   <Download className="w-4 h-4" />
                   <span>Export as CSV</span>
-                </button>
-              </div>
+                            </button>
+                        </div>
               <div className="bg-white border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
+                      <thead className="bg-gray-50">
+                        <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">S.No</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Interviewer ID</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Caller Name</th>
@@ -3111,9 +3111,9 @@ const SurveyReportsPage = () => {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Number Not Reachable</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Number Does Not Exist</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">No Response by Telecaller</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
                     {catiStats.interviewerStats.map((stat, index) => (
                       <tr key={stat.interviewerId || index} className="hover:bg-gray-50">
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.sNo || index + 1}</td>
@@ -3133,11 +3133,11 @@ const SurveyReportsPage = () => {
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.numberNotReachable || 0}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.numberDoesNotExist || 0}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.noResponseByTelecaller || 0}</td>
-                      </tr>
+                            </tr>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                      </tbody>
+                    </table>
+                  </div>
             </div>
           )}
         </div>

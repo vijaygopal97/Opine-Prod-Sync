@@ -407,8 +407,8 @@
       "assemblyConstituencies": [
         { "acCode": "WB001", "acName": "Mekliganj", "district": "Cooch Behar", "lokSabha": "Jalpaiguri", "reserved": "SC" },
         { "acCode": "WB002", "acName": "Mathabhanga", "district": "Cooch Behar", "lokSabha": "Cooch Behar", "reserved": "SC" },
-        { "acCode": "WB003", "acName": "Cooch Behar Uttar", "district": "Cooch Behar", "lokSabha": "Cooch Behar", "reserved": "SC" },
-        { "acCode": "WB004", "acName": "Cooch Behar Dakshin", "district": "Cooch Behar", "lokSabha": "Cooch Behar", "reserved": "None" },
+        { "acCode": "WB003", "acName": "COOCHBEHAR UTTAR (SC)", "district": "Cooch Behar", "lokSabha": "Cooch Behar", "reserved": "SC" },
+        { "acCode": "WB004", "acName": "COOCHBEHAR DAKSHIN", "district": "Cooch Behar", "lokSabha": "Cooch Behar", "reserved": "None" },
         { "acCode": "WB005", "acName": "Sitalkuchi", "district": "Cooch Behar", "lokSabha": "Cooch Behar", "reserved": "SC" },
         { "acCode": "WB006", "acName": "Sitai", "district": "Cooch Behar", "lokSabha": "Cooch Behar", "reserved": "SC" },
         { "acCode": "WB007", "acName": "Dinhata", "district": "Cooch Behar", "lokSabha": "Cooch Behar", "reserved": "None" },

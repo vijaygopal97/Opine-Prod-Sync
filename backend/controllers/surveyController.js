@@ -2720,7 +2720,7 @@ exports.getCatiStats = async (req, res) => {
     const ringing = ringingFromResponses || callStatusBreakdown.ringing;
     const notRinging = notRingingFromResponses || (switchOffCount + numberNotReachableCount + numberDoesNotExistCount);
     const callNotReceived = callNotReceivedFromResponses || callStatusBreakdown.no_answer;
-    
+
     // Call Not Ring Status breakdown (from responses)
     const callNotRingStatus = {
       switchOff: switchOffFromResponses || switchOffCount,
@@ -2733,8 +2733,8 @@ exports.getCatiStats = async (req, res) => {
     const callRingStatus = {
       callsConnected: callsConnectedFromResponses || callsConnected,
       callsNotConnected: callsNotConnectedFromResponses || callRecords.filter(c => {
-        const status = getCallStatus(c);
-        return status === 'no-answer';
+      const status = getCallStatus(c);
+      return status === 'no-answer';
       }).length
       // Removed noResponseByTelecaller from here
     };
@@ -2844,7 +2844,7 @@ exports.getCatiStats = async (req, res) => {
         numberNotReachable: 0,
         numberDoesNotExist: 0,
         noResponseByTelecaller: 0 // From CatiCall: hangupBySource=1 or statusCode=7
-      });
+          });
     });
     
     // Step 2: Count Total Dials from SurveyResponse objects (BETTER APPROACH)
@@ -2860,8 +2860,8 @@ exports.getCatiStats = async (req, res) => {
       const interviewerId = response.interviewer._id.toString();
       if (!interviewerStatsMap.has(interviewerId)) return;
       
-      const stat = interviewerStatsMap.get(interviewerId);
-      
+        const stat = interviewerStatsMap.get(interviewerId);
+        
       // Get call status from response - PRIORITY ORDER:
       // 1. knownCallStatus field (dedicated field for call status)
       // 2. metadata.callStatus (legacy)
@@ -2979,8 +2979,8 @@ exports.getCatiStats = async (req, res) => {
       if (response.status === 'Rejected' && 
           (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected')) {
         stat.rejected += 1;
-      }
-      
+        }
+        
       // Call Status Breakdown
       if (normalizedCallStatus === 'didnt_get_call' || normalizedCallStatus === 'didn\'t_get_call') {
         stat.callNotReceivedToTelecaller += 1;

@@ -2704,46 +2704,46 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
           return;
         } else {
           // For CAPI mode, still abandon but use standard abandon endpoint
-          const consentQuestion = allQuestions.find(q => q.id === 'consent-form');
-          if (consentQuestion) {
+        const consentQuestion = allQuestions.find(q => q.id === 'consent-form');
+        if (consentQuestion) {
             try {
-              const finalResponses = [{
-                sectionIndex: consentQuestion.sectionIndex,
-                questionIndex: consentQuestion.questionIndex,
-                questionId: consentQuestion.id,
-                questionType: consentQuestion.type,
-                questionText: consentQuestion.text,
-                questionDescription: consentQuestion.description,
-                questionOptions: consentQuestion.options.map(opt => typeof opt === 'object' ? opt.text : opt),
-                response: responses['consent-form'] || '2',
-                responseTime: 0,
-                isRequired: true,
-                isSkipped: false
-              }];
-              
+          const finalResponses = [{
+            sectionIndex: consentQuestion.sectionIndex,
+            questionIndex: consentQuestion.questionIndex,
+            questionId: consentQuestion.id,
+            questionType: consentQuestion.type,
+            questionText: consentQuestion.text,
+            questionDescription: consentQuestion.description,
+            questionOptions: consentQuestion.options.map(opt => typeof opt === 'object' ? opt.text : opt),
+            response: responses['consent-form'] || '2',
+            responseTime: 0,
+            isRequired: true,
+            isSkipped: false
+          }];
+          
               // Abandon interview with only consent response
               const response = await surveyResponseAPI.abandonInterview(sessionId, finalResponses, {
-                selectedAC: selectedAC || null,
-                selectedPollingStation: selectedPollingStation || null,
-                location: gpsLocation || null,
+              selectedAC: selectedAC || null,
+              selectedPollingStation: selectedPollingStation || null,
+              location: gpsLocation || null,
                 setNumber: selectedSetNumber || null,
                 abandonedReason: 'Consent_Form_Disagree' // Map consent refusal to standardized reason
-              });
-            
-              if (response.success) {
+          });
+          
+          if (response.success) {
                 showSuccess('Interview abandoned due to consent refusal');
                 if (onComplete) onComplete({ abandoned: true, reason: 'consent_refused' });
-                if (onClose) onClose();
-              } else {
+            if (onClose) onClose();
+          } else {
                 showError(response.message || 'Failed to abandon interview');
-              }
+          }
             } catch (error) {
               console.error('Error abandoning interview:', error);
               showError('Failed to abandon interview');
             } finally {
-              setIsLoading(false);
+          setIsLoading(false);
             }
-            return;
+          return;
           }
         }
       }
@@ -4728,7 +4728,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                         {(shouldShowSubmitForCallStatus || shouldShowAbandonForConsent) ? (
                           <XCircle className="w-5 h-5" />
                         ) : (
-                          <CheckCircle className="w-5 h-5" />
+                        <CheckCircle className="w-5 h-5" />
                         )}
                         <span>{(shouldShowSubmitForCallStatus || shouldShowAbandonForConsent) ? 'Abandon' : 'Submit'}</span>
                       </button>
