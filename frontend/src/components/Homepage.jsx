@@ -93,8 +93,8 @@ const Homepage = () => {
 
   const getColorClasses = (color) => {
     const colors = {
-      blue: "bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white",
-      purple: "bg-purple-100 text-purple-600 group-hover:bg-purple-600 group-hover:text-white",
+      blue: "bg-[#E6F0F8] text-[#001D48] group-hover:bg-[#001D48] group-hover:text-white",
+      purple: "bg-[#E8E6F5] text-[#373177] group-hover:bg-[#373177] group-hover:text-white",
       green: "bg-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white",
       orange: "bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white",
       pink: "bg-pink-100 text-pink-600 group-hover:bg-pink-600 group-hover:text-white",
@@ -110,12 +110,12 @@ const Homepage = () => {
       <SEO pathname="/" />
       <div className="homepage">
       {/* Hero Section */}
-      <section id="home" className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20 overflow-hidden">
+      <section id="home" className="relative bg-gradient-to-br from-[#E6F0F8] via-white to-[#E8E6F5] py-20 overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 left-0 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-          <div className="absolute top-0 right-0 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
-          <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
+          <div className="absolute top-0 left-0 w-72 h-72 bg-[#3FADCC] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+          <div className="absolute top-0 right-0 w-72 h-72 bg-[#373177] rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
+          <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-[#3FADCC] rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
         </div>
 
         <div className="relative w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
@@ -129,23 +129,23 @@ const Homepage = () => {
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
               Connect Research Companies with
-              <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] bg-clip-text text-transparent">
                 Professional Interviewers
               </span>
             </h1>
 
             {/* Subheadline */}
             <p className="text-xl text-gray-600 mb-8 max-w-4xl mx-auto leading-relaxed">
-              Opine India's multi-tenant platform enables market research companies worldwide to conduct high-quality field interviews through our network of verified gig workers, ensuring data security and privacy protection.
+              Convergent's multi-tenant platform enables market research companies worldwide to conduct high-quality field interviews through our network of verified gig workers, ensuring data security and privacy protection.
             </p>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-              <button className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center">
+              <button className="group px-8 py-4 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white font-semibold rounded-lg hover:from-[#002855] hover:via-[#3d3a8a] hover:to-[#4bb8d9] transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center">
                 Get Started as Company
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
               </button>
-              <button className="px-8 py-4 border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-600 hover:text-white transition-all duration-300">
+              <button className="px-8 py-4 border-2 border-[#001D48] text-[#001D48] font-semibold rounded-lg hover:bg-[#001D48] hover:text-white transition-all duration-300">
                 Join as Interviewer
               </button>
             </div>
@@ -153,16 +153,16 @@ const Homepage = () => {
             {/* Trust Indicators */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="bg-blue-100 p-3 rounded-full mb-4">
-                  <Globe className="h-6 w-6 text-blue-600" />
+                <div className="bg-[#E6F0F8] p-3 rounded-full mb-4">
+                  <Globe className="h-6 w-6 text-[#001D48]" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Global Reach</h3>
                 <p className="text-gray-600 text-center">Multi-country operations with localized support</p>
               </div>
               
               <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="bg-purple-100 p-3 rounded-full mb-4">
-                  <Shield className="h-6 w-6 text-purple-600" />
+                <div className="bg-[#E8E6F5] p-3 rounded-full mb-4">
+                  <Shield className="h-6 w-6 text-[#373177]" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Secure Platform</h3>
                 <p className="text-gray-600 text-center">Enterprise-grade data isolation and privacy</p>
@@ -187,7 +187,7 @@ const Homepage = () => {
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
               Powerful Features for
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC]">
                 Market Research Excellence
               </span>
             </h2>
@@ -221,11 +221,11 @@ const Homepage = () => {
           </div>
 
           {/* Stats Section */}
-          <div className="mt-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 sm:p-12">
+          <div className="mt-20 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] rounded-2xl p-8 sm:p-12">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
               <div className="text-white">
                 <div className="text-3xl sm:text-4xl font-bold mb-2">50+</div>
-                <div className="text-blue-100 font-medium">Research Companies</div>
+                <div className="text-[#E6F0F8] font-medium">Research Companies</div>
               </div>
               <div className="text-white">
                 <div className="text-3xl sm:text-4xl font-bold mb-2">10K+</div>
@@ -250,7 +250,7 @@ const Homepage = () => {
           {/* Section Header */}
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              How Opine India Works
+              How Convergent Works
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
               Our platform streamlines the entire survey process for both research companies and interviewers
@@ -262,7 +262,7 @@ const Homepage = () => {
                 onClick={() => setActiveTab('companies')}
                 className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
                   activeTab === 'companies'
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white shadow-lg'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -272,7 +272,7 @@ const Homepage = () => {
                 onClick={() => setActiveTab('interviewers')}
                 className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
                   activeTab === 'interviewers'
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white shadow-lg'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -289,13 +289,13 @@ const Homepage = () => {
                 <div key={index} className="relative">
                   {/* Connector Line */}
                   {index < steps.length - 1 && (
-                    <div className="hidden lg:block absolute top-12 left-full w-8 h-0.5 bg-gradient-to-r from-blue-300 to-purple-300 transform translate-x-4"></div>
+                    <div className="hidden lg:block absolute top-12 left-full w-8 h-0.5 bg-gradient-to-r from-[#3FADCC] to-[#373177] transform translate-x-4"></div>
                   )}
                   
                   <div className="bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100">
                     {/* Step Number */}
                     <div className="flex items-center mb-4">
-                      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3">
+                      <div className="bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3">
                         {index + 1}
                       </div>
                       <div className="bg-gray-100 p-2 rounded-lg">
@@ -322,13 +322,13 @@ const Homepage = () => {
                 Ready to Get Started?
               </h3>
               <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-                Join thousands of companies and interviewers already using Opine India to conduct high-quality market research.
+                Join thousands of companies and interviewers already using Convergent to conduct high-quality market research.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/app" className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
+                <Link to="/app" className="px-8 py-3 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white font-semibold rounded-lg hover:from-[#002855] hover:via-[#3d3a8a] hover:to-[#4bb8d9] transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
                   Start Free Trial
                 </Link>
-                <button className="px-8 py-3 border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-600 hover:text-white transition-all duration-300">
+                <button className="px-8 py-3 border-2 border-[#001D48] text-[#001D48] font-semibold rounded-lg hover:bg-[#001D48] hover:text-white transition-all duration-300">
                   Schedule Demo
                 </button>
               </div>

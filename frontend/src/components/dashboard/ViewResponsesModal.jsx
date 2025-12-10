@@ -661,7 +661,7 @@ const ViewResponsesModal = ({ survey, onClose }) => {
               </button>
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                className="flex items-center space-x-1 px-3 py-2 bg-[#E6F0F8] text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
               >
                 <Filter className="w-4 h-4" />
                 <span>Filters</span>
@@ -915,7 +915,7 @@ const ViewResponsesModal = ({ survey, onClose }) => {
                           <div className="flex items-center space-x-2 ml-4">
                             <button
                               onClick={() => handleViewFullResponse(response)}
-                              className="flex items-center space-x-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                              className="flex items-center space-x-1 px-3 py-2 bg-[#E6F0F8] text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                             >
                               <Eye className="w-4 h-4" />
                               <span>View Full Response</span>
@@ -953,7 +953,7 @@ const ViewResponsesModal = ({ survey, onClose }) => {
                               onClick={() => handlePageChange(page)}
                               className={`px-3 py-2 rounded-lg ${
                                 page === pagination.currentPage
-                                  ? 'bg-blue-600 text-white'
+                                  ? 'bg-[#001D48] text-white'
                                   : 'text-gray-600 hover:bg-gray-100'
                               }`}
                             >

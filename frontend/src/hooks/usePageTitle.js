@@ -6,63 +6,63 @@ import { useLocation } from 'react-router-dom';
 // are handled by their individual SEO components
 const pageTitles = {
   // Super Admin routes
-  '/admin/dashboard': 'Dashboard - Super Admin | Opine India',
-  '/admin/add-user': 'Add User - Super Admin | Opine India',
-  '/admin/manage-users': 'User Management - Super Admin | Opine India',
-  '/admin/manage-companies': 'Company Management - Super Admin | Opine India',
-  '/admin/survey-templates': 'Survey Templates - Super Admin | Opine India',
-  '/admin/reports': 'Reports & Analytics - Super Admin | Opine India',
-  '/admin/settings': 'System Settings - Super Admin | Opine India',
-  '/admin/profile': 'Profile Settings - Super Admin | Opine India',
+  '/admin/dashboard': 'Dashboard - Super Admin | Convergent',
+  '/admin/add-user': 'Add User - Super Admin | Convergent',
+  '/admin/manage-users': 'User Management - Super Admin | Convergent',
+  '/admin/manage-companies': 'Company Management - Super Admin | Convergent',
+  '/admin/survey-templates': 'Survey Templates - Super Admin | Convergent',
+  '/admin/reports': 'Reports & Analytics - Super Admin | Convergent',
+  '/admin/settings': 'System Settings - Super Admin | Convergent',
+  '/admin/profile': 'Profile Settings - Super Admin | Convergent',
   
   // Company Admin routes
-  '/company/dashboard': 'Dashboard - Company Admin | Opine India',
-  '/company/team-management': 'Team Management - Company Admin | Opine India',
-  '/company/surveys': 'Surveys - Company Admin | Opine India',
-  '/company/survey-approvals': 'Survey Approvals - Company Admin | Opine India',
-  '/company/document-verification': 'Document Verification - Company Admin | Opine India',
-  '/company/performance': 'Performance Monitoring - Company Admin | Opine India',
-  '/company/payment-settings': 'Payment Settings - Company Admin | Opine India',
-  '/company/account-settings': 'Account Settings - Company Admin | Opine India',
-  '/company/profile': 'Profile Settings - Company Admin | Opine India',
+  '/company/dashboard': 'Dashboard - Company Admin | Convergent',
+  '/company/team-management': 'Team Management - Company Admin | Convergent',
+  '/company/surveys': 'Surveys - Company Admin | Convergent',
+  '/company/survey-approvals': 'Survey Approvals - Company Admin | Convergent',
+  '/company/document-verification': 'Document Verification - Company Admin | Convergent',
+  '/company/performance': 'Performance Monitoring - Company Admin | Convergent',
+  '/company/payment-settings': 'Payment Settings - Company Admin | Convergent',
+  '/company/account-settings': 'Account Settings - Company Admin | Convergent',
+  '/company/profile': 'Profile Settings - Company Admin | Convergent',
   
   // Project Manager routes
-  '/project-manager/dashboard': 'Dashboard - Project Manager | Opine India',
-  '/project-manager/surveys': 'Survey Management - Project Manager | Opine India',
-  '/project-manager/survey-approvals': 'Survey Approvals - Project Manager | Opine India',
-  '/project-manager/performance': 'Performance Monitoring - Project Manager | Opine India',
-  '/project-manager/payment-settings': 'Payment Settings - Project Manager | Opine India',
-  '/project-manager/profile': 'Profile Settings - Project Manager | Opine India',
+  '/project-manager/dashboard': 'Dashboard - Project Manager | Convergent',
+  '/project-manager/surveys': 'Survey Management - Project Manager | Convergent',
+  '/project-manager/survey-approvals': 'Survey Approvals - Project Manager | Convergent',
+  '/project-manager/performance': 'Performance Monitoring - Project Manager | Convergent',
+  '/project-manager/payment-settings': 'Payment Settings - Project Manager | Convergent',
+  '/project-manager/profile': 'Profile Settings - Project Manager | Convergent',
   
   // Interviewer routes
-  '/interviewer/dashboard': 'Dashboard - Interviewer | Opine India',
-  '/interviewer/available-surveys': 'Available Interviews - Interviewer | Opine India',
-  '/interviewer/my-interviews': 'My Interviews - Interviewer | Opine India',
-  '/interviewer/performance': 'Performance Monitoring - Interviewer | Opine India',
-  '/interviewer/payments-history': 'Payments History - Interviewer | Opine India',
-  '/interviewer/payment-settings': 'Payment Settings - Interviewer | Opine India',
-  '/interviewer/profile': 'Profile Settings - Interviewer | Opine India',
+  '/interviewer/dashboard': 'Dashboard - Interviewer | Convergent',
+  '/interviewer/available-surveys': 'Available Interviews - Interviewer | Convergent',
+  '/interviewer/my-interviews': 'My Interviews - Interviewer | Convergent',
+  '/interviewer/performance': 'Performance Monitoring - Interviewer | Convergent',
+  '/interviewer/payments-history': 'Payments History - Interviewer | Convergent',
+  '/interviewer/payment-settings': 'Payment Settings - Interviewer | Convergent',
+  '/interviewer/profile': 'Profile Settings - Interviewer | Convergent',
   
   // Quality Agent routes
-  '/quality-agent/dashboard': 'Dashboard - Quality Agent | Opine India',
-  '/quality-agent/available-surveys': 'Available Interviews - Quality Agent | Opine India',
-  '/quality-agent/validation-history': 'Validation History - Quality Agent | Opine India',
-  '/quality-agent/performance': 'Performance Monitoring - Quality Agent | Opine India',
-  '/quality-agent/payments-history': 'Payments History - Quality Agent | Opine India',
-  '/quality-agent/payment-settings': 'Payment Settings - Quality Agent | Opine India',
-  '/quality-agent/profile': 'Profile Settings - Quality Agent | Opine India',
+  '/quality-agent/dashboard': 'Dashboard - Quality Agent | Convergent',
+  '/quality-agent/available-surveys': 'Available Interviews - Quality Agent | Convergent',
+  '/quality-agent/validation-history': 'Validation History - Quality Agent | Convergent',
+  '/quality-agent/performance': 'Performance Monitoring - Quality Agent | Convergent',
+  '/quality-agent/payments-history': 'Payments History - Quality Agent | Convergent',
+  '/quality-agent/payment-settings': 'Payment Settings - Quality Agent | Convergent',
+  '/quality-agent/profile': 'Profile Settings - Quality Agent | Convergent',
   
   // Data Analyst routes
-  '/data-analyst/dashboard': 'Dashboard - Data Analyst | Opine India',
-  '/data-analyst/available-gigs': 'Available Gigs - Data Analyst | Opine India',
-  '/data-analyst/my-work': 'My Work - Data Analyst | Opine India',
-  '/data-analyst/performance': 'Performance Monitoring - Data Analyst | Opine India',
-  '/data-analyst/payments-history': 'Payments History - Data Analyst | Opine India',
-  '/data-analyst/payment-settings': 'Payment Settings - Data Analyst | Opine India',
-  '/data-analyst/profile': 'Profile Settings - Data Analyst | Opine India',
+  '/data-analyst/dashboard': 'Dashboard - Data Analyst | Convergent',
+  '/data-analyst/available-gigs': 'Available Gigs - Data Analyst | Convergent',
+  '/data-analyst/my-work': 'My Work - Data Analyst | Convergent',
+  '/data-analyst/performance': 'Performance Monitoring - Data Analyst | Convergent',
+  '/data-analyst/payments-history': 'Payments History - Data Analyst | Convergent',
+  '/data-analyst/payment-settings': 'Payment Settings - Data Analyst | Convergent',
+  '/data-analyst/profile': 'Profile Settings - Data Analyst | Convergent',
   
   // Default dashboard
-  '/dashboard': 'Dashboard | Opine India'
+  '/dashboard': 'Dashboard | Convergent'
 };
 
 // Custom hook to manage page titles for dashboard routes only

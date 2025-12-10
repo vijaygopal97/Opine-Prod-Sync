@@ -289,7 +289,7 @@ const ManageCompanies = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader className="w-6 h-6 animate-spin text-blue-600" />
+            <Loader className="w-6 h-6 animate-spin text-[#001D48]" />
             <span className="ml-2 text-gray-600">Loading companies...</span>
           </div>
         ) : error ? (
@@ -332,7 +332,7 @@ const ManageCompanies = () => {
                   <tr key={company._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                        <div className="w-10 h-10 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] rounded-full flex items-center justify-center text-white font-medium">
                           {company.companyName.charAt(0)}
                         </div>
                         <div className="ml-4">
@@ -369,7 +369,7 @@ const ManageCompanies = () => {
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => handleEditCompany(company)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          className="text-[#001D48] hover:text-[#001D48] transition-colors"
                           title="Edit Company"
                         >
                           <Edit className="w-4 h-4" />
@@ -420,7 +420,7 @@ const ManageCompanies = () => {
                   onClick={() => handlePageChange(pageNum)}
                   className={`px-3 py-2 border rounded-lg transition-colors ${
                     pageNum === pagination.currentPage
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'bg-[#001D48] text-white border-[#001D48]'
                       : 'border-gray-300 hover:bg-gray-50'
                   }`}
                 >

@@ -50,7 +50,7 @@ const About = () => {
   const milestones = [
     {
       year: "2024",
-      title: "Opine India Founded",
+      title: "Convergent Founded",
       description: "Started with a vision to revolutionize market research in India"
     },
     {
@@ -75,26 +75,26 @@ const About = () => {
       <SEO pathname="/about" />
       <div className="about-page">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20 overflow-hidden">
+        <section className="relative bg-gradient-to-br from-[#E6F0F8] via-white to-[#E8E6F5] py-20 overflow-hidden">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-0 left-0 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-            <div className="absolute top-0 right-0 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
-            <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
+            <div className="absolute top-0 left-0 w-72 h-72 bg-[#3FADCC] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+            <div className="absolute top-0 right-0 w-72 h-72 bg-[#373177] rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
+            <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-[#001D48] rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
           </div>
 
           <div className="relative w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
             <div className="text-center">
               {/* Badge */}
-              <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-8">
+              <div className="inline-flex items-center px-4 py-2 bg-[#E6F0F8] text-[#001D48] rounded-full text-sm font-medium mb-8">
                 <Users className="w-4 h-4 mr-2" />
-                About Opine India
+                About Convergent
               </div>
 
               {/* Main Headline */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 Revolutionizing Market Research
-                <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] bg-clip-text text-transparent">
                   Through Technology
                 </span>
               </h1>
@@ -144,7 +144,7 @@ const About = () => {
 
               {/* Vision */}
               <div className="space-y-6">
-                <div className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
+                <div className="inline-flex items-center px-4 py-2 bg-[#E8E6F5] text-purple-800 rounded-full text-sm font-medium">
                   <Award className="w-4 h-4 mr-2" />
                   Our Vision
                 </div>
@@ -156,15 +156,15 @@ const About = () => {
                   for data quality, interviewer professionalism, and research innovation while 
                   empowering businesses to make data-driven decisions.
                 </p>
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl">
+                <div className="bg-gradient-to-r from-[#E6F0F8] to-[#E8E6F5] p-6 rounded-xl">
                   <h3 className="text-xl font-semibold text-gray-900 mb-3">Our Impact</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">1000+</div>
+                      <div className="text-2xl font-bold text-[#001D48]">1000+</div>
                       <div className="text-sm text-gray-600">Interviews Conducted</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">50+</div>
+                      <div className="text-2xl font-bold text-[#373177]">50+</div>
                       <div className="text-sm text-gray-600">Cities Covered</div>
                     </div>
                   </div>
@@ -178,7 +178,7 @@ const About = () => {
         <section className="py-20 bg-gray-50">
           <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-6">
+              <div className="inline-flex items-center px-4 py-2 bg-[#E6F0F8] text-[#001D48] rounded-full text-sm font-medium mb-6">
                 <Heart className="w-4 h-4 mr-2" />
                 Our Values
               </div>
@@ -193,7 +193,7 @@ const About = () => {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
               {values.map((value, index) => (
                 <div key={index} className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-                  <div className="text-blue-600 mb-4">
+                  <div className="text-[#001D48] mb-4">
                     {value.icon}
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-3">
@@ -233,12 +233,12 @@ const About = () => {
                       alt={member.name}
                       className="w-48 h-48 rounded-full mx-auto object-cover shadow-lg group-hover:shadow-xl transition-shadow duration-300"
                     />
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
                     {member.name}
                   </h3>
-                  <p className="text-blue-600 font-medium mb-3">
+                  <p className="text-[#001D48] font-medium mb-3">
                     {member.role}
                   </p>
                   <p className="text-gray-600 leading-relaxed">
@@ -254,7 +254,7 @@ const About = () => {
         <section className="py-20 bg-gray-50">
           <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center px-4 py-2 bg-purple-100 text-purple-800 rounded-full text-sm font-medium mb-6">
+              <div className="inline-flex items-center px-4 py-2 bg-[#E8E6F5] text-purple-800 rounded-full text-sm font-medium mb-6">
                 <TrendingUp className="w-4 h-4 mr-2" />
                 Our Journey
               </div>
@@ -268,14 +268,14 @@ const About = () => {
 
             <div className="relative">
               {/* Timeline line */}
-              <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-blue-600 to-purple-600"></div>
+              <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-[#001D48] via-[#373177] to-[#3FADCC]"></div>
 
               <div className="space-y-12">
                 {milestones.map((milestone, index) => (
                   <div key={index} className={`flex items-center ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
                     <div className={`w-1/2 ${index % 2 === 0 ? 'pr-8 text-right' : 'pl-8 text-left'}`}>
                       <div className="bg-white p-6 rounded-xl shadow-lg">
-                        <div className="text-2xl font-bold text-blue-600 mb-2">
+                        <div className="text-2xl font-bold text-[#001D48] mb-2">
                           {milestone.year}
                         </div>
                         <h3 className="text-xl font-semibold text-gray-900 mb-2">
@@ -288,7 +288,7 @@ const About = () => {
                     </div>
                     
                     {/* Timeline dot */}
-                    <div className="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-blue-600 rounded-full border-4 border-white shadow-lg"></div>
+                    <div className="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-[#001D48] rounded-full border-4 border-white shadow-lg"></div>
                     
                     <div className="w-1/2"></div>
                   </div>
@@ -299,19 +299,19 @@ const About = () => {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
+        <section className="py-20 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
               Ready to Transform Your Research?
             </h2>
-            <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-              Join hundreds of companies already using Opine India to conduct high-quality market research.
+            <p className="text-xl text-[#E6F0F8] mb-8 max-w-3xl mx-auto">
+              Join hundreds of companies already using Convergent to conduct high-quality market research.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-300 shadow-lg">
+              <button className="px-8 py-4 bg-white text-[#001D48] font-semibold rounded-lg hover:bg-gray-100 transition-colors duration-300 shadow-lg">
                 Get Started Today
               </button>
-              <button className="px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-blue-600 transition-all duration-300">
+              <button className="px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:text-[#001D48] transition-all duration-300">
                 Contact Our Team
               </button>
             </div>

@@ -1,5 +1,5 @@
 /**
- * Configuration utilities for Opine application
+ * Configuration utilities for Convergent application
  * Centralizes environment variable access and URL construction
  */
 

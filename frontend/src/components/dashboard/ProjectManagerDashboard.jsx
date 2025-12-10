@@ -50,8 +50,8 @@ const ProjectManagerDashboard = () => {
 
   const getColorClasses = (color) => {
     const colors = {
-      blue: "bg-blue-50 text-blue-600",
-      purple: "bg-purple-50 text-purple-600",
+      blue: "bg-blue-50 text-[#001D48]",
+      purple: "bg-[#E8E6F5] text-[#373177]",
       green: "bg-green-50 text-green-600",
       orange: "bg-orange-50 text-orange-600"
     };
@@ -126,7 +126,7 @@ const ProjectManagerDashboard = () => {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-3">
-            <button className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105">
+            <button className="p-4 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105">
               <ClipboardCheck className="h-6 w-6 mx-auto mb-2" />
               <span className="text-sm font-medium">Create Survey</span>
             </button>
@@ -192,7 +192,7 @@ const ProjectManagerDashboard = () => {
                   <p className="text-sm font-medium text-gray-900">{member.name}</p>
                   <p className="text-xs text-gray-500">{member.interviews} interviews</p>
                 </div>
-                <span className="text-sm font-medium text-blue-600">★ {member.quality}</span>
+                <span className="text-sm font-medium text-[#001D48]">★ {member.quality}</span>
               </div>
             ))}
           </div>

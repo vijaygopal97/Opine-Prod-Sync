@@ -64,7 +64,7 @@ const DashboardHeader = ({ sidebarOpen, setSidebarOpen, user }) => {
           <a href="/" className="flex flex-col items-center hover:opacity-80 transition-opacity duration-200">
             <img 
               src="/logo.png" 
-              alt="Opine India Logo" 
+              alt="Convergent Logo" 
               className="h-10 w-auto"
             />
             <p className="text-xs text-gray-500 mt-1">{getUserTypeDisplay(user?.userType)} Dashboard</p>
@@ -75,7 +75,7 @@ const DashboardHeader = ({ sidebarOpen, setSidebarOpen, user }) => {
         <nav className="hidden md:flex items-center space-x-8">
           <a 
             href="/" 
-            className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-200"
+            className="flex items-center px-4 py-2 text-sm font-medium text-[#001D48] bg-[#E6F0F8] rounded-lg hover:bg-[#D0E1F0] transition-colors duration-200"
           >
             <User className="h-4 w-4 mr-2" />
             Home
@@ -88,7 +88,7 @@ const DashboardHeader = ({ sidebarOpen, setSidebarOpen, user }) => {
             onClick={() => setSettingsOpen(!settingsOpen)}
             className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
           >
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] rounded-full flex items-center justify-center">
               <User className="h-4 w-4 text-white" />
             </div>
             <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${settingsOpen ? 'rotate-180' : ''}`} />
@@ -104,7 +104,7 @@ const DashboardHeader = ({ sidebarOpen, setSidebarOpen, user }) => {
                 <p className="text-xs text-gray-500 break-words leading-relaxed mt-1">
                   {user?.email}
                 </p>
-                <p className="text-xs text-blue-600 font-medium capitalize mt-1">
+                <p className="text-xs text-[#001D48] font-medium capitalize mt-1">
                   {user?.userType?.replace('_', ' ')}
                 </p>
               </div>

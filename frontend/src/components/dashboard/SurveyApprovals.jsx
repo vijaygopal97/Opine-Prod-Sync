@@ -1811,7 +1811,7 @@ const SurveyApprovals = () => {
         <button
               onClick={handleStartQualityCheck}
               disabled={isGettingNextAssignment}
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center px-6 py-3 bg-[#001D48] text-white rounded-lg shadow-sm text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isGettingNextAssignment ? (
                 <>
@@ -1834,7 +1834,7 @@ const SurveyApprovals = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
+            <div className="p-3 rounded-lg bg-[#E6F0F8] text-[#373177]">
               <FileText className="h-6 w-6" />
             </div>
             <div className="ml-4">
@@ -1870,7 +1870,7 @@ const SurveyApprovals = () => {
         
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center">
-            <div className="p-3 rounded-lg bg-purple-50 text-purple-600">
+            <div className="p-3 rounded-lg bg-[#E8E6F5] text-[#373177]">
               <Headphones className="h-6 w-6" />
             </div>
             <div className="ml-4">
@@ -1985,7 +1985,7 @@ const SurveyApprovals = () => {
                   Search: {searchTerm}
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="ml-1 text-blue-600 hover:text-blue-800"
+                    className="ml-1 text-[#373177] hover:text-blue-800"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -2003,22 +2003,22 @@ const SurveyApprovals = () => {
                 </span>
               )}
               {filterMode && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#E8E6F5] text-purple-800">
                   Mode: {filterMode.toUpperCase()}
                   <button
                     onClick={() => setFilterMode('')}
-                    className="ml-1 text-purple-600 hover:text-purple-800"
+                    className="ml-1 text-[#373177] hover:text-purple-800"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
               )}
               {(ageRange.min || ageRange.max) && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#E8E6F5] text-purple-800">
                   Age: {ageRange.min || '0'} - {ageRange.max || '∞'}
                   <button
                     onClick={() => setAgeRange({ min: '', max: '' })}
-                    className="ml-1 text-purple-600 hover:text-purple-800"
+                    className="ml-1 text-[#373177] hover:text-purple-800"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -2038,7 +2038,7 @@ const SurveyApprovals = () => {
             <div className="max-w-md mx-auto">
               <div className="mb-6">
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 mb-4">
-                  <CheckSquare className="w-10 h-10 text-blue-600" />
+                  <CheckSquare className="w-10 h-10 text-[#373177]" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Ready to Review?</h3>
                 <p className="text-gray-600 mb-6">
@@ -2048,7 +2048,7 @@ const SurveyApprovals = () => {
                 <button
                   onClick={handleStartQualityCheck}
                   disabled={isGettingNextAssignment}
-                  className="inline-flex items-center px-8 py-4 bg-blue-600 text-white rounded-lg shadow-sm text-base font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex items-center px-8 py-4 bg-[#001D48] text-white rounded-lg shadow-sm text-base font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isGettingNextAssignment ? (
                     <>
@@ -2113,7 +2113,7 @@ const SurveyApprovals = () => {
                   e.stopPropagation();
                   setShowResponseDetails(true);
                 }}
-                className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="ml-4 px-4 py-2 bg-[#001D48] text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
               >
                 Review Now
               </button>
@@ -2173,7 +2173,7 @@ const SurveyApprovals = () => {
                       e.stopPropagation();
                       setShowResponseDetails(true);
                     }}
-                    className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                    className="ml-4 px-4 py-2 bg-[#001D48] text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
                   >
                     Review Now
                   </button>
@@ -2185,7 +2185,7 @@ const SurveyApprovals = () => {
           {/* Pending Approvals List */}
       {loading ? (
         <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#001D48]"></div>
           <span className="ml-2 text-gray-600">Loading pending approvals...</span>
         </div>
       ) : sortedInterviews.length === 0 ? (
@@ -2255,7 +2255,7 @@ const SurveyApprovals = () => {
                                     ? 'bg-blue-100 text-blue-800' 
                                     : interview.interviewMode === 'cati' 
                                     ? 'bg-green-100 text-green-800' 
-                                    : 'bg-purple-100 text-purple-800'
+                                    : 'bg-[#E8E6F5] text-purple-800'
                                 }`}>
                                   {interview.interviewMode.toUpperCase()}
                                 </span>
@@ -2294,7 +2294,7 @@ const SurveyApprovals = () => {
                             {interview.selectedAC && (
                               <div className="flex items-center mb-1">
                                 <Target className="w-4 h-4 mr-1 text-blue-400" />
-                                <span className="text-blue-600 font-medium">{interview.selectedAC}</span>
+                                <span className="text-[#373177] font-medium">{interview.selectedAC}</span>
                               </div>
                             )}
                             {interview.location && (
@@ -2482,7 +2482,7 @@ const SurveyApprovals = () => {
                                 }
                               }
                             }}
-                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           >
                             <Eye className="w-4 h-4 mr-1" />
                             Verify Details
@@ -2522,7 +2522,7 @@ const SurveyApprovals = () => {
                         ? 'bg-blue-100 text-blue-800' 
                         : selectedInterview.interviewMode === 'cati' 
                         ? 'bg-green-100 text-green-800' 
-                        : 'bg-purple-100 text-purple-800'
+                        : 'bg-[#E8E6F5] text-purple-800'
                     }`}>
                       {selectedInterview.interviewMode.toUpperCase()}
                     </span>
@@ -2626,7 +2626,7 @@ const SurveyApprovals = () => {
               {selectedInterview.interviewMode === 'cati' && catiCallDetails && (
                 <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6">
                   <h4 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
-                    <PhoneCall className="w-5 h-5 mr-2 text-blue-600" />
+                    <PhoneCall className="w-5 h-5 mr-2 text-[#373177]" />
                     Call Information
                   </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -2777,7 +2777,7 @@ const SurveyApprovals = () => {
                                   
                                   {/* Age Group */}
                                   {targetAudience.demographics['Age Group'] && targetAudience.demographics.ageRange && (
-                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div className="p-3 bg-[#E6F0F8] rounded-lg border border-blue-200">
                                       <h6 className="text-xs font-medium text-blue-900 mb-1">Age Range</h6>
                                       <span className="text-xs text-blue-700">
                                         {targetAudience.demographics.ageRange.min || 'Not specified'} - {targetAudience.demographics.ageRange.max || 'Not specified'} years
@@ -2787,7 +2787,7 @@ const SurveyApprovals = () => {
 
                                   {/* Gender Requirements */}
                                   {targetAudience.demographics['Gender'] && targetAudience.demographics.genderRequirements && (
-                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                    <div className="p-3 bg-[#E8E6F5] rounded-lg border border-purple-200">
                                       <h6 className="text-xs font-medium text-purple-900 mb-2">Gender Distribution</h6>
                                       <div className="space-y-1">
                                         {(() => {
@@ -2894,7 +2894,7 @@ const SurveyApprovals = () => {
 
                                   {/* State/Province */}
                                   {targetAudience.geographic['State/Province'] && targetAudience.geographic.stateRequirements && (
-                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div className="p-3 bg-[#E6F0F8] rounded-lg border border-blue-200">
                                       <h6 className="text-xs font-medium text-blue-900 mb-1">Target States/Provinces</h6>
                                       <p className="text-xs text-blue-700">{targetAudience.geographic.stateRequirements}</p>
                                     </div>
@@ -2902,7 +2902,7 @@ const SurveyApprovals = () => {
 
                                   {/* City */}
                                   {targetAudience.geographic['City'] && targetAudience.geographic.cityRequirements && (
-                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                    <div className="p-3 bg-[#E8E6F5] rounded-lg border border-purple-200">
                                       <h6 className="text-xs font-medium text-purple-900 mb-1">Target Cities</h6>
                                       <p className="text-xs text-purple-700">{targetAudience.geographic.cityRequirements}</p>
                                     </div>
@@ -3003,7 +3003,7 @@ const SurveyApprovals = () => {
                                   
                                   {/* Age Group */}
                                   {targetAudience.demographics['Age Group'] && targetAudience.demographics.ageRange && (
-                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div className="p-3 bg-[#E6F0F8] rounded-lg border border-blue-200">
                                       <h6 className="text-xs font-medium text-blue-900 mb-1">Age Range</h6>
                                       <span className="text-xs text-blue-700">
                                         {targetAudience.demographics.ageRange.min || 'Not specified'} - {targetAudience.demographics.ageRange.max || 'Not specified'} years
@@ -3013,7 +3013,7 @@ const SurveyApprovals = () => {
 
                                   {/* Gender Requirements */}
                                   {targetAudience.demographics['Gender'] && targetAudience.demographics.genderRequirements && (
-                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                    <div className="p-3 bg-[#E8E6F5] rounded-lg border border-purple-200">
                                       <h6 className="text-xs font-medium text-purple-900 mb-2">Gender Distribution</h6>
                                       <div className="space-y-1">
                                         {(() => {
@@ -3120,7 +3120,7 @@ const SurveyApprovals = () => {
 
                                   {/* State/Province */}
                                   {targetAudience.geographic['State/Province'] && targetAudience.geographic.stateRequirements && (
-                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div className="p-3 bg-[#E6F0F8] rounded-lg border border-blue-200">
                                       <h6 className="text-xs font-medium text-blue-900 mb-1">Target States/Provinces</h6>
                                       <p className="text-xs text-blue-700">{targetAudience.geographic.stateRequirements}</p>
                                     </div>
@@ -3128,7 +3128,7 @@ const SurveyApprovals = () => {
 
                                   {/* City */}
                                   {targetAudience.geographic['City'] && targetAudience.geographic.cityRequirements && (
-                                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                    <div className="p-3 bg-[#E8E6F5] rounded-lg border border-purple-200">
                                       <h6 className="text-xs font-medium text-purple-900 mb-1">Target Cities</h6>
                                       <p className="text-xs text-purple-700">{targetAudience.geographic.cityRequirements}</p>
                                     </div>
@@ -3225,7 +3225,7 @@ const SurveyApprovals = () => {
                         href={`https://www.openstreetmap.org/?mlat=${selectedInterview.location.latitude}&mlon=${selectedInterview.location.longitude}&zoom=15`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 text-sm underline"
+                        className="text-[#373177] hover:text-blue-800 text-sm underline"
                       >
                         View on OpenStreetMap
                       </a>
@@ -3371,7 +3371,7 @@ const SurveyApprovals = () => {
                     </div>
                     <button
                       onClick={() => handlePlayAudio(selectedInterview.audioRecording.audioUrl, selectedInterview._id)}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       {audioPlaying === selectedInterview._id ? (
                         <>
@@ -3467,7 +3467,7 @@ const SurveyApprovals = () => {
                           value="1"
                           checked={verificationForm.audioStatus === '1'}
                           onChange={(e) => handleVerificationFormChange('audioStatus', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">1 - Survey Conversation can be heard (জরিপের কথোপকথন শোনা যাচ্ছে)</span>
                       </label>
@@ -3478,7 +3478,7 @@ const SurveyApprovals = () => {
                           value="2"
                           checked={verificationForm.audioStatus === '2'}
                           onChange={(e) => handleVerificationFormChange('audioStatus', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">2 - No Conversation (কোনো কথোপকথন নেই)</span>
                       </label>
@@ -3489,7 +3489,7 @@ const SurveyApprovals = () => {
                           value="3"
                           checked={verificationForm.audioStatus === '3'}
                           onChange={(e) => handleVerificationFormChange('audioStatus', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">3 - Irrelevant Conversation (অপ্রাসঙ্গিক কথোপকথন)</span>
                       </label>
@@ -3500,7 +3500,7 @@ const SurveyApprovals = () => {
                           value="4"
                           checked={verificationForm.audioStatus === '4'}
                           onChange={(e) => handleVerificationFormChange('audioStatus', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">4 - Can hear the interviewer more than the respondent (সাক্ষাৎকারগ্রহণকারীর কণ্ঠস্বর উত্তরদাতার তুলনায় বেশি শোনা যাচ্ছে)</span>
                       </label>
@@ -3511,7 +3511,7 @@ const SurveyApprovals = () => {
                           value="7"
                           checked={verificationForm.audioStatus === '7'}
                           onChange={(e) => handleVerificationFormChange('audioStatus', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">7 - Cannot hear the response clearly (উত্তর স্পষ্টভাবে শোনা যাচ্ছে না)</span>
                       </label>
@@ -3522,7 +3522,7 @@ const SurveyApprovals = () => {
                           value="8"
                           checked={verificationForm.audioStatus === '8'}
                           onChange={(e) => handleVerificationFormChange('audioStatus', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">8 - Duplicate Audio (ডুপ্লিকেট অডিও)</span>
                       </label>
@@ -3536,9 +3536,9 @@ const SurveyApprovals = () => {
                       <span className="text-red-500 ml-1">*</span>
                     </label>
                     {selectedInterview && (
-                      <div className="mb-3 p-2 bg-blue-50 border-l-4 border-blue-500 rounded">
+                      <div className="mb-3 p-2 bg-[#E6F0F8] border-l-4 border-blue-500 rounded">
                         <span className="text-sm font-medium text-blue-700">Response: </span>
-                        <span className="text-sm text-blue-600">{getVerificationResponses(selectedInterview).gender}</span>
+                        <span className="text-sm text-[#373177]">{getVerificationResponses(selectedInterview).gender}</span>
                       </div>
                     )}
                     <div className="space-y-2">
@@ -3549,7 +3549,7 @@ const SurveyApprovals = () => {
                           value="1"
                           checked={verificationForm.genderMatching === '1'}
                           onChange={(e) => handleVerificationFormChange('genderMatching', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">1 - Matched (মিলে গেছে)</span>
                       </label>
@@ -3560,7 +3560,7 @@ const SurveyApprovals = () => {
                           value="2"
                           checked={verificationForm.genderMatching === '2'}
                           onChange={(e) => handleVerificationFormChange('genderMatching', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">2 - Not Matched (মেলেনি)</span>
                       </label>
@@ -3571,7 +3571,7 @@ const SurveyApprovals = () => {
                           value="3"
                           checked={verificationForm.genderMatching === '3'}
                           onChange={(e) => handleVerificationFormChange('genderMatching', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">3 - Male answering on behalf of female (মহিলার পক্ষ থেকে পুরুষ উত্তর দিচ্ছেন।)</span>
                       </label>
@@ -3586,9 +3586,9 @@ const SurveyApprovals = () => {
                         <span className="text-red-500 ml-1">*</span>
                       </label>
                       {selectedInterview && (
-                        <div className="mb-3 p-2 bg-blue-50 border-l-4 border-blue-500 rounded">
+                        <div className="mb-3 p-2 bg-[#E6F0F8] border-l-4 border-blue-500 rounded">
                           <span className="text-sm font-medium text-blue-700">Response: </span>
-                          <span className="text-sm text-blue-600">{getVerificationResponses(selectedInterview).upcomingElection}</span>
+                          <span className="text-sm text-[#373177]">{getVerificationResponses(selectedInterview).upcomingElection}</span>
                         </div>
                       )}
                       <div className="space-y-2">
@@ -3599,7 +3599,7 @@ const SurveyApprovals = () => {
                             value="1"
                             checked={verificationForm.upcomingElectionsMatching === '1'}
                             onChange={(e) => handleVerificationFormChange('upcomingElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">1 - Matched (মিলে গেছে)</span>
                         </label>
@@ -3610,7 +3610,7 @@ const SurveyApprovals = () => {
                             value="2"
                             checked={verificationForm.upcomingElectionsMatching === '2'}
                             onChange={(e) => handleVerificationFormChange('upcomingElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">2 - Not Matched (মেলেনি)</span>
                         </label>
@@ -3621,7 +3621,7 @@ const SurveyApprovals = () => {
                             value="3"
                             checked={verificationForm.upcomingElectionsMatching === '3'}
                             onChange={(e) => handleVerificationFormChange('upcomingElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">3 - Cannot hear the response clearly (উত্তর স্পষ্টভাবে শোনা যাচ্ছে না)</span>
                         </label>
@@ -3632,7 +3632,7 @@ const SurveyApprovals = () => {
                             value="4"
                             checked={verificationForm.upcomingElectionsMatching === '4'}
                             onChange={(e) => handleVerificationFormChange('upcomingElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">4 - Did not ask (জিজ্ঞাসা করা হয়নি)</span>
                         </label>
@@ -3648,9 +3648,9 @@ const SurveyApprovals = () => {
                         <span className="text-red-500 ml-1">*</span>
                       </label>
                       {selectedInterview && (
-                        <div className="mb-3 p-2 bg-blue-50 border-l-4 border-blue-500 rounded">
+                        <div className="mb-3 p-2 bg-[#E6F0F8] border-l-4 border-blue-500 rounded">
                           <span className="text-sm font-medium text-blue-700">Response: </span>
-                          <span className="text-sm text-blue-600">{getVerificationResponses(selectedInterview).assembly2021}</span>
+                          <span className="text-sm text-[#373177]">{getVerificationResponses(selectedInterview).assembly2021}</span>
                         </div>
                       )}
                       <div className="space-y-2">
@@ -3661,7 +3661,7 @@ const SurveyApprovals = () => {
                             value="1"
                             checked={verificationForm.previousElectionsMatching === '1'}
                             onChange={(e) => handleVerificationFormChange('previousElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">1 - Matched (মিলে গেছে)</span>
                         </label>
@@ -3672,7 +3672,7 @@ const SurveyApprovals = () => {
                             value="2"
                             checked={verificationForm.previousElectionsMatching === '2'}
                             onChange={(e) => handleVerificationFormChange('previousElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">2 - Not Matched (মেলেনি)</span>
                         </label>
@@ -3683,7 +3683,7 @@ const SurveyApprovals = () => {
                             value="3"
                             checked={verificationForm.previousElectionsMatching === '3'}
                             onChange={(e) => handleVerificationFormChange('previousElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">3 - Cannot hear the response clearly (উত্তর স্পষ্টভাবে শোনা যাচ্ছে না)</span>
                         </label>
@@ -3694,7 +3694,7 @@ const SurveyApprovals = () => {
                             value="4"
                             checked={verificationForm.previousElectionsMatching === '4'}
                             onChange={(e) => handleVerificationFormChange('previousElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">4 - Did not ask (জিজ্ঞাসা করা হয়নি)</span>
                         </label>
@@ -3710,9 +3710,9 @@ const SurveyApprovals = () => {
                         <span className="text-red-500 ml-1">*</span>
                       </label>
                       {selectedInterview && (
-                        <div className="mb-3 p-2 bg-blue-50 border-l-4 border-blue-500 rounded">
+                        <div className="mb-3 p-2 bg-[#E6F0F8] border-l-4 border-blue-500 rounded">
                           <span className="text-sm font-medium text-blue-700">Response: </span>
-                          <span className="text-sm text-blue-600">{getVerificationResponses(selectedInterview).lokSabha2024}</span>
+                          <span className="text-sm text-[#373177]">{getVerificationResponses(selectedInterview).lokSabha2024}</span>
                         </div>
                       )}
                       <div className="space-y-2">
@@ -3723,7 +3723,7 @@ const SurveyApprovals = () => {
                             value="1"
                             checked={verificationForm.previousLoksabhaElectionsMatching === '1'}
                             onChange={(e) => handleVerificationFormChange('previousLoksabhaElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">1 - Matched (মিলে গেছে)</span>
                         </label>
@@ -3734,7 +3734,7 @@ const SurveyApprovals = () => {
                             value="2"
                             checked={verificationForm.previousLoksabhaElectionsMatching === '2'}
                             onChange={(e) => handleVerificationFormChange('previousLoksabhaElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">2 - Not Matched (মেলেনি)</span>
                         </label>
@@ -3745,7 +3745,7 @@ const SurveyApprovals = () => {
                             value="3"
                             checked={verificationForm.previousLoksabhaElectionsMatching === '3'}
                             onChange={(e) => handleVerificationFormChange('previousLoksabhaElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">3 - Cannot hear the response clearly (উত্তর স্পষ্টভাবে শোনা যাচ্ছে না)</span>
                         </label>
@@ -3756,7 +3756,7 @@ const SurveyApprovals = () => {
                             value="4"
                             checked={verificationForm.previousLoksabhaElectionsMatching === '4'}
                             onChange={(e) => handleVerificationFormChange('previousLoksabhaElectionsMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">4 - Did not ask (জিজ্ঞাসা করা হয়নি)</span>
                         </label>
@@ -3771,9 +3771,9 @@ const SurveyApprovals = () => {
                       <span className="text-red-500 ml-1">*</span>
                     </label>
                     {selectedInterview && (
-                      <div className="mb-3 p-2 bg-blue-50 border-l-4 border-blue-500 rounded">
+                      <div className="mb-3 p-2 bg-[#E6F0F8] border-l-4 border-blue-500 rounded">
                         <span className="text-sm font-medium text-blue-700">Response: </span>
-                        <span className="text-sm text-blue-600">{getVerificationResponses(selectedInterview).name}</span>
+                        <span className="text-sm text-[#373177]">{getVerificationResponses(selectedInterview).name}</span>
                       </div>
                     )}
                     <div className="space-y-2">
@@ -3784,7 +3784,7 @@ const SurveyApprovals = () => {
                           value="1"
                           checked={verificationForm.nameMatching === '1'}
                           onChange={(e) => handleVerificationFormChange('nameMatching', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">1 - Matched (মিলে গেছে)</span>
                       </label>
@@ -3795,7 +3795,7 @@ const SurveyApprovals = () => {
                           value="2"
                           checked={verificationForm.nameMatching === '2'}
                           onChange={(e) => handleVerificationFormChange('nameMatching', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">2 - Not Matched (মেলেনি)</span>
                       </label>
@@ -3806,7 +3806,7 @@ const SurveyApprovals = () => {
                           value="3"
                           checked={verificationForm.nameMatching === '3'}
                           onChange={(e) => handleVerificationFormChange('nameMatching', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">3 - Cannot hear the response clearly (উত্তর স্পষ্টভাবে শোনা যাচ্ছে না)</span>
                       </label>
@@ -3817,7 +3817,7 @@ const SurveyApprovals = () => {
                           value="4"
                           checked={verificationForm.nameMatching === '4'}
                           onChange={(e) => handleVerificationFormChange('nameMatching', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">4 - Did not ask (জিজ্ঞাসা করা হয়নি)</span>
                       </label>
@@ -3832,9 +3832,9 @@ const SurveyApprovals = () => {
                         <span className="text-red-500 ml-1">*</span>
                       </label>
                       {selectedInterview && (
-                        <div className="mb-3 p-2 bg-blue-50 border-l-4 border-blue-500 rounded">
+                        <div className="mb-3 p-2 bg-[#E6F0F8] border-l-4 border-blue-500 rounded">
                           <span className="text-sm font-medium text-blue-700">Response: </span>
-                          <span className="text-sm text-blue-600">{getVerificationResponses(selectedInterview).age}</span>
+                          <span className="text-sm text-[#373177]">{getVerificationResponses(selectedInterview).age}</span>
                         </div>
                       )}
                       <div className="space-y-2">
@@ -3845,7 +3845,7 @@ const SurveyApprovals = () => {
                             value="1"
                             checked={verificationForm.ageMatching === '1'}
                             onChange={(e) => handleVerificationFormChange('ageMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">1 - Matched (মিলে গেছে)</span>
                         </label>
@@ -3856,7 +3856,7 @@ const SurveyApprovals = () => {
                             value="2"
                             checked={verificationForm.ageMatching === '2'}
                             onChange={(e) => handleVerificationFormChange('ageMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">2 - Not Matched (মেলেনি)</span>
                         </label>
@@ -3867,7 +3867,7 @@ const SurveyApprovals = () => {
                             value="3"
                             checked={verificationForm.ageMatching === '3'}
                             onChange={(e) => handleVerificationFormChange('ageMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">3 - Cannot hear the response clearly (উত্তর স্পষ্টভাবে শোনা যাচ্ছে না)</span>
                         </label>
@@ -3878,7 +3878,7 @@ const SurveyApprovals = () => {
                             value="4"
                             checked={verificationForm.ageMatching === '4'}
                             onChange={(e) => handleVerificationFormChange('ageMatching', e.target.value)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                           />
                           <span className="text-sm text-gray-700">4 - Did not ask (জিজ্ঞাসা করা হয়নি)</span>
                         </label>
@@ -3901,7 +3901,7 @@ const SurveyApprovals = () => {
                           value="1"
                           checked={verificationForm.phoneNumberAsked === '1'}
                           onChange={(e) => handleVerificationFormChange('phoneNumberAsked', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">1 - Asked the number and noted in the questionnaire (নম্বরটি জিজ্ঞাসা করে প্রশ্নপত্রে নোট করা হয়েছে)</span>
                       </label>
@@ -3912,7 +3912,7 @@ const SurveyApprovals = () => {
                           value="2"
                           checked={verificationForm.phoneNumberAsked === '2'}
                           onChange={(e) => handleVerificationFormChange('phoneNumberAsked', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">2 - Asked the question but the respondent refused to share (প্রশ্নটি করা হয়েছে কিন্তু উত্তরদাতা শেয়ার করতে অস্বীকার করেছেন)</span>
                       </label>
@@ -3923,7 +3923,7 @@ const SurveyApprovals = () => {
                           value="3"
                           checked={verificationForm.phoneNumberAsked === '3'}
                           onChange={(e) => handleVerificationFormChange('phoneNumberAsked', e.target.value)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">3 - Did not ask (জিজ্ঞাসা করা হয়নি)</span>
                       </label>
@@ -3952,7 +3952,7 @@ const SurveyApprovals = () => {
                       disabled={!isVerificationFormValid() || isSubmittingVerification}
                       className={`w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                         isVerificationFormValid() && !isSubmittingVerification
-                          ? 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                          ? 'bg-[#001D48] hover:bg-blue-700 focus:ring-blue-500'
                           : 'bg-gray-400 cursor-not-allowed'
                       }`}
                     >

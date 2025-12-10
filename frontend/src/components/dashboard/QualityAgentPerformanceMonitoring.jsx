@@ -328,7 +328,7 @@ const QualityAgentPerformanceMonitoring = () => {
               <Filter className="h-5 w-5 text-gray-600" />
               <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
               {getActiveFilterCount() > 0 && (
-                <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs font-medium rounded-full">
+                <span className="px-2 py-1 bg-[#E6F0F8] text-[#373177] text-xs font-medium rounded-full">
                   {getActiveFilterCount()} active
                 </span>
               )}
@@ -437,8 +437,8 @@ const QualityAgentPerformanceMonitoring = () => {
                 <p className="text-sm font-medium text-gray-600">Total Reviewed</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">{overview.totalReviewed || 0}</p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <FileText className="h-6 w-6 text-blue-600" />
+              <div className="p-3 bg-[#E6F0F8] rounded-lg">
+                <FileText className="h-6 w-6 text-[#373177]" />
               </div>
             </div>
           </div>
@@ -486,8 +486,8 @@ const QualityAgentPerformanceMonitoring = () => {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-[#E6F0F8] rounded-lg">
+              <TrendingUp className="h-6 w-6 text-[#373177]" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Performance Over Time</h3>
@@ -499,7 +499,7 @@ const QualityAgentPerformanceMonitoring = () => {
           {performanceData?.dailyPerformance && performanceData.dailyPerformance.length > 0 && (
             <div className="flex items-center space-x-4 text-sm">
               <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-[#E6F0F8]0 rounded-full"></div>
                 <span className="text-gray-600">Total: {performanceData.dailyPerformance.reduce((sum, day) => sum + day.totalReviewed, 0)}</span>
               </div>
               <div className="flex items-center space-x-1">
@@ -519,7 +519,7 @@ const QualityAgentPerformanceMonitoring = () => {
           {loading ? (
             <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#001D48] mx-auto mb-4"></div>
                 <p className="text-gray-600">Loading performance data...</p>
               </div>
             </div>
@@ -541,9 +541,9 @@ const QualityAgentPerformanceMonitoring = () => {
         {/* Chart Insights */}
         {performanceData?.dailyPerformance && performanceData.dailyPerformance.length > 0 && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-blue-50 rounded-lg p-4">
+            <div className="bg-[#E6F0F8] rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-2">
-                <Activity className="h-4 w-4 text-blue-600" />
+                <Activity className="h-4 w-4 text-[#373177]" />
                 <span className="text-sm font-medium text-blue-900">Best Day</span>
               </div>
               <p className="text-lg font-semibold text-blue-900">
@@ -564,9 +564,9 @@ const QualityAgentPerformanceMonitoring = () => {
               </p>
             </div>
 
-            <div className="bg-purple-50 rounded-lg p-4">
+            <div className="bg-[#E8E6F5] rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-2">
-                <Target className="h-4 w-4 text-purple-600" />
+                <Target className="h-4 w-4 text-[#373177]" />
                 <span className="text-sm font-medium text-purple-900">Average Daily</span>
               </div>
               <p className="text-lg font-semibold text-purple-900">
@@ -700,7 +700,7 @@ const QualityAgentPerformanceMonitoring = () => {
                           <button
                             onClick={() => fetchFullResponseData(review)}
                             disabled={loadingResponse}
-                            className="text-blue-600 hover:text-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="text-[#373177] hover:text-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <Eye className="h-4 w-4 inline mr-1" />
                             View

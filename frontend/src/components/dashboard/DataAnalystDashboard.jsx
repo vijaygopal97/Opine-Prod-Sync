@@ -50,8 +50,8 @@ const DataAnalystDashboard = () => {
 
   const getColorClasses = (color) => {
     const colors = {
-      blue: "bg-blue-50 text-blue-600",
-      purple: "bg-purple-50 text-purple-600",
+      blue: "bg-[#E6F0F8] text-[#373177]",
+      purple: "bg-purple-50 text-[#373177]",
       green: "bg-green-50 text-green-600",
       orange: "bg-orange-50 text-orange-600"
     };
@@ -110,7 +110,7 @@ const DataAnalystDashboard = () => {
               <div key={index} className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200">
                 <div className={`w-2 h-2 rounded-full ${
                   activity.type === 'success' ? 'bg-green-500' :
-                  activity.type === 'info' ? 'bg-blue-500' :
+                  activity.type === 'info' ? 'bg-[#E6F0F8]0' :
                   activity.type === 'warning' ? 'bg-yellow-500' : 'bg-gray-500'
                 }`}></div>
                 <div className="flex-1">
@@ -126,7 +126,7 @@ const DataAnalystDashboard = () => {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-3">
-            <button className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105">
+            <button className="p-4 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105">
               <FileText className="h-6 w-6 mx-auto mb-2" />
               <span className="text-sm font-medium">Browse Gigs</span>
             </button>
@@ -188,11 +188,11 @@ const DataAnalystDashboard = () => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Average Delivery Time</span>
-              <span className="text-sm font-medium text-blue-600">2.3 days</span>
+              <span className="text-sm font-medium text-[#373177]">2.3 days</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Client Satisfaction</span>
-              <span className="text-sm font-medium text-purple-600">4.9/5</span>
+              <span className="text-sm font-medium text-[#373177]">4.9/5</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Total Earnings</span>
@@ -215,7 +215,7 @@ const DataAnalystDashboard = () => {
                 <div className={`w-2 h-2 rounded-full mt-2 ${
                   notification.type === 'success' ? 'bg-green-500' :
                   notification.type === 'warning' ? 'bg-yellow-500' :
-                  notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+                  notification.type === 'error' ? 'bg-red-500' : 'bg-[#E6F0F8]0'
                 }`}></div>
                 <div className="flex-1">
                   <p className="text-sm text-gray-900">{notification.message}</p>

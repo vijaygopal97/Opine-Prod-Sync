@@ -53,8 +53,8 @@ const CompanyAdminDashboard = () => {
 
   const getColorClasses = (color) => {
     const colors = {
-      blue: "bg-blue-50 text-blue-600",
-      purple: "bg-purple-50 text-purple-600",
+      blue: "bg-[#E6F0F8] text-[#001D48]",
+      purple: "bg-purple-50 text-[#373177]",
       green: "bg-green-50 text-green-600",
       orange: "bg-orange-50 text-orange-600"
     };
@@ -113,7 +113,7 @@ const CompanyAdminDashboard = () => {
               <div key={index} className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors duration-200">
                 <div className={`w-2 h-2 rounded-full ${
                   activity.type === 'success' ? 'bg-green-500' :
-                  activity.type === 'info' ? 'bg-blue-500' :
+                  activity.type === 'info' ? 'bg-[#E6F0F8]0' :
                   activity.type === 'warning' ? 'bg-yellow-500' : 'bg-gray-500'
                 }`}></div>
                 <div className="flex-1">
@@ -129,13 +129,13 @@ const CompanyAdminDashboard = () => {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-2 gap-3">
-            <button className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105">
+            <button className="p-4 bg-gradient-to-r from-[#373177] to-[#373177] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105">
               <Users className="h-6 w-6 mx-auto mb-2" />
               <span className="text-sm font-medium">Add Team Member</span>
             </button>
             <button 
               onClick={() => setShowSurveyBuilder(true)}
-              className="p-4 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105"
+              className="p-4 bg-gradient-to-r from-green-600 to-[#373177] text-white rounded-lg hover:from-green-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105"
             >
               <Plus className="h-6 w-6 mx-auto mb-2" />
               <span className="text-sm font-medium">Create Survey</span>
@@ -169,7 +169,7 @@ const CompanyAdminDashboard = () => {
                   <p className="text-sm font-medium text-gray-900">{member.name}</p>
                   <p className="text-xs text-gray-500">{member.interviews} interviews</p>
                 </div>
-                <span className="text-sm font-medium text-blue-600">★ {member.rating}</span>
+                <span className="text-sm font-medium text-[#001D48]">★ {member.rating}</span>
               </div>
             ))}
           </div>
@@ -181,7 +181,7 @@ const CompanyAdminDashboard = () => {
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">In Progress</span>
-              <span className="text-sm font-medium text-blue-600">5</span>
+              <span className="text-sm font-medium text-[#001D48]">5</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Completed</span>
@@ -212,7 +212,7 @@ const CompanyAdminDashboard = () => {
                 <div className={`w-2 h-2 rounded-full mt-2 ${
                   notification.type === 'success' ? 'bg-green-500' :
                   notification.type === 'warning' ? 'bg-yellow-500' :
-                  notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+                  notification.type === 'error' ? 'bg-red-500' : 'bg-[#E6F0F8]0'
                 }`}></div>
                 <div className="flex-1">
                   <p className="text-sm text-gray-900">{notification.message}</p>

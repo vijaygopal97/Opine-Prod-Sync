@@ -42,9 +42,9 @@ const Register = () => {
       label: 'Interviewer',
       description: 'Conduct field interviews and earn money',
       icon: <UserCheck className="w-6 h-6" />,
-      color: 'from-purple-500 to-violet-500',
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-200'
+      color: 'from-[#373177] to-[#3FADCC]',
+      bgColor: 'bg-[#E8E6F5]',
+      borderColor: 'border-[#373177]'
     },
     {
       value: 'quality_agent',
@@ -60,9 +60,9 @@ const Register = () => {
       label: 'Data Analyst',
       description: 'Analyze survey data and create professional reports',
       icon: <Brain className="w-6 h-6" />,
-      color: 'from-blue-500 to-cyan-500',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200'
+      color: 'from-[#001D48] to-[#3FADCC]',
+      bgColor: 'bg-[#E6F0F8]',
+      borderColor: 'border-[#001D48]'
     }
   ];
 
@@ -326,13 +326,13 @@ const Register = () => {
   return (
     <>
       <SEO pathname="/register" />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12">
+      <div className="min-h-screen bg-gradient-to-br from-[#E6F0F8] via-white to-[#E8E6F5] py-12">
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
           <div className="max-w-4xl mx-auto">
             {/* Header */}
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Join as <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Interviewer</span>
+                Join as <span className="bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] bg-clip-text text-transparent">Interviewer</span>
               </h1>
               <p className="text-xl text-gray-600">
                 Start your journey as a field interviewer and earn money by conducting surveys
@@ -540,7 +540,7 @@ const Register = () => {
                         required={['company_admin', 'project_manager'].includes(formData.userType)}
                       />
                       {['interviewer', 'quality_agent', 'Data_Analyst'].includes(formData.userType) && (
-                        <p className="text-sm text-blue-600 mt-2">
+                        <p className="text-sm text-[#373177] mt-2">
                           💡 You can work independently without a company affiliation, or join a company later.
                         </p>
                       )}
@@ -676,7 +676,7 @@ const Register = () => {
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                    className="w-full px-6 py-3 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
                     disabled={formStatus.loading}
                   >
                     {formStatus.loading ? (
@@ -693,7 +693,7 @@ const Register = () => {
                   <div className="text-center">
                     <p className="text-gray-600">
                       Already have an account?{' '}
-                      <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                      <Link to="/login" className="text-[#001D48] hover:text-[#373177] font-medium">
                         Sign in here
                       </Link>
                     </p>

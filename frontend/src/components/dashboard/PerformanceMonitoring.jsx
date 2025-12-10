@@ -423,7 +423,7 @@ const PerformanceMonitoring = () => {
                 <Filter className="h-5 w-5 text-gray-600" />
                 <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
                 {getActiveFilterCount() > 0 && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs font-medium rounded-full">
+                  <span className="px-2 py-1 bg-[#E6F0F8] text-[#001D48] text-xs font-medium rounded-full">
                     {getActiveFilterCount()} active
                   </span>
                 )}
@@ -516,8 +516,8 @@ const PerformanceMonitoring = () => {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-[#E6F0F8] rounded-lg">
+                <TrendingUp className="h-6 w-6 text-[#001D48]" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Performance Over Time</h3>
@@ -529,7 +529,7 @@ const PerformanceMonitoring = () => {
             {performanceData?.dailyPerformance && performanceData.dailyPerformance.length > 0 && (
               <div className="flex items-center space-x-4 text-sm">
                 <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-[#E6F0F8]0 rounded-full"></div>
                   <span className="text-gray-600">Total: {performanceData.dailyPerformance.reduce((sum, day) => sum + day.interviews, 0)}</span>
                 </div>
                 <div className="flex items-center space-x-1">
@@ -549,7 +549,7 @@ const PerformanceMonitoring = () => {
             {loading ? (
               <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#001D48] mx-auto mb-4"></div>
                   <p className="text-gray-600">Loading performance data...</p>
                 </div>
               </div>
@@ -571,9 +571,9 @@ const PerformanceMonitoring = () => {
           {/* Chart Insights */}
           {performanceData?.dailyPerformance && performanceData.dailyPerformance.length > 0 && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4">
+              <div className="bg-[#E6F0F8] rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Activity className="h-4 w-4 text-blue-600" />
+                  <Activity className="h-4 w-4 text-[#001D48]" />
                   <span className="text-sm font-medium text-blue-900">Best Day</span>
                 </div>
                 <p className="text-lg font-semibold text-blue-900">
@@ -596,7 +596,7 @@ const PerformanceMonitoring = () => {
 
               <div className="bg-purple-50 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Target className="h-4 w-4 text-purple-600" />
+                  <Target className="h-4 w-4 text-[#373177]" />
                   <span className="text-sm font-medium text-purple-900">Average Daily</span>
                 </div>
                 <p className="text-lg font-semibold text-purple-900">
@@ -640,7 +640,7 @@ const PerformanceMonitoring = () => {
             </p>
             <button
               onClick={() => navigate('/interviewer/available-surveys')}
-              className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              className="mt-4 px-6 py-3 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
             >
               View Available Surveys
             </button>
@@ -654,8 +654,8 @@ const PerformanceMonitoring = () => {
                   <p className="text-sm font-medium text-gray-600">Total Interviews</p>
                   <p className="text-3xl font-bold text-gray-900">{performanceData.overview.totalInterviews}</p>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600" />
+                <div className="p-3 bg-[#E6F0F8] rounded-lg">
+                  <Users className="h-6 w-6 text-[#001D48]" />
                 </div>
               </div>
             </div>
@@ -757,24 +757,24 @@ const PerformanceMonitoring = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Timer className="h-5 w-5 text-blue-600" />
+                    <div className="p-2 bg-[#E6F0F8] rounded-lg">
+                      <Timer className="h-5 w-5 text-[#001D48]" />
                     </div>
                     <span className="text-gray-700">Avg. Completion Time</span>
                   </div>
-                  <span className="font-semibold text-blue-600">
+                  <span className="font-semibold text-[#001D48]">
                     {formatDuration(performanceData.overview.averageCompletionTime)}
                   </span>
                 </div>
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Target className="h-5 w-5 text-purple-600" />
+                    <div className="p-2 bg-[#E8E6F5] rounded-lg">
+                      <Target className="h-5 w-5 text-[#373177]" />
                     </div>
                     <span className="text-gray-700">Avg. Completion %</span>
                   </div>
-                  <span className="font-semibold text-purple-600">
+                  <span className="font-semibold text-[#373177]">
                     {Math.round(performanceData.overview.averageCompletionPercentage || 0)}%
                   </span>
                 </div>
@@ -820,7 +820,7 @@ const PerformanceMonitoring = () => {
                 <h3 className="text-lg font-semibold text-gray-900">Recent Interviews</h3>
                 <button 
                   onClick={() => navigate('/interviewer/my-interviews')}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors duration-200"
+                  className="text-[#001D48] hover:text-[#373177] text-sm font-medium transition-colors duration-200"
                 >
                   View All
                 </button>

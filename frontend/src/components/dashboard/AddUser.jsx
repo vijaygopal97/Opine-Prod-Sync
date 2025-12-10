@@ -376,11 +376,11 @@ const AddUser = ({ onUserCreated }) => {
                 onClick={() => handleUserTypeChange(type.value)}
                 className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-300
                   ${formData.userType === type.value
-                    ? 'border-blue-600 bg-blue-50 shadow-md'
+                    ? 'border-[#001D48] bg-blue-50 shadow-md'
                     : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                   }`}
               >
-                <div className={`p-3 rounded-full ${formData.userType === type.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                <div className={`p-3 rounded-full ${formData.userType === type.value ? 'bg-[#373177] text-white' : 'bg-gray-100 text-gray-600'}`}>
                   {type.icon}
                 </div>
                 <span className="mt-3 text-sm font-semibold text-gray-800">{type.label}</span>
@@ -411,7 +411,7 @@ const AddUser = ({ onUserCreated }) => {
                     onClick={() => setFormData(prev => ({ ...prev, status: status.value }))}
                     className={`flex flex-col items-start p-4 rounded-lg border-2 transition-all duration-300 ${
                       formData.status === status.value
-                        ? 'border-blue-600 bg-blue-50 shadow-md'
+                        ? 'border-[#001D48] bg-blue-50 shadow-md'
                         : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                     }`}
                   >
@@ -559,7 +559,7 @@ const AddUser = ({ onUserCreated }) => {
                     name="gig_enabled"
                     checked={formData.gig_enabled}
                     onChange={handleChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
+                    className="w-4 h-4 text-[#373177] border-gray-300 rounded focus:ring-blue-500 mt-1"
                   />
                   <div className="flex-1">
                     <label htmlFor="gig_enabled" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -650,7 +650,7 @@ const AddUser = ({ onUserCreated }) => {
                   value={formData.companyName}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Opine Corp"
+                  placeholder="Convergent Corp"
                   required
                 />
               </div>
@@ -788,7 +788,7 @@ const AddUser = ({ onUserCreated }) => {
                   <p className="text-sm text-gray-500 mt-2">No active companies available.</p>
                 )}
                 {['interviewer', 'quality_agent', 'Data_Analyst'].includes(formData.userType) && (
-                  <p className="text-sm text-blue-600 mt-2">
+                  <p className="text-sm text-[#373177] mt-2">
                     💡 You can work independently without a company affiliation, or join a company later.
                   </p>
                 )}
@@ -817,7 +817,7 @@ const AddUser = ({ onUserCreated }) => {
 
           <button
             type="submit"
-            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
+            className="w-full px-6 py-3 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
             disabled={formStatus.loading}
           >
             {formStatus.loading ? (

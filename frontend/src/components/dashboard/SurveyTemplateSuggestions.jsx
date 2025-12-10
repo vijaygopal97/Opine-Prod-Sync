@@ -142,9 +142,9 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
 
         {/* AI Recommendations */}
         {specifications && (
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-8">
+          <div className="bg-gradient-to-r from-[#E6F0F8] to-purple-50 rounded-xl p-6 mb-8">
             <div className="flex items-center space-x-3 mb-4">
-              <Sparkles className="w-6 h-6 text-blue-600" />
+              <Sparkles className="w-6 h-6 text-[#001D48]" />
               <h3 className="text-lg font-semibold text-gray-900">AI Recommendations</h3>
             </div>
             <p className="text-gray-700 mb-4">
@@ -154,7 +154,7 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
                 {specifications.category}
               </span>
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+              <span className="px-3 py-1 bg-[#E8E6F5] text-purple-700 rounded-full text-sm">
                 {specifications.sampleSize} responses
               </span>
               <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
@@ -197,7 +197,7 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
                 onClick={() => setShowCreateFromScratch(!showCreateFromScratch)}
                 className={`flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                   showCreateFromScratch 
-                    ? 'bg-blue-600 text-white' 
+                    ? 'bg-[#001D48] text-white' 
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
@@ -219,7 +219,7 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
                 onClick={() => handleTemplateSelect(template)}
                 className={`cursor-pointer transition-all duration-200 ${
                   isSelected 
-                    ? 'ring-2 ring-blue-500 bg-blue-50' 
+                    ? 'ring-2 ring-blue-500 bg-[#E6F0F8]' 
                     : 'hover:bg-gray-50'
                 }`}
               >
@@ -241,7 +241,7 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
                       </span>
                     </div>
                     {isSelected && (
-                      <CheckCircle className="w-6 h-6 text-blue-600" />
+                      <CheckCircle className="w-6 h-6 text-[#001D48]" />
                     )}
                   </div>
 
@@ -303,7 +303,7 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
                         e.stopPropagation();
                         // Preview template
                       }}
-                      className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                      className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 text-sm text-[#001D48] border border-blue-200 rounded-lg hover:bg-[#E6F0F8] transition-colors"
                     >
                       <Eye className="w-4 h-4" />
                       <span>Preview</span>
@@ -313,7 +313,7 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
                         e.stopPropagation();
                         // Import template
                       }}
-                      className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <Download className="w-4 h-4" />
                       <span>Import</span>
@@ -338,7 +338,7 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
         {showCreateFromScratch && (
           <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 mb-8">
             <div className="flex items-center space-x-3 mb-4">
-              <Plus className="w-6 h-6 text-purple-600" />
+              <Plus className="w-6 h-6 text-[#373177]" />
               <h3 className="text-lg font-semibold text-gray-900">Create from Scratch</h3>
             </div>
             <p className="text-gray-700 mb-4">
@@ -364,11 +364,11 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
 
         {/* Selection Summary */}
         {(selectedTemplate || showCreateFromScratch) && (
-          <div className="bg-blue-50 rounded-xl p-6 mb-8">
+          <div className="bg-[#E6F0F8] rounded-xl p-6 mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Selected Option</h3>
             {selectedTemplate ? (
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                <div className="w-12 h-12 bg-[#001D48] rounded-lg flex items-center justify-center text-white font-bold">
                   {selectedTemplate.name.charAt(0)}
                 </div>
                 <div>
@@ -385,7 +385,7 @@ const SurveyTemplateSuggestions = ({ onUpdate, initialData, specifications }) =>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-white">
+                <div className="w-12 h-12 bg-[#373177] rounded-lg flex items-center justify-center text-white">
                   <Plus className="w-6 h-6" />
                 </div>
                 <div>

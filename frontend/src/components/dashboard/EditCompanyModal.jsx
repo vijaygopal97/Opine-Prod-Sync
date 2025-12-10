@@ -477,7 +477,7 @@ const EditCompanyModal = ({ company, onSave, onCancel }) => {
               <button
                 type="button"
                 onClick={() => setShowAddAdmin(!showAddAdmin)}
-                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center px-3 py-2 bg-[#373177] text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
                 Add Admin
@@ -594,7 +594,7 @@ const EditCompanyModal = ({ company, onSave, onCancel }) => {
             <div className="space-y-2">
               {loadingAdmins ? (
                 <div className="flex items-center justify-center py-4">
-                  <Loader className="w-4 h-4 animate-spin text-blue-600 mr-2" />
+                  <Loader className="w-4 h-4 animate-spin text-[#001D48] mr-2" />
                   <span className="text-gray-600">Loading admins...</span>
                 </div>
               ) : companyAdmins.length === 0 ? (
@@ -606,7 +606,7 @@ const EditCompanyModal = ({ company, onSave, onCancel }) => {
                 companyAdmins.map((admin) => (
                   <div key={admin._id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                      <div className="w-8 h-8 bg-gradient-to-r from-[#373177] to-[#373177] rounded-full flex items-center justify-center text-white font-medium text-sm">
                         {admin.firstName.charAt(0)}{admin.lastName.charAt(0)}
                       </div>
                       <div className="ml-3">
@@ -653,7 +653,7 @@ const EditCompanyModal = ({ company, onSave, onCancel }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+              className="px-4 py-2 bg-[#373177] text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
               disabled={loading}
             >
               {loading ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}

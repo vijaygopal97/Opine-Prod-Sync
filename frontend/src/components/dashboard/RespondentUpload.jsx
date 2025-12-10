@@ -479,9 +479,9 @@ const RespondentUpload = ({ onUpdate, initialData, surveyId }) => {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
+      <div className="bg-gradient-to-r from-blue-50 to-[#E8E6F5] rounded-lg p-6 border border-blue-200">
         <div className="flex items-center gap-3 mb-6">
-          <Users className="w-8 h-8 text-blue-600" />
+          <Users className="w-8 h-8 text-[#001D48]" />
           <div>
             <h3 className="text-xl font-bold text-gray-800">Upload Respondents</h3>
             <p className="text-sm text-gray-600">Add contacts for CATI interviews by uploading an Excel file or adding manually</p>
@@ -494,7 +494,7 @@ const RespondentUpload = ({ onUpdate, initialData, surveyId }) => {
             onClick={() => setActiveTab('upload')}
             className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
               activeTab === 'upload'
-                ? 'text-blue-600 border-b-2 border-blue-600'
+                ? 'text-[#001D48] border-b-2 border-[#001D48]'
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
@@ -505,7 +505,7 @@ const RespondentUpload = ({ onUpdate, initialData, surveyId }) => {
             onClick={() => setActiveTab('manual')}
             className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
               activeTab === 'manual'
-                ? 'text-blue-600 border-b-2 border-blue-600'
+                ? 'text-[#001D48] border-b-2 border-[#001D48]'
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
@@ -536,7 +536,7 @@ const RespondentUpload = ({ onUpdate, initialData, surveyId }) => {
 
           <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-3">
-              <Upload className="w-6 h-6 text-blue-600" />
+              <Upload className="w-6 h-6 text-[#001D48]" />
               <h4 className="font-semibold text-gray-800">Upload Contacts</h4>
             </div>
             <p className="text-sm text-gray-600 mb-4">
@@ -548,7 +548,7 @@ const RespondentUpload = ({ onUpdate, initialData, surveyId }) => {
                 type="file"
                 accept=".xlsx,.xls"
                 onChange={handleFileSelect}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#E6F0F8] file:text-blue-700 hover:file:bg-[#E6F0F8]"
               />
               {selectedFile && (
                 <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -559,7 +559,7 @@ const RespondentUpload = ({ onUpdate, initialData, surveyId }) => {
               <button
                 onClick={handleUpload}
                 disabled={!selectedFile || uploading}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {uploading ? (
                   <>
@@ -596,7 +596,7 @@ const RespondentUpload = ({ onUpdate, initialData, surveyId }) => {
         {activeTab === 'manual' && (
           <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
             <div className="flex items-center gap-3 mb-6">
-              <UserPlus className="w-6 h-6 text-blue-600" />
+              <UserPlus className="w-6 h-6 text-[#001D48]" />
               <h4 className="font-semibold text-gray-800">Add Contact Manually</h4>
             </div>
 
@@ -746,7 +746,7 @@ const RespondentUpload = ({ onUpdate, initialData, surveyId }) => {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={handleAddManualContact}
-                className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+                className="flex items-center gap-2 px-6 py-2.5 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
               >
                 <Plus className="w-4 h-4" />
                 Add Contact

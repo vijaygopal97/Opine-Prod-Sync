@@ -321,7 +321,7 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
         bg: 'bg-blue-50',
         border: 'border-blue-200',
         text: 'text-blue-700',
-        button: 'bg-blue-600 hover:bg-blue-700'
+        button: 'bg-[#001D48] hover:bg-blue-700'
       },
       green: {
         bg: 'bg-green-50',
@@ -333,7 +333,7 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
         bg: 'bg-purple-50',
         border: 'border-purple-200',
         text: 'text-purple-700',
-        button: 'bg-purple-600 hover:bg-purple-700'
+        button: 'bg-[#373177] hover:bg-purple-700'
       },
       orange: {
         bg: 'bg-orange-50',
@@ -388,7 +388,7 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
                   {/* Selection Indicator */}
                   {isSelected && (
                     <div className="absolute top-4 right-4">
-                      <CheckCircle className="w-6 h-6 text-blue-600" />
+                      <CheckCircle className="w-6 h-6 text-[#373177]" />
                     </div>
                   )}
 
@@ -436,7 +436,7 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
                           type="checkbox"
                           checked={includeGigWorkers}
                           onChange={(e) => handleGigWorkersToggle(e.target.checked)}
-                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                          className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                         />
                         <div className="flex items-center space-x-2">
                           <Users className="w-4 h-4 text-gray-500" />
@@ -460,7 +460,7 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
         {(selectedMode === 'multi_mode' || (selectedModes.includes('capi') && selectedModes.includes('cati'))) && (
           <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-8">
             <div className="flex items-center space-x-3 mb-6">
-              <Target className="w-6 h-6 text-purple-600" />
+              <Target className="w-6 h-6 text-[#373177]" />
               <h3 className="text-lg font-semibold text-gray-900">Configure Mode Allocation</h3>
             </div>
             
@@ -550,7 +550,7 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
                               onChange={(e) => {
                                 handleModeGigWorkersToggle(mode, e.target.checked);
                               }}
-                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                              className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                             />
                             <div className="flex items-center space-x-2">
                               <Users className="w-4 h-4 text-gray-500" />
@@ -574,9 +574,9 @@ const SurveyModeSelection = ({ onUpdate, initialData }) => {
 
         {/* Recommendation */}
         {selectedMode && (
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-8">
+          <div className="bg-gradient-to-r from-blue-50 to-[#E8E6F5] rounded-xl p-6 mb-8">
             <div className="flex items-center space-x-3 mb-4">
-              <Zap className="w-6 h-6 text-blue-600" />
+              <Zap className="w-6 h-6 text-[#373177]" />
               <h3 className="text-lg font-semibold text-gray-900">Recommended for you</h3>
             </div>
             <p className="text-gray-700">

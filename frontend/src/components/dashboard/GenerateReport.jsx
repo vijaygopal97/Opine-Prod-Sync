@@ -241,7 +241,7 @@ const GenerateReport = () => {
       {/* Page Header */}
       <div className="mb-8">
         <div className="flex items-center space-x-3 mb-2">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+          <div className="p-3 bg-gradient-to-br from-blue-500 to-[#373177] rounded-lg">
             <FileBarChart className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -269,7 +269,7 @@ const GenerateReport = () => {
               {/* Template Download */}
               <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center space-x-3">
-                  <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+                  <FileSpreadsheet className="w-5 h-5 text-[#373177]" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Download Excel Template</p>
                     <p className="text-xs text-gray-600">Get the template with column headers and structure</p>
@@ -277,7 +277,7 @@ const GenerateReport = () => {
                 </div>
                 <button
                   onClick={handleDownloadTemplate}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  className="flex items-center space-x-2 px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
                 >
                   <Download className="w-4 h-4" />
                   <span>Download Template</span>
@@ -362,7 +362,7 @@ const GenerateReport = () => {
               className={`w-full flex items-center justify-center space-x-2 px-6 py-4 rounded-lg font-semibold transition-all duration-200 ${
                 !excelFile || generatingReport || generatingAudit
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transform hover:scale-[1.02] shadow-lg'
+                  : 'bg-gradient-to-r from-[#373177] to-[#373177] text-white hover:from-blue-700 hover:to-purple-700 transform hover:scale-[1.02] shadow-lg'
               }`}
             >
               {generatingReport ? (
@@ -418,7 +418,7 @@ const GenerateReport = () => {
             {generatingAudit && (
               <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center space-x-3">
-                  <Loader className="w-5 h-5 animate-spin text-blue-600" />
+                  <Loader className="w-5 h-5 animate-spin text-[#373177]" />
                   <span className="text-sm font-medium text-gray-700">Generating audit trail...</span>
                 </div>
               </div>

@@ -201,7 +201,7 @@ const FindingsDashboard = () => {
       <DashboardLayout user={user}>
         <div className="flex items-center justify-center min-h-96">
           <div className="text-center">
-            <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+            <Loader2 className="w-12 h-12 text-[#373177] animate-spin mx-auto mb-4" />
             <p className="text-gray-600">Loading Findings Dashboard...</p>
           </div>
         </div>
@@ -219,7 +219,7 @@ const FindingsDashboard = () => {
             <p className="text-gray-600 mb-4">The requested survey could not be found.</p>
             <button
               onClick={() => navigate('/company/surveys')}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Surveys</span>
@@ -300,7 +300,7 @@ const FindingsDashboard = () => {
                           onClick={() => toggleSection(item.id)}
                           className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                             expandedSections[item.id]
-                              ? 'bg-blue-50 text-blue-700'
+                              ? 'bg-[#E6F0F8] text-blue-700'
                               : 'text-gray-700 hover:bg-gray-50'
                           }`}
                         >
@@ -322,7 +322,7 @@ const FindingsDashboard = () => {
                                 onClick={() => handlePageChange(subItem.id)}
                                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
                                   activePage === subItem.id
-                                    ? 'bg-blue-100 text-blue-700 font-medium'
+                                    ? 'bg-[#E6F0F8] text-blue-700 font-medium'
                                     : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                               >
@@ -337,7 +337,7 @@ const FindingsDashboard = () => {
                         onClick={() => handlePageChange(item.id)}
                         className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                           activePage === item.id
-                            ? 'bg-blue-50 text-blue-700 font-medium'
+                            ? 'bg-[#E6F0F8] text-blue-700 font-medium'
                             : 'text-gray-700 hover:bg-gray-50'
                         }`}
                       >
@@ -379,7 +379,7 @@ const FieldWorkProgressPage = ({ stats }) => {
         {/* Target Sample */}
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-500 rounded-lg">
+            <div className="p-3 bg-[#E6F0F8]0 rounded-lg">
               <Target className="w-6 h-6 text-white" />
             </div>
           </div>
@@ -391,7 +391,7 @@ const FieldWorkProgressPage = ({ stats }) => {
         {/* Interviews Attempted */}
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-500 rounded-lg">
+            <div className="p-3 bg-[#E8E6F5]0 rounded-lg">
               <FileText className="w-6 h-6 text-white" />
             </div>
           </div>

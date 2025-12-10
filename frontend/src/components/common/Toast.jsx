@@ -39,7 +39,7 @@ const Toast = ({
       case 'warning':
         return <AlertCircle className="w-5 h-5 text-yellow-600" />;
       case 'info':
-        return <Info className="w-5 h-5 text-blue-600" />;
+        return <Info className="w-5 h-5 text-[#001D48]" />;
       default:
         return <CheckCircle className="w-5 h-5 text-green-600" />;
     }
@@ -54,7 +54,7 @@ const Toast = ({
       case 'warning':
         return 'bg-yellow-50 border-yellow-200';
       case 'info':
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-[#E6F0F8] border-blue-200';
       default:
         return 'bg-green-50 border-green-200';
     }
@@ -69,7 +69,7 @@ const Toast = ({
       case 'warning':
         return 'text-yellow-800';
       case 'info':
-        return 'text-blue-800';
+        return 'text-[#001D48]';
       default:
         return 'text-green-800';
     }

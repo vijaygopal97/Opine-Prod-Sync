@@ -202,7 +202,7 @@ const DocumentVerification = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader className="h-8 w-8 animate-spin text-[#373177]" />
       </div>
     );
   }
@@ -287,11 +287,11 @@ const DocumentVerification = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-gray-600">Active filters:</span>
               {searchTerm && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#E6F0F8] text-[#001D48]">
                   Search: {searchTerm}
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="ml-1 text-blue-600 hover:text-blue-800"
+                    className="ml-1 text-[#373177] hover:text-[#001D48]"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -429,7 +429,7 @@ const DocumentVerification = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
                       onClick={() => openModal(profile)}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                     >
                       <Shield className="h-4 w-4 mr-2" />
                       Verify Details
@@ -492,7 +492,7 @@ const DocumentVerification = () => {
                         onClick={() => handlePageChange(page)}
                         className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                           page === currentPage
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                            ? 'z-10 bg-[#E6F0F8] border-blue-500 text-[#373177]'
                             : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
                         }`}
                       >
@@ -529,8 +529,8 @@ const DocumentVerification = () => {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center space-x-4">
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <Shield className="h-6 w-6 text-blue-600" />
+                <div className="p-3 bg-[#E6F0F8] rounded-lg">
+                  <Shield className="h-6 w-6 text-[#373177]" />
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
@@ -557,7 +557,7 @@ const DocumentVerification = () => {
                   {/* Basic Information */}
                   <div className="bg-gray-50 rounded-lg p-6">
                     <div className="flex items-center mb-4">
-                      <User className="h-5 w-5 text-blue-600 mr-2" />
+                      <User className="h-5 w-5 text-[#373177] mr-2" />
                       <h4 className="text-lg font-semibold text-gray-900">Basic Information</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -595,7 +595,7 @@ const DocumentVerification = () => {
                         <label className="text-sm font-medium text-gray-600">Languages Spoken</label>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {selectedProfile.interviewerProfile.languagesSpoken?.map((lang, index) => (
-                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#E6F0F8] text-[#001D48]">
                               {lang}
                             </span>
                           ))}
@@ -661,7 +661,7 @@ const DocumentVerification = () => {
                   {/* Survey Requirements */}
                   <div className="bg-gray-50 rounded-lg p-6">
                     <div className="flex items-center mb-4">
-                      <Smartphone className="h-5 w-5 text-purple-600 mr-2" />
+                      <Smartphone className="h-5 w-5 text-[#373177] mr-2" />
                       <h4 className="text-lg font-semibold text-gray-900">Survey Requirements</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -765,12 +765,12 @@ const DocumentVerification = () => {
                       {selectedProfile.interviewerProfile.cvUpload && (
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center">
-                            <FileText className="h-5 w-5 text-blue-600 mr-3" />
+                            <FileText className="h-5 w-5 text-[#373177] mr-3" />
                             <span className="text-sm font-medium text-gray-900">CV Document</span>
                           </div>
                           <button
                             onClick={() => handleDocumentPreview(selectedProfile.interviewerProfile.cvUpload, 'CV Document')}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
@@ -787,7 +787,7 @@ const DocumentVerification = () => {
                           </div>
                           <button
                             onClick={() => handleDocumentPreview(selectedProfile.interviewerProfile.aadhaarDocument, 'Aadhaar Card', selectedProfile.interviewerProfile.aadhaarNumber)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
@@ -799,12 +799,12 @@ const DocumentVerification = () => {
                       {selectedProfile.interviewerProfile.panDocument && (
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center">
-                            <FileImage className="h-5 w-5 text-purple-600 mr-3" />
+                            <FileImage className="h-5 w-5 text-[#373177] mr-3" />
                             <span className="text-sm font-medium text-gray-900">PAN Card</span>
                           </div>
                           <button
                             onClick={() => handleDocumentPreview(selectedProfile.interviewerProfile.panDocument, 'PAN Card', selectedProfile.interviewerProfile.panNumber)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
@@ -821,7 +821,7 @@ const DocumentVerification = () => {
                           </div>
                           <button
                             onClick={() => handleDocumentPreview(selectedProfile.interviewerProfile.passportPhoto, 'Passport Photo')}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
@@ -848,7 +848,7 @@ const DocumentVerification = () => {
                                 ifscCode: selectedProfile.interviewerProfile.bankIfscCode
                               }
                             )}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
@@ -932,7 +932,7 @@ const DocumentVerification = () => {
             {/* Preview Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center space-x-3">
-                <FileImage className="h-6 w-6 text-blue-600" />
+                <FileImage className="h-6 w-6 text-[#373177]" />
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">{previewType} Preview</h3>
                   {(previewType === 'Aadhaar Card' || previewType === 'PAN Card') && previewDocumentNumber && (
@@ -1018,7 +1018,7 @@ const DocumentVerification = () => {
                 href={previewDocument}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download

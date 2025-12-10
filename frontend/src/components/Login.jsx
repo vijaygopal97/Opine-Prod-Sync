@@ -129,12 +129,12 @@ const Login = () => {
   return (
     <>
       <SEO pathname="/login" />
-      <div className="login-page bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 min-h-screen flex items-center justify-center">
+      <div className="login-page bg-gradient-to-br from-[#E6F0F8] via-white to-[#E8E6F5] py-12 min-h-screen flex items-center justify-center">
         <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 max-w-[800px]">
           <div className="bg-white p-8 rounded-lg shadow-xl border border-gray-200">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Welcome Back to <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Opine India</span>
+                Welcome Back to <span className="bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] bg-clip-text text-transparent">Convergent</span>
               </h1>
               <p className="text-gray-600">
                 Sign in to your account to continue
@@ -209,7 +209,7 @@ const Login = () => {
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    className="h-4 w-4 text-[#001D48] focus:ring-[#001D48] border-gray-300 rounded"
                   />
                   <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                     Remember me
@@ -217,7 +217,7 @@ const Login = () => {
                 </div>
 
                 <div className="text-sm">
-                  <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
+                  <Link to="/forgot-password" className="font-medium text-[#001D48] hover:text-[#373177]">
                     Forgot your password?
                   </Link>
                 </div>
@@ -225,7 +225,7 @@ const Login = () => {
 
               <button
                 type="submit"
-                className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                className="w-full px-6 py-3 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white font-semibold rounded-lg hover:from-[#002855] hover:via-[#3d3a8a] hover:to-[#4bb8d9] transition-all duration-200 shadow-md flex items-center justify-center"
                 disabled={formStatus.loading}
               >
                 {formStatus.loading ? (
@@ -245,7 +245,7 @@ const Login = () => {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{' '}
-                <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link to="/register" className="font-medium text-[#001D48] hover:text-[#373177]">
                   Register here
                 </Link>
               </p>
@@ -255,7 +255,7 @@ const Login = () => {
             <div className="mt-8 p-4 bg-gray-50 rounded-lg">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Credentials:</h3>
               <div className="text-xs text-gray-600 space-y-1">
-                <p><strong>Super Admin:</strong> test5@opineindia.com / Password</p>
+                <p><strong>Super Admin:</strong> test5@convergent.com / Password</p>
                 <p><em>Use these credentials to test the login functionality</em></p>
               </div>
             </div>

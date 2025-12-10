@@ -1,4 +1,4 @@
-# SEO Management System for Opine India
+# SEO Management System for Convergent
 
 ## Overview
 This project includes a comprehensive SEO management system using React Helmet Async for dynamic meta tag management.
@@ -101,7 +101,7 @@ Example:
 // In src/config/seo.js
 routes: {
   "/new-page": {
-    title: "New Page - Opine India",
+    title: "New Page - Convergent",
     description: "Description for the new page",
     keywords: "new, page, keywords",
     canonical: "https://opineindia.com/new-page"

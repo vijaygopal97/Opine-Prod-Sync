@@ -113,7 +113,7 @@ const LocationMap = ({ locationData, height = '300px', showDetails = true }) => 
         {isLoading && (
           <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#001D48] mx-auto mb-2"></div>
               <p className="text-sm text-gray-600">Loading map...</p>
             </div>
           </div>
@@ -134,16 +134,16 @@ const LocationMap = ({ locationData, height = '300px', showDetails = true }) => 
       {/* Location Details */}
       {showDetails && (
         <div className="space-y-3">
-          <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Navigation className="w-5 h-5 text-blue-600" />
+          <div className="flex items-start space-x-3 p-4 bg-[#E6F0F8] rounded-lg border border-blue-200">
+            <div className="p-2 bg-[#E6F0F8] rounded-lg">
+              <Navigation className="w-5 h-5 text-[#373177]" />
             </div>
             <div className="flex-1">
               <h4 className="font-semibold text-blue-900 mb-1">Interview Location</h4>
-              <p className="text-sm text-blue-800 mb-2">
+              <p className="text-sm text-[#001D48] mb-2">
                 {formatted || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`}
               </p>
-              <div className="flex items-center space-x-4 text-xs text-blue-600">
+              <div className="flex items-center space-x-4 text-xs text-[#373177]">
                 <span>Lat: {latitude.toFixed(6)}</span>
                 <span>Lng: {longitude.toFixed(6)}</span>
                 {accuracy && <span>Accuracy: {Math.round(accuracy)}m</span>}

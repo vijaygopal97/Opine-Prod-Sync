@@ -1889,7 +1889,7 @@ const SurveyReportsPage = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#001D48] mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading survey reports...</p>
         </div>
       </div>
@@ -1905,7 +1905,7 @@ const SurveyReportsPage = () => {
           <p className="text-gray-600 mb-4">The requested survey could not be found.</p>
           <button
             onClick={() => navigate('/company/surveys')}
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Surveys</span>
@@ -1998,9 +1998,9 @@ const SurveyReportsPage = () => {
                   
                   {/* Custom Date Range Picker */}
                   {filters.dateRange === 'custom' && (
-                    <div className="mt-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+                    <div className="mt-3 p-4 bg-gradient-to-br from-[#E6F0F8] to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
                       <div className="flex items-center gap-2 mb-3">
-                        <Calendar className="w-4 h-4 text-blue-600" />
+                        <Calendar className="w-4 h-4 text-[#373177]" />
                         <span className="text-sm font-semibold text-gray-700">Select Date Range</span>
                       </div>
                       
@@ -2087,7 +2087,7 @@ const SurveyReportsPage = () => {
                       {filters.startDate && filters.endDate && (
                         <div className="mt-4 pt-4 border-t border-blue-200 flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <div className="w-2 h-2 rounded-full bg-[#E6F0F8]0"></div>
                             <span className="text-sm font-medium text-gray-700">
                               {new Date(filters.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - {new Date(filters.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </span>
@@ -2197,7 +2197,7 @@ const SurveyReportsPage = () => {
                               setShowACDropdown(false);
                             }}
                             className={`px-4 py-2 cursor-pointer hover:bg-gray-100 transition-colors ${
-                              isSelected ? 'bg-blue-50' : ''
+                              isSelected ? 'bg-[#E6F0F8]' : ''
                             }`}
                           >
                             <div className="flex items-center justify-between">
@@ -2208,7 +2208,7 @@ const SurveyReportsPage = () => {
                                 )}
                               </div>
                               {isSelected && (
-                                <CheckCircle className="w-5 h-5 text-blue-600" />
+                                <CheckCircle className="w-5 h-5 text-[#373177]" />
                               )}
                             </div>
                           </div>
@@ -2262,7 +2262,7 @@ const SurveyReportsPage = () => {
                         onClick={() => handleInterviewerModeToggle('include')}
                         className={`flex-1 px-3 py-1.5 text-sm rounded-lg transition-colors ${
                           filters.interviewerMode === 'include'
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-[#001D48] text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -2290,12 +2290,12 @@ const SurveyReportsPage = () => {
                         return (
                           <span
                             key={interviewerId}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-[#E6F0F8] text-blue-800 text-xs rounded-full"
                           >
                             {interviewer.name}
                             <button
                               onClick={() => handleInterviewerToggle(interviewerId)}
-                              className="hover:text-blue-600"
+                              className="hover:text-[#373177]"
                             >
                               <X className="w-3 h-3" />
                             </button>
@@ -2317,7 +2317,7 @@ const SurveyReportsPage = () => {
                               handleInterviewerToggle(interviewer._id);
                             }}
                             className={`px-4 py-2 cursor-pointer hover:bg-gray-100 transition-colors ${
-                              isSelected ? 'bg-blue-50' : ''
+                              isSelected ? 'bg-[#E6F0F8]' : ''
                             }`}
                           >
                             <div className="flex items-center justify-between">
@@ -2330,7 +2330,7 @@ const SurveyReportsPage = () => {
                                 </div>
                               </div>
                               {isSelected && (
-                                <CheckCircle className="w-5 h-5 text-blue-600" />
+                                <CheckCircle className="w-5 h-5 text-[#373177]" />
                               )}
                             </div>
                           </div>
@@ -2374,8 +2374,8 @@ const SurveyReportsPage = () => {
                 <p className="text-sm font-medium text-gray-600">Total Responses</p>
                 <p className="text-2xl font-bold text-gray-900">{analytics.totalResponses.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-blue-600" />
+              <div className="p-3 bg-[#E6F0F8] rounded-lg">
+                <BarChart3 className="w-6 h-6 text-[#373177]" />
               </div>
             </div>
           </div>
@@ -2405,7 +2405,7 @@ const SurveyReportsPage = () => {
                 <p className="text-2xl font-bold text-gray-900">{analytics.capiResponses.toLocaleString()}</p>
               </div>
               <div className="p-3 bg-purple-100 rounded-lg">
-                <Activity className="w-6 h-6 text-purple-600" />
+                <Activity className="w-6 h-6 text-[#373177]" />
               </div>
             </div>
           </div>
@@ -2435,7 +2435,7 @@ const SurveyReportsPage = () => {
               {analytics.acStats.slice(0, 5).map((stat, index) => (
                 <div key={stat.ac} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <span className="w-6 h-6 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full flex items-center justify-center">
+                    <span className="w-6 h-6 bg-[#E6F0F8] text-[#373177] text-xs font-semibold rounded-full flex items-center justify-center">
                       {index + 1}
                     </span>
                     <span className="text-sm font-medium text-gray-900 truncate">{stat.ac}</span>
@@ -2450,7 +2450,7 @@ const SurveyReportsPage = () => {
             <div className="mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={() => setShowACModal(true)}
-                className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium text-center"
+                className="w-full text-sm text-[#373177] hover:text-blue-800 font-medium text-center"
               >
                 View All ({analytics.acStats.length} ACs)
               </button>
@@ -2482,7 +2482,7 @@ const SurveyReportsPage = () => {
             <div className="mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={() => setShowInterviewerModal(true)}
-                className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium text-center"
+                className="w-full text-sm text-[#373177] hover:text-blue-800 font-medium text-center"
               >
                 View All ({analytics.interviewerStats.length} Interviewers)
               </button>
@@ -2499,7 +2499,7 @@ const SurveyReportsPage = () => {
             {loading ? (
               <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#001D48] mx-auto mb-4"></div>
                   <p className="text-gray-600">Loading response trends...</p>
                 </div>
               </div>
@@ -2522,7 +2522,7 @@ const SurveyReportsPage = () => {
           {analytics.dailyStats && analytics.dailyStats.length > 0 && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{analytics.totalResponses}</div>
+                <div className="text-2xl font-bold text-[#373177]">{analytics.totalResponses}</div>
                 <div className="text-sm text-gray-600">Total Responses</div>
               </div>
               <div className="text-center">
@@ -2549,7 +2549,7 @@ const SurveyReportsPage = () => {
                   <div className="flex items-center space-x-2">
                     <div className="w-20 bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-blue-600 h-2 rounded-full" 
+                        className="bg-[#001D48] h-2 rounded-full" 
                         style={{ width: `${(count / analytics.totalResponses) * 100}%` }}
                       ></div>
                     </div>
@@ -2597,7 +2597,7 @@ const SurveyReportsPage = () => {
                   <div className="flex items-center space-x-2">
                     <div className="w-20 bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-purple-600 h-2 rounded-full" 
+                        className="bg-[#373177] h-2 rounded-full" 
                         style={{ width: `${(stat.count / Math.max(...analytics.dailyStats.map(d => d.count), 1)) * 100}%` }}
                       ></div>
                     </div>
@@ -2609,7 +2609,7 @@ const SurveyReportsPage = () => {
             <div className="mt-4 pt-4 border-t border-gray-200">
               <button
                 onClick={() => setShowDailyTrendsModal(true)}
-                className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium text-center"
+                className="w-full text-sm text-[#373177] hover:text-blue-800 font-medium text-center"
               >
                 View All ({analytics.dailyStats.length} Days)
               </button>
@@ -2629,8 +2629,8 @@ const SurveyReportsPage = () => {
               <div className="text-3xl font-bold text-red-600 mb-2">{analytics.capiPerformance.rejected}</div>
               <div className="text-sm font-medium text-red-800">Rejected Interviews</div>
             </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-3xl font-bold text-blue-600 mb-2">{analytics.capiPerformance.total}</div>
+            <div className="text-center p-4 bg-[#E6F0F8] rounded-lg border border-blue-200">
+              <div className="text-3xl font-bold text-[#373177] mb-2">{analytics.capiPerformance.total}</div>
               <div className="text-sm font-medium text-blue-800">Total CAPI Interviews</div>
             </div>
           </div>
@@ -2832,7 +2832,7 @@ const SurveyReportsPage = () => {
                                 setShowCatiACDropdown(false);
                               }}
                               className={`px-4 py-2 cursor-pointer hover:bg-gray-100 transition-colors ${
-                                isSelected ? 'bg-blue-50' : ''
+                                isSelected ? 'bg-[#E6F0F8]' : ''
                               }`}
                             >
                               <div className="flex items-center justify-between">
@@ -2843,7 +2843,7 @@ const SurveyReportsPage = () => {
                                   )}
                                 </div>
                                 {isSelected && (
-                                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                                  <CheckCircle className="w-5 h-5 text-[#373177]" />
                                 )}
                               </div>
                             </div>
@@ -2908,7 +2908,7 @@ const SurveyReportsPage = () => {
                           onClick={handleCatiInterviewerModeToggle}
                           className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                             catiFilters.interviewerMode === 'include'
-                              ? 'bg-blue-500 text-white'
+                              ? 'bg-[#E6F0F8]0 text-white'
                               : 'bg-red-500 text-white'
                           }`}
                         >
@@ -2934,7 +2934,7 @@ const SurveyReportsPage = () => {
                               key={interviewerId}
                               onClick={() => handleCatiInterviewerToggle(interviewerId)}
                               className={`px-4 py-2 cursor-pointer hover:bg-gray-100 transition-colors ${
-                                isSelected ? 'bg-blue-50' : ''
+                                isSelected ? 'bg-[#E6F0F8]' : ''
                               }`}
                             >
                               <div className="flex items-center justify-between">
@@ -2949,7 +2949,7 @@ const SurveyReportsPage = () => {
                                   </div>
                                 </div>
                                 {isSelected && (
-                                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                                  <CheckCircle className="w-5 h-5 text-[#373177]" />
                                 )}
                               </div>
                             </div>
@@ -2966,8 +2966,8 @@ const SurveyReportsPage = () => {
           <div className="mb-8">
             <h4 className="text-md font-semibold text-gray-800 mb-4">Caller Performance</h4>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-2xl font-bold text-blue-600 mb-1">{analytics.catiPerformance.callerPerformance.callsMade || 0}</div>
+              <div className="text-center p-3 bg-[#E6F0F8] rounded-lg border border-blue-200">
+                <div className="text-2xl font-bold text-[#373177] mb-1">{analytics.catiPerformance.callerPerformance.callsMade || 0}</div>
                 <div className="text-xs font-medium text-blue-800">Calls Made</div>
               </div>
               <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
@@ -3084,7 +3084,7 @@ const SurveyReportsPage = () => {
                     document.body.removeChild(link);
                     window.URL.revokeObjectURL(url);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                             >
                   <Download className="w-4 h-4" />
                   <span>Export as CSV</span>
@@ -3415,7 +3415,7 @@ const SurveyReportsPage = () => {
                       return (
                         <tr key={stat.ac} className="border-b border-gray-100">
                           <td className="py-3 px-4">
-                            <span className="w-6 h-6 bg-blue-100 text-blue-600 text-xs font-semibold rounded-full flex items-center justify-center">
+                            <span className="w-6 h-6 bg-[#E6F0F8] text-[#373177] text-xs font-semibold rounded-full flex items-center justify-center">
                               {index + 1}
                             </span>
                           </td>
@@ -3671,7 +3671,7 @@ const SurveyReportsPage = () => {
                     <div className="flex items-center space-x-2">
                       <div className="w-32 bg-gray-200 rounded-full h-2">
                         <div 
-                          className="bg-purple-600 h-2 rounded-full" 
+                          className="bg-[#373177] h-2 rounded-full" 
                           style={{ width: `${(stat.count / Math.max(...analytics.dailyStats.map(d => d.count))) * 100}%` }}
                         ></div>
                       </div>

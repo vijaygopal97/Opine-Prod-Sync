@@ -341,11 +341,11 @@ const AddCompanyUser = ({ onUserCreated }) => {
                 onClick={() => handleUserTypeChange(type.value)}
                 className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all duration-300
                   ${formData.userType === type.value
-                    ? 'border-blue-600 bg-blue-50 shadow-md'
+                    ? 'border-[#001D48] bg-[#E6F0F8] shadow-md'
                     : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                   }`}
               >
-                <div className={`p-3 rounded-full ${formData.userType === type.value ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                <div className={`p-3 rounded-full ${formData.userType === type.value ? 'bg-[#001D48] text-white' : 'bg-gray-100 text-gray-600'}`}>
                   {type.icon}
                 </div>
                 <span className="mt-3 text-sm font-semibold text-gray-800">{type.label}</span>
@@ -376,7 +376,7 @@ const AddCompanyUser = ({ onUserCreated }) => {
                     onClick={() => setFormData(prev => ({ ...prev, status: status.value }))}
                     className={`flex flex-col items-start p-4 rounded-lg border-2 transition-all duration-300 ${
                       formData.status === status.value
-                        ? 'border-blue-600 bg-blue-50 shadow-md'
+                        ? 'border-[#001D48] bg-[#E6F0F8] shadow-md'
                         : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                     }`}
                   >
@@ -400,7 +400,7 @@ const AddCompanyUser = ({ onUserCreated }) => {
           {['interviewer', 'quality_agent', 'Data_Analyst'].includes(formData.userType) && (
             <div className="border-t border-gray-200 pt-6 mt-6 space-y-6">
               <h3 className="text-xl font-bold text-gray-800">Gig Work Feature</h3>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-[#E6F0F8] border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
                   <input
                     type="checkbox"
@@ -408,7 +408,7 @@ const AddCompanyUser = ({ onUserCreated }) => {
                     name="gig_enabled"
                     checked={formData.gig_enabled}
                     onChange={handleChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
+                    className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500 mt-1"
                   />
                   <div className="flex-1">
                     <label htmlFor="gig_enabled" className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -617,7 +617,7 @@ const AddCompanyUser = ({ onUserCreated }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Interviewers {selectedInterviewers.length > 0 && (
-                    <span className="text-blue-600 font-normal">({selectedInterviewers.length} selected)</span>
+                    <span className="text-[#001D48] font-normal">({selectedInterviewers.length} selected)</span>
                   )}
                 </label>
                 {loadingTeamMembers ? (
@@ -681,7 +681,7 @@ const AddCompanyUser = ({ onUserCreated }) => {
                                     setSelectedInterviewers(selectedInterviewers.filter(id => id !== interviewer._id));
                                   }
                                 }}
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -689,7 +689,7 @@ const AddCompanyUser = ({ onUserCreated }) => {
                                     {interviewer.firstName} {interviewer.lastName}
                                   </span>
                                   {interviewer.memberId && (
-                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono">
+                                    <span className="text-xs bg-[#E6F0F8] text-blue-700 px-2 py-0.5 rounded font-mono">
                                       ID: {interviewer.memberId}
                                     </span>
                                   )}
@@ -709,7 +709,7 @@ const AddCompanyUser = ({ onUserCreated }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Quality Agents {selectedQualityAgents.length > 0 && (
-                    <span className="text-purple-600 font-normal">({selectedQualityAgents.length} selected)</span>
+                    <span className="text-[#373177] font-normal">({selectedQualityAgents.length} selected)</span>
                   )}
                 </label>
                 {loadingTeamMembers ? (
@@ -773,7 +773,7 @@ const AddCompanyUser = ({ onUserCreated }) => {
                                     setSelectedQualityAgents(selectedQualityAgents.filter(id => id !== agent._id));
                                   }
                                 }}
-                                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                className="w-4 h-4 text-[#373177] border-gray-300 rounded focus:ring-purple-500"
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -801,7 +801,7 @@ const AddCompanyUser = ({ onUserCreated }) => {
 
           <button
             type="submit"
-            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
+            className="w-full px-6 py-3 bg-gradient-to-r from-[#373177] to-[#373177] text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
             disabled={formStatus.loading}
           >
             {formStatus.loading ? (

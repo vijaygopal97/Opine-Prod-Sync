@@ -345,8 +345,8 @@ const ForgotPassword = () => {
     <div className="flex items-center justify-center mb-8">
       <div className="flex items-center space-x-4">
         {/* Email Step */}
-        <div className={`flex items-center ${currentStep === 'email' ? 'text-blue-600' : currentStep === 'otp' || currentStep === 'reset' ? 'text-green-600' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'email' ? 'bg-blue-100' : currentStep === 'otp' || currentStep === 'reset' ? 'bg-green-100' : 'bg-gray-100'}`}>
+        <div className={`flex items-center ${currentStep === 'email' ? 'text-[#001D48]' : currentStep === 'otp' || currentStep === 'reset' ? 'text-green-600' : 'text-gray-400'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'email' ? 'bg-[#E6F0F8]' : currentStep === 'otp' || currentStep === 'reset' ? 'bg-green-100' : 'bg-gray-100'}`}>
             <Mail className="w-4 h-4" />
           </div>
           <span className="ml-2 text-sm font-medium">Email</span>
@@ -355,8 +355,8 @@ const ForgotPassword = () => {
         <div className={`w-8 h-0.5 ${currentStep === 'otp' || currentStep === 'reset' ? 'bg-green-400' : 'bg-gray-300'}`}></div>
         
         {/* OTP Step */}
-        <div className={`flex items-center ${currentStep === 'otp' ? 'text-blue-600' : currentStep === 'reset' ? 'text-green-600' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'otp' ? 'bg-blue-100' : currentStep === 'reset' ? 'bg-green-100' : 'bg-gray-100'}`}>
+        <div className={`flex items-center ${currentStep === 'otp' ? 'text-[#001D48]' : currentStep === 'reset' ? 'text-green-600' : 'text-gray-400'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'otp' ? 'bg-[#E6F0F8]' : currentStep === 'reset' ? 'bg-green-100' : 'bg-gray-100'}`}>
             <Shield className="w-4 h-4" />
           </div>
           <span className="ml-2 text-sm font-medium">OTP</span>
@@ -365,8 +365,8 @@ const ForgotPassword = () => {
         <div className={`w-8 h-0.5 ${currentStep === 'reset' ? 'bg-green-400' : 'bg-gray-300'}`}></div>
         
         {/* Reset Step */}
-        <div className={`flex items-center ${currentStep === 'reset' ? 'text-blue-600' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'reset' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+        <div className={`flex items-center ${currentStep === 'reset' ? 'text-[#001D48]' : 'text-gray-400'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'reset' ? 'bg-[#E6F0F8]' : 'bg-gray-100'}`}>
             <Key className="w-4 h-4" />
           </div>
           <span className="ml-2 text-sm font-medium">Reset</span>
@@ -379,12 +379,12 @@ const ForgotPassword = () => {
     <>
       <SEO 
         pathname="/forgot-password"
-        title="Forgot Password - Opine India"
-        description="Reset your password for Opine India account. Enter your email to receive a verification code and create a new password."
-        keywords="forgot password, reset password, Opine India, account recovery"
+        title="Forgot Password - Convergent"
+        description="Reset your password for Convergent account. Enter your email to receive a verification code and create a new password."
+        keywords="forgot password, reset password, Convergent, account recovery"
         canonical="/forgot-password"
-        ogTitle="Forgot Password - Opine India"
-        ogDescription="Reset your password for Opine India account. Enter your email to receive a verification code and create a new password."
+        ogTitle="Forgot Password - Convergent"
+        ogDescription="Reset your password for Convergent account. Enter your email to receive a verification code and create a new password."
         ogImage="/og-image.jpg"
         ogType="website"
         twitterCard="summary_large_image"
@@ -398,7 +398,7 @@ const ForgotPassword = () => {
             {/* Header */}
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Reset Your <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Password</span>
+                Reset Your <span className="bg-gradient-to-r from-[#373177] to-[#373177] bg-clip-text text-transparent">Password</span>
               </h1>
               <p className="text-gray-600">
                 {currentStep === 'email' && 'Enter your email address to receive a verification code'}
@@ -444,7 +444,7 @@ const ForgotPassword = () => {
 
                 <button
                   type="submit"
-                  className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                  className="w-full px-6 py-3 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white font-semibold rounded-lg hover:from-[#002855] hover:via-[#3d3a8a] hover:to-[#4bb8d9] transition-all duration-200 shadow-md flex items-center justify-center"
                   disabled={formStatus.loading}
                 >
                   {formStatus.loading ? (
@@ -496,7 +496,7 @@ const ForgotPassword = () => {
                   
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-[#373177] to-[#373177] text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
                     disabled={formStatus.loading}
                   >
                     {formStatus.loading ? (
@@ -518,7 +518,7 @@ const ForgotPassword = () => {
                     type="button"
                     onClick={handleResendOTP}
                     disabled={otpTimer > 0 || formStatus.loading}
-                    className="text-sm text-blue-600 hover:text-blue-500 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
+                    className="text-sm text-[#001D48] hover:text-[#373177] disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
                   >
                     {otpTimer > 0 ? (
                       <>
@@ -609,7 +609,7 @@ const ForgotPassword = () => {
                   
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-[#373177] to-[#373177] text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md flex items-center justify-center"
                     disabled={formStatus.loading}
                   >
                     {formStatus.loading ? (
@@ -632,7 +632,7 @@ const ForgotPassword = () => {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Remember your password?{' '}
-                <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link to="/login" className="font-medium text-[#001D48] hover:text-[#373177]">
                   Sign in here
                 </Link>
               </p>

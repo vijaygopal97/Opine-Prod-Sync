@@ -89,7 +89,7 @@ const MyInterviews = () => {
       case 'Rejected':
         return 'bg-red-100 text-red-800';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-[#E6F0F8] text-[#001D48]';
       case 'abandoned':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -815,8 +815,8 @@ const MyInterviews = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <FileText className="w-6 h-6 text-blue-600" />
+            <div className="p-2 bg-[#E6F0F8] rounded-lg">
+              <FileText className="w-6 h-6 text-[#373177]" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Interviews</p>
@@ -855,8 +855,8 @@ const MyInterviews = () => {
         
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Headphones className="w-6 h-6 text-purple-600" />
+            <div className="p-2 bg-[#E8E6F5] rounded-lg">
+              <Headphones className="w-6 h-6 text-[#373177]" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">With Audio</p>
@@ -992,11 +992,11 @@ const MyInterviews = () => {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-gray-600">Active filters:</span>
               {searchTerm && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#E6F0F8] text-[#001D48]">
                   Search: "{searchTerm}"
                   <button
                     onClick={() => setSearchTerm('')}
-                    className="ml-1 text-blue-600 hover:text-blue-800"
+                    className="ml-1 text-[#373177] hover:text-[#001D48]"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -1014,11 +1014,11 @@ const MyInterviews = () => {
                 </span>
               )}
               {filterGender && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#E8E6F5] text-purple-800">
                   Gender: {filterGender}
                   <button
                     onClick={() => setFilterGender('')}
-                    className="ml-1 text-purple-600 hover:text-purple-800"
+                    className="ml-1 text-[#373177] hover:text-purple-800"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -1149,7 +1149,7 @@ const MyInterviews = () => {
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
-                              className="bg-blue-600 h-2 rounded-full" 
+                              className="bg-[#001D48] h-2 rounded-full" 
                               style={{ width: `${interview.completionPercentage || 0}%` }}
                             ></div>
                           </div>
@@ -1169,8 +1169,8 @@ const MyInterviews = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           interview.interviewMode === 'cati' 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : 'bg-blue-100 text-blue-800'
+                            ? 'bg-[#E8E6F5] text-purple-800' 
+                            : 'bg-[#E6F0F8] text-[#001D48]'
                         }`}>
                           {interview.interviewMode === 'cati' ? (
                             <PhoneCall className="w-3 h-3 mr-1" />
@@ -1209,7 +1209,7 @@ const MyInterviews = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => handleViewResponse(interview)}
-                          className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
                           <Eye className="w-4 h-4 mr-1" />
                           View Details
@@ -1371,7 +1371,7 @@ const MyInterviews = () => {
               {selectedInterview.interviewMode === 'cati' && catiCallDetails && (
                 <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6">
                   <h4 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
-                    <PhoneCall className="w-5 h-5 mr-2 text-blue-600" />
+                    <PhoneCall className="w-5 h-5 mr-2 text-[#373177]" />
                     Call Information
                   </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -1507,7 +1507,7 @@ const MyInterviews = () => {
                         href={`https://www.openstreetmap.org/?mlat=${selectedInterview.location.latitude}&mlon=${selectedInterview.location.longitude}&zoom=15`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 text-sm underline"
+                        className="text-[#373177] hover:text-[#001D48] text-sm underline"
                       >
                         View on OpenStreetMap
                       </a>
@@ -1653,7 +1653,7 @@ const MyInterviews = () => {
                     </div>
                     <button
                       onClick={() => handlePlayAudio(selectedInterview.audioRecording.audioUrl, selectedInterview._id)}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       {audioPlaying === selectedInterview._id ? (
                         <>

@@ -589,7 +589,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
               <p className="text-gray-600">{question.description}</p>
             )}
             {question.settings?.allowMultiple && question.settings?.maxSelections && (
-              <p className="text-sm text-blue-600 font-medium">
+              <p className="text-sm text-[#001D48] font-medium">
                 Maximum {question.settings.maxSelections} selection{question.settings.maxSelections > 1 ? 's' : ''} allowed
               </p>
             )}
@@ -599,7 +599,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                   <input
                     type={question.settings?.allowMultiple ? 'checkbox' : 'radio'}
                     name={`question-${question.id}`}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                   />
                   <span className="text-gray-700">{option.text || option}</span>
                 </label>
@@ -684,7 +684,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                 <input
                   type="radio"
                   name={`question-${question.id}`}
-                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  className="w-4 h-4 text-[#001D48] border-gray-300 focus:ring-blue-500"
                 />
                 <span className="text-gray-700">Yes</span>
               </label>
@@ -692,7 +692,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                 <input
                   type="radio"
                   name={`question-${question.id}`}
-                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  className="w-4 h-4 text-[#001D48] border-gray-300 focus:ring-blue-500"
                 />
                 <span className="text-gray-700">No</span>
               </label>
@@ -740,7 +740,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
               onClick={() => setIsPreviewMode(!isPreviewMode)}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                 isPreviewMode 
-                  ? 'bg-blue-600 text-white' 
+                  ? 'bg-[#001D48] text-white' 
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
@@ -785,7 +785,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                         <span className="text-sm text-gray-500 mr-2">Section {sectionIndex + 1}:</span>
                         {section.title}
                         {sectionIndex === 0 && (
-                          <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                          <span className="ml-2 text-xs text-[#001D48] bg-blue-100 px-2 py-1 rounded-full">
                             <Lock className="w-3 h-3 inline mr-1" />
                             Protected
                           </span>
@@ -804,7 +804,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                         </button>
                       )}
                       {sectionIndex === 0 && !isSpecialSurvey && (
-                        <div className="flex items-center text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                        <div className="flex items-center text-xs text-[#001D48] bg-blue-50 px-2 py-1 rounded">
                           <Shield className="w-3 h-3 mr-1" />
                           Protected
                         </div>
@@ -886,7 +886,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                               />
                             ) : (
                               <span 
-                                className="question-number-area text-xs font-medium text-gray-500 w-12 flex-shrink-0 cursor-text hover:text-blue-600 hover:bg-blue-50 px-1 py-0.5 rounded transition-colors select-none"
+                                className="question-number-area text-xs font-medium text-gray-500 w-12 flex-shrink-0 cursor-text hover:text-[#001D48] hover:bg-blue-50 px-1 py-0.5 rounded transition-colors select-none"
                                 onClick={(e) => {
                                   // Stop all propagation to prevent section navigation
                                   e.stopPropagation();
@@ -924,7 +924,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                         setCurrentSection(sectionIndex);
                         setShowQuestionTypes(true);
                       }}
-                      className="w-full mt-2 flex items-center justify-center space-x-2 py-2 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                      className="w-full mt-2 flex items-center justify-center space-x-2 py-2 text-sm text-[#001D48] border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Add Question</span>
@@ -960,7 +960,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                   />
                   
                   <div className="text-center mt-8">
-                    <button className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <button className="px-8 py-3 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors">
                       Submit Survey
                     </button>
                   </div>
@@ -1015,7 +1015,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                               />
                             ) : (
                               <span 
-                                className={`text-sm font-bold px-2 py-1 rounded cursor-text hover:bg-blue-200 transition-colors ${isFixed ? 'text-blue-700 bg-blue-200' : 'text-blue-600 bg-blue-100'}`}
+                                className={`text-sm font-bold px-2 py-1 rounded cursor-text hover:bg-blue-200 transition-colors ${isFixed ? 'text-blue-700 bg-blue-200' : 'text-[#001D48] bg-blue-100'}`}
                                 onDoubleClick={(e) => {
                                   e.stopPropagation();
                                   handleQuestionNumberDoubleClick(e, currentSection, questionIndex);
@@ -1034,8 +1034,8 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                               </span>
                               {isFixed && (
                                 <div className="flex items-center space-x-1">
-                                  <Lock className="w-3 h-3 text-blue-600" />
-                                  <span className="text-xs text-blue-600 font-medium">Required</span>
+                                  <Lock className="w-3 h-3 text-[#001D48]" />
+                                  <span className="text-xs text-[#001D48] font-medium">Required</span>
                                 </div>
                               )}
                             {question.conditions && question.conditions.length > 0 && (
@@ -1065,8 +1065,8 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                               )}
                               {isFixed && (
                                 <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 rounded-md">
-                                  <Shield className="w-4 h-4 text-blue-600" />
-                                  <span className="text-xs text-blue-600 font-medium">Protected</span>
+                                  <Shield className="w-4 h-4 text-[#001D48]" />
+                                  <span className="text-xs text-[#001D48] font-medium">Protected</span>
                                 </div>
                               )}
                             </div>
@@ -1202,7 +1202,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                                       const updatedOptions = [...question.options, newOption];
                                       updateQuestion(currentSection, questionIndex, { options: updatedOptions });
                                     }}
-                                    className="flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700"
+                                    className="flex items-center space-x-2 text-sm text-[#001D48] hover:text-[#373177]"
                                   >
                                     <Plus className="w-4 h-4" />
                                     <span>Add Option</span>
@@ -1218,7 +1218,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                                   type="checkbox"
                                   checked={question.required}
                                   onChange={(e) => !isFixed && updateQuestion(currentSection, questionIndex, { required: e.target.checked })}
-                                  className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
+                                  className={`w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
                                   disabled={isFixed}
                                 />
                                 <span className={`text-sm ${isFixed ? 'text-gray-500' : 'text-gray-700'}`}>Required</span>
@@ -1232,7 +1232,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                                       type="checkbox"
                                       checked={question.enabledForCAPI !== false} // Default to true
                                       onChange={(e) => !isFixed && updateQuestion(currentSection, questionIndex, { enabledForCAPI: e.target.checked })}
-                                      className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
+                                      className={`w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
                                       disabled={isFixed}
                                     />
                                     <span className={`text-xs ${isFixed ? 'text-gray-500' : 'text-gray-700'}`}>CAPI</span>
@@ -1242,7 +1242,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                                       type="checkbox"
                                       checked={question.enabledForCATI !== false} // Default to true
                                       onChange={(e) => !isFixed && updateQuestion(currentSection, questionIndex, { enabledForCATI: e.target.checked })}
-                                      className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
+                                      className={`w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
                                       disabled={isFixed}
                                     />
                                     <span className={`text-xs ${isFixed ? 'text-gray-500' : 'text-gray-700'}`}>CATI</span>
@@ -1261,7 +1261,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                                               updateQuestion(currentSection, questionIndex, updates);
                                             }
                                           }}
-                                          className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
+                                          className={`w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
                                           disabled={isFixed}
                                         />
                                         <span className={`text-xs ${isFixed ? 'text-gray-500' : 'text-gray-700'}`}>Sets</span>
@@ -1300,7 +1300,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                                             maxSelections: e.target.checked ? (question.settings?.maxSelections || null) : null
                                           }
                                         })}
-                                        className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
+                                        className={`w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
                                         disabled={isFixed}
                                       />
                                       <span className={`text-sm ${isFixed ? 'text-gray-500' : 'text-gray-700'}`}>Allow multiple selections</span>
@@ -1343,7 +1343,7 @@ const SurveyQuestionBuilder = ({ onSave, onUpdate, initialData, surveyData }) =>
                                           shuffleOptions: e.target.checked
                                         }
                                       })}
-                                      className={`w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
+                                      className={`w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500 ${isFixed ? 'cursor-not-allowed opacity-50' : ''}`}
                                       disabled={isFixed}
                                     />
                                     <span className={`text-sm ${isFixed ? 'text-gray-500' : 'text-gray-700'}`}>Shuffle options</span>

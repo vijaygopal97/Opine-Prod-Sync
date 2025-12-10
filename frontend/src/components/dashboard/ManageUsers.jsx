@@ -236,7 +236,7 @@ const ManageUsers = () => {
         </div>
         <button
           onClick={() => setShowAddUser(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add User
@@ -362,7 +362,7 @@ const ManageUsers = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader className="w-6 h-6 animate-spin text-blue-600" />
+            <Loader className="w-6 h-6 animate-spin text-[#373177]" />
             <span className="ml-2 text-gray-600">Loading users...</span>
           </div>
         ) : error ? (
@@ -405,7 +405,7 @@ const ManageUsers = () => {
                   <tr key={user._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                        <div className="w-10 h-10 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] rounded-full flex items-center justify-center text-white font-medium">
                           {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                         </div>
                         <div className="ml-4">
@@ -437,7 +437,7 @@ const ManageUsers = () => {
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => handleEditUser(user)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          className="text-[#373177] hover:text-blue-800 transition-colors"
                           title="Edit User"
                         >
                           <Edit className="w-4 h-4" />
@@ -488,7 +488,7 @@ const ManageUsers = () => {
                   onClick={() => handlePageChange(pageNum)}
                   className={`px-3 py-2 border rounded-lg transition-colors ${
                     pageNum === pagination.currentPage
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'bg-[#001D48] text-white border-[#001D48]'
                       : 'border-gray-300 hover:bg-gray-50'
                   }`}
                 >

@@ -621,7 +621,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
           </div>
           <div className="flex justify-center items-center py-12">
             <div className="flex flex-col items-center space-y-4">
-              <Loader className="w-8 h-8 animate-spin text-blue-600" />
+              <Loader className="w-8 h-8 animate-spin text-[#373177]" />
               <p className="text-gray-600">Fetching quality agents...</p>
             </div>
           </div>
@@ -645,7 +645,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
               <p className="text-red-600 mb-4">{error}</p>
               <button 
                 onClick={() => window.location.reload()} 
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-[#373177] text-white rounded-lg hover:bg-blue-700"
               >
                 Try Again
               </button>
@@ -665,7 +665,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
           <p className="text-lg text-gray-600">
             Choose quality agents who will review and approve survey responses
           </p>
-          <div className="mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm bg-purple-100 text-purple-800">
+          <div className="mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm bg-[#E8E6F5] text-purple-800">
             <Shield className="w-4 h-4 mr-2" />
             Quality Agents ({filteredQualityAgents.length} available)
           </div>
@@ -680,7 +680,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
                 id="assignACs"
                 checked={assignACs}
                 onChange={(e) => setAssignACs(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-[#373177] border-gray-300 rounded focus:ring-blue-500"
               />
               <label htmlFor="assignACs" className="text-sm font-medium text-gray-700">
                 Assign Assembly Constituencies
@@ -692,7 +692,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
           </div>
           
           {assignACs && (
-            <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+            <div className="mt-4 p-4 bg-[#E8E6F5] rounded-lg border border-purple-200">
               <div className="space-y-4">
                 {/* Country Selection - always visible and changeable in bulk section */}
                 <div>
@@ -836,7 +836,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
             <div className="flex items-center space-x-4">
               <button
                 onClick={handleSelectAll}
-                className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-[#373177] text-white rounded-lg hover:bg-purple-700 transition-colors"
               >
                 <UserCheck className="w-4 h-4" />
                 <span>
@@ -854,7 +854,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
               <button
                 onClick={() => setShowAll(!showAll)}
                 className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                  showAll ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'
+                  showAll ? 'bg-[#373177] text-white' : 'bg-gray-200 text-gray-700'
                 }`}
               >
                 {showAll ? 'All' : 'Available Only'}
@@ -878,7 +878,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
                 key={agent.id}
                 className={`transition-all duration-200 ${
                   isSelected 
-                    ? 'ring-2 ring-purple-500 bg-purple-50'
+                    ? 'ring-2 ring-purple-500 bg-[#E8E6F5]'
                     : 'hover:bg-gray-50'
                 } ${!isAvailable && !showAll ? 'opacity-50' : ''}`}
               >
@@ -894,7 +894,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
                           }}
                           className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-colors ${
                           isSelected 
-                              ? 'bg-purple-600 border-purple-600 hover:bg-purple-700' 
+                              ? 'bg-[#373177] border-[#373177] hover:bg-purple-700' 
                               : 'border-gray-300 hover:border-purple-400'
                           }`}
                         >
@@ -1065,7 +1065,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
                                             currentAgent.assignedACs.map(ac => (
                                               <span
                                                 key={ac}
-                                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200"
+                                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-[#E8E6F5] text-purple-800 border border-purple-200"
                                               >
                                                 {ac}
                                                 <button
@@ -1128,12 +1128,12 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
                                                         }
                                                       }}
                                                       className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between ${
-                                                        isSelected ? 'bg-purple-50 text-purple-700' : 'text-gray-700'
+                                                        isSelected ? 'bg-[#E8E6F5] text-purple-700' : 'text-gray-700'
                                                       }`}
                                                     >
                                                       <div className="flex flex-col items-start">
                                                         <div className="flex items-center space-x-2">
-                                                          <span className="font-medium text-purple-600 text-xs bg-purple-100 px-2 py-1 rounded">
+                                                          <span className="font-medium text-[#373177] text-xs bg-[#E8E6F5] px-2 py-1 rounded">
                                                             {acData?.acCode || 'N/A'}
                                                           </span>
                                                           <span className="font-medium">{acName}</span>
@@ -1151,7 +1151,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
                                                           </span>
                                                         )}
                                                       {isSelected && (
-                                                        <CheckCircle className="w-4 h-4 text-purple-600" />
+                                                        <CheckCircle className="w-4 h-4 text-[#373177]" />
                                                       )}
                                                       </div>
                                                     </button>
@@ -1184,7 +1184,7 @@ const QualityAgentSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode
                           e.stopPropagation();
                           // View profile action
                         }}
-                        className="px-3 py-1 text-sm text-purple-600 hover:text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+                        className="px-3 py-1 text-sm text-[#373177] hover:text-purple-700 border border-purple-200 rounded-lg hover:bg-[#E8E6F5] transition-colors"
                       >
                         View Profile
                       </button>

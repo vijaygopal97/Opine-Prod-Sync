@@ -1681,7 +1681,7 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 !mt-0">
       <div className="bg-white rounded-lg max-w-6xl w-full max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white">
           <div>
             <h2 className="text-2xl font-bold">{editingSurvey ? 'Edit Survey' : 'Create New Survey'}</h2>
             <p className="text-blue-100">{editingSurvey ? 'Update your survey details' : 'Build your survey step by step'}</p>
@@ -1705,7 +1705,7 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
                   onClick={() => handleStepClick(step.id)}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
                     currentStep === step.id
-                      ? 'bg-blue-600 text-white shadow-sm'
+                      ? 'bg-[#001D48] text-white shadow-sm'
                       : currentStep > step.id
                       ? 'bg-green-500 text-white'
                       : editingSurvey
@@ -1806,7 +1806,7 @@ const SurveyBuilder = ({ onClose, onSave, editingSurvey }) => {
             ) : (
               <button
                 onClick={handleNext}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors rounded-lg"
+                className="flex items-center space-x-2 px-4 py-2 bg-[#001D48] text-white hover:bg-blue-700 transition-colors rounded-lg"
               >
                 <ArrowRight className="w-4 h-4" />
                 <span>Next</span>

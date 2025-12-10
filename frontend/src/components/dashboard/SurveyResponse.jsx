@@ -191,7 +191,7 @@ const SurveyResponse = ({ survey, onResponseChange, initialResponses = {} }) => 
                         ? (responses[question.id] || []).includes(option.value)
                         : responses[question.id] === option.value
                     }
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-[#373177] border-gray-300 rounded focus:ring-blue-500"
                   />
                   <span className="text-gray-700">{option.text}</span>
                 </label>
@@ -237,7 +237,7 @@ const SurveyResponse = ({ survey, onResponseChange, initialResponses = {} }) => 
                   onClick={() => handleChange(rating)}
                   className={`w-10 h-10 border rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 ${
                     responses[question.id] === rating
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'bg-[#001D48] text-white border-[#001D48]'
                       : 'border-gray-300'
                   }`}
                 >
@@ -266,7 +266,7 @@ const SurveyResponse = ({ survey, onResponseChange, initialResponses = {} }) => 
                   value="yes"
                   checked={responses[question.id] === 'yes'}
                   onChange={(e) => handleChange(e.target.value)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                 />
                 <span className="text-gray-700">Yes</span>
               </label>
@@ -277,7 +277,7 @@ const SurveyResponse = ({ survey, onResponseChange, initialResponses = {} }) => 
                   value="no"
                   checked={responses[question.id] === 'no'}
                   onChange={(e) => handleChange(e.target.value)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                 />
                 <span className="text-gray-700">No</span>
               </label>

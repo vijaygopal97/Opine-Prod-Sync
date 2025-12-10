@@ -1138,7 +1138,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
           </div>
           <div className="flex justify-center items-center py-12">
             <div className="flex flex-col items-center space-y-4">
-              <Loader className="w-8 h-8 animate-spin text-blue-600" />
+              <Loader className="w-8 h-8 animate-spin text-[#373177]" />
               <p className="text-gray-600">Fetching interviewers...</p>
             </div>
           </div>
@@ -1168,7 +1168,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                   const event = new Event('retry-fetch');
                   window.dispatchEvent(event);
                 }} 
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Try Again
               </button>
@@ -1209,7 +1209,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
             </div>
           )}
           {(typeof mode === 'object' ? mode.mode : mode) === 'capi' && !isMultiMode && (
-            <div className="mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm bg-blue-100 text-blue-800">
+            <div className="mt-4 inline-flex items-center px-4 py-2 rounded-full text-sm bg-[#E6F0F8] text-[#001D48]">
               <Users className="w-4 h-4 mr-2" />
               Company Interviewers Only ({filteredInterviewers.length} available)
             </div>
@@ -1226,7 +1226,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                 id="assignACs"
                 checked={assignACs}
                 onChange={(e) => setAssignACs(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-[#373177] border-gray-300 rounded focus:ring-blue-500"
               />
               <label htmlFor="assignACs" className="text-sm font-medium text-gray-700">
                 Assign Assembly Constituencies
@@ -1384,7 +1384,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
             <div className="flex items-center space-x-4">
               <button
                 onClick={handleSelectAll}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <UserCheck className="w-4 h-4" />
                 <span>
@@ -1402,7 +1402,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
               <button
                 onClick={() => setShowAll(!showAll)}
                 className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                  showAll ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                  showAll ? 'bg-[#001D48] text-white' : 'bg-gray-200 text-gray-700'
                 }`}
               >
                 {showAll ? 'All' : 'Available Only'}
@@ -1508,7 +1508,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                           isSelected 
                               ? isRejected
                                 ? 'bg-red-600 border-red-600 hover:bg-red-700'
-                                : 'bg-blue-600 border-blue-600 hover:bg-blue-700' 
+                                : 'bg-[#001D48] border-[#001D48] hover:bg-blue-700' 
                               : 'border-gray-300 hover:border-blue-400'
                           }`}
                         >
@@ -1524,7 +1524,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                             {isSelectedInCurrentMode && (
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                 modeValue === 'capi'
-                                  ? 'bg-blue-100 text-blue-800' 
+                                  ? 'bg-[#E6F0F8] text-[#001D48]' 
                                   : 'bg-green-100 text-green-800'
                               }`}>
                                 {modeValue === 'capi' ? 'CAPI' : 'CATI'} - Current Step
@@ -1770,7 +1770,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                                             currentInterviewer.assignedACs.map(ac => (
                                               <span
                                                 key={ac}
-                                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-[#E6F0F8] text-[#001D48] border border-blue-200"
                                               >
                                                 {ac}
                                                 <button
@@ -1839,7 +1839,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                                                     >
                                                       <div className="flex flex-col items-start">
                                                         <div className="flex items-center space-x-2">
-                                                          <span className="font-medium text-blue-600 text-xs bg-blue-100 px-2 py-1 rounded">
+                                                          <span className="font-medium text-[#373177] text-xs bg-[#E6F0F8] px-2 py-1 rounded">
                                                             {acData?.acCode || 'N/A'}
                                                           </span>
                                                           <span className="font-medium">{acName}</span>
@@ -1857,7 +1857,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                                                           </span>
                                                         )}
                                                       {isSelected && (
-                                                        <CheckCircle className="w-4 h-4 text-blue-600" />
+                                                        <CheckCircle className="w-4 h-4 text-[#373177]" />
                                                       )}
                                                       </div>
                                                     </button>
@@ -1890,7 +1890,7 @@ const InterviewerSelection = ({ onUpdate, onACSettingsUpdate, initialData, mode,
                           e.stopPropagation();
                           // View profile action
                         }}
-                        className="px-3 py-1 text-sm text-blue-600 hover:text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
+                        className="px-3 py-1 text-sm text-[#373177] hover:text-[#373177] border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
                       >
                         View Profile
                       </button>

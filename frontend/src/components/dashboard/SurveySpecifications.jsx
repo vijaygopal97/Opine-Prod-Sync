@@ -231,7 +231,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
           {/* Basic Information */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-              <Target className="w-6 h-6 mr-2 text-blue-600" />
+              <Target className="w-6 h-6 mr-2 text-[#001D48]" />
               Basic Information
             </h3>
             
@@ -360,7 +360,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
           {/* Sample Size & Target Audience */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
             <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-              <Users className="w-6 h-6 mr-2 text-purple-600" />
+              <Users className="w-6 h-6 mr-2 text-[#373177]" />
               Sample Size & Target Audience
             </h3>
             
@@ -410,7 +410,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                           ...getTargetAudience('demographics'),
                           [option]: e.target.checked
                         })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">{option}</span>
                     </label>
@@ -419,7 +419,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                 
                 {/* Dynamic Demographics Fields */}
                 {Object.keys(getTargetAudience('demographics')).some(key => getTargetAudience('demographics')[key]) && (
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="mt-4 p-4 bg-[#E6F0F8] rounded-lg border border-blue-200">
                     <h5 className="text-sm font-medium text-blue-900 mb-3">Demographic Conditions</h5>
                     <div className="space-y-4">
                       {getTargetAudience('demographics')['Age Group'] && (
@@ -497,7 +497,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                         genderRequirements: newRequirements
                                       });
                                     }}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{gender}</span>
                               </label>
@@ -630,7 +630,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [education]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{education}</span>
                               </label>
@@ -671,7 +671,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [status]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{status}</span>
                               </label>
@@ -736,7 +736,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                           ...formData.targetAudience.geographic,
                           [option]: e.target.checked
                         })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">{option}</span>
                     </label>
@@ -812,7 +812,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [areaType]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{areaType}</span>
                               </label>
@@ -853,7 +853,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [timezone]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{timezone}</span>
                               </label>
@@ -881,7 +881,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                           ...formData.targetAudience.behavioral,
                           [option]: e.target.checked
                         })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">{option}</span>
                     </label>
@@ -890,7 +890,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                 
                 {/* Dynamic Behavioral Fields */}
                 {Object.keys(formData.targetAudience.behavioral).some(key => formData.targetAudience.behavioral[key]) && (
-                  <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="mt-4 p-4 bg-[#E8E6F5] rounded-lg border border-purple-200">
                     <h5 className="text-sm font-medium text-purple-900 mb-3">Behavioral Conditions</h5>
                     <div className="space-y-4">
                       {formData.targetAudience.behavioral['Purchase Behavior'] && (
@@ -909,7 +909,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [behavior]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{behavior}</span>
                               </label>
@@ -934,7 +934,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [loyalty]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{loyalty}</span>
                               </label>
@@ -959,7 +959,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [activity]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{activity}</span>
                               </label>
@@ -984,7 +984,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [frequency]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{frequency}</span>
                               </label>
@@ -1009,7 +1009,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [media]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{media}</span>
                               </label>
@@ -1034,7 +1034,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [techLevel]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{techLevel}</span>
                               </label>
@@ -1062,7 +1062,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                           ...formData.targetAudience.psychographic,
                           [option]: e.target.checked
                         })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">{option}</span>
                     </label>
@@ -1090,7 +1090,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [lifestyle]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{lifestyle}</span>
                               </label>
@@ -1115,7 +1115,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [value]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{value}</span>
                               </label>
@@ -1140,7 +1140,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [interest]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{interest}</span>
                               </label>
@@ -1165,7 +1165,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [trait]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{trait}</span>
                               </label>
@@ -1190,7 +1190,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                                       [attitude]: e.target.checked
                                     }
                                   })}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                                 />
                                 <span className="text-sm text-gray-700">{attitude}</span>
                               </label>
@@ -1239,7 +1239,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
           {((typeof mode === 'object' ? mode.mode : mode) === 'capi' || (typeof mode === 'object' ? mode.mode : mode) === 'cati') && (
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
               <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
-                <Users className="w-6 h-6 mr-2 text-blue-600" />
+                <Users className="w-6 h-6 mr-2 text-[#001D48]" />
                 Interview Limits
               </h3>
               
@@ -1289,7 +1289,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                     value="email"
                     checked={formData.contactMode === 'email'}
                     onChange={(e) => handleInputChange('contactMode', e.target.value)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    className="w-4 h-4 text-[#001D48] border-gray-300 focus:ring-blue-500"
                   />
                   <span className="text-sm text-gray-700">Email</span>
                 </label>
@@ -1300,7 +1300,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                     value="whatsapp"
                     checked={formData.contactMode === 'whatsapp'}
                     onChange={(e) => handleInputChange('contactMode', e.target.value)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    className="w-4 h-4 text-[#001D48] border-gray-300 focus:ring-blue-500"
                   />
                   <span className="text-sm text-gray-700">WhatsApp</span>
                 </label>
@@ -1311,7 +1311,7 @@ const SurveySpecifications = ({ onUpdate, initialData, mode }) => {
                     value="both"
                     checked={formData.contactMode === 'both'}
                     onChange={(e) => handleInputChange('contactMode', e.target.value)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    className="w-4 h-4 text-[#001D48] border-gray-300 focus:ring-blue-500"
                   />
                   <span className="text-sm text-gray-700">Both</span>
                 </label>

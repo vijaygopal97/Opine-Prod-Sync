@@ -1001,11 +1001,11 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
 
             {/* Review Information - Only show if response has been reviewed */}
             {response.verificationData?.reviewer && (
-              <div className="bg-blue-50 rounded-lg p-4 mb-6">
+              <div className="bg-[#E6F0F8] rounded-lg p-4 mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Review Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center space-x-3">
-                    <User className="w-5 h-5 text-blue-600" />
+                    <User className="w-5 h-5 text-[#001D48]" />
                     <div>
                       <p className="text-sm font-medium text-gray-700">Reviewed By</p>
                       <p className="text-sm text-gray-600">
@@ -1017,7 +1017,7 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
                   </div>
                   
                   <div className="flex items-center space-x-3">
-                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <Calendar className="w-5 h-5 text-[#001D48]" />
                     <div>
                       <p className="text-sm font-medium text-gray-700">Reviewed At</p>
                       <p className="text-sm text-gray-600">
@@ -1058,7 +1058,7 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
             )}
 
             {/* Demographics */}
-            <div className="bg-blue-50 rounded-lg p-4 mb-6">
+            <div className="bg-[#E6F0F8] rounded-lg p-4 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Demographics</h3>
               {(() => {
                 // Extract AC and polling station from responses
@@ -1146,7 +1146,7 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
             {response.interviewMode === 'cati' && catiCallDetails && (
               <div className="mt-6 bg-white border border-gray-200 rounded-lg p-6 mb-6">
                 <h4 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
-                  <PhoneCall className="w-5 h-5 mr-2 text-blue-600" />
+                  <PhoneCall className="w-5 h-5 mr-2 text-[#001D48]" />
                   Call Information
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -1283,7 +1283,7 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
                     href={`https://www.openstreetmap.org/?mlat=${response.location.latitude}&mlon=${response.location.longitude}&zoom=15`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 text-sm underline"
+                    className="text-[#001D48] hover:text-blue-800 text-sm underline"
                   >
                     View on OpenStreetMap
                   </a>
@@ -1418,7 +1418,7 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false }
                         return audioUrl;
                       })()}
                       download={`capi_recording_${response.responseId || response._id || 'recording'}.${response.audioRecording.format || 'webm'}`}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Download Recording

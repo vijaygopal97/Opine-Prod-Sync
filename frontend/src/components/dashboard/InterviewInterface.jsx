@@ -436,8 +436,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
       setShowPermissionModal(true);
       setPermissionType('location');
       setPermissionError(`
-        <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 class="font-semibold text-blue-800 mb-2">📍 Manual Location Selection</h4>
+        <div class="mt-4 p-4 bg-[#E6F0F8] border border-blue-200 rounded-lg">
+          <h4 class="font-semibold text-[#001D48] mb-2">📍 Manual Location Selection</h4>
           <div class="text-sm text-blue-700 space-y-2">
             <p>Since automatic location detection failed, please:</p>
             <ol class="ml-4 space-y-1">
@@ -490,7 +490,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
         {
           headers: {
-            'User-Agent': 'OpineIndia-SurveyApp/1.0'
+            'User-Agent': 'ConvergentIndia-SurveyApp/1.0'
           }
         }
       );
@@ -870,8 +870,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
       } else if (error.name === 'NotSupportedError') {
         errorMessage += 'Audio recording not supported in this browser.';
         troubleshooting = `
-          <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 class="font-semibold text-blue-800 mb-2">🔧 Browser Compatibility Issue</h4>
+          <div class="mt-4 p-4 bg-[#E6F0F8] border border-blue-200 rounded-lg">
+            <h4 class="font-semibold text-[#001D48] mb-2">🔧 Browser Compatibility Issue</h4>
             <div class="text-sm text-blue-700 space-y-2">
               <p><strong>Try these solutions:</strong></p>
               <ul class="ml-4 space-y-1">
@@ -3792,7 +3792,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                       handleResponseChange(currentQuestion.id, '');
                     }
                   }}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="w-5 h-5 text-[#373177] border-gray-300 rounded focus:ring-blue-500"
                 />
                 <span className="text-lg text-gray-700">
                   {renderDisplayText('refused to share phone number {নম্বর দিতে চাননি}')}
@@ -3837,7 +3837,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         return (
           <div className="space-y-4">
             {allowMultiple && maxSelections && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="bg-[#E6F0F8] border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-700 font-medium">
                   Selection limit: {currentSelections} / {maxSelections}
                 </p>
@@ -3988,7 +3988,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                       className={`w-6 h-6 border-2 border-gray-300 rounded focus:ring-blue-500 group-hover:border-blue-400 transition-colors ${
                         quotaInfo?.isFull 
                           ? 'text-gray-400 cursor-not-allowed opacity-50' 
-                          : 'text-blue-600'
+                          : 'text-[#373177]'
                       }`}
                       disabled={quotaInfo?.isFull}
                     />
@@ -4075,7 +4075,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     value={optionValue}
                     checked={currentResponse === optionValue}
                     onChange={(e) => handleResponseChange(currentQuestion.id, e.target.value)}
-                    className="w-6 h-6 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 group-hover:border-blue-400 transition-colors"
+                    className="w-6 h-6 text-[#373177] border-2 border-gray-300 focus:ring-blue-500 group-hover:border-blue-400 transition-colors"
                   />
                   <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors flex items-center gap-2">
                     {renderDisplayText(optionText, {
@@ -4301,7 +4301,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
           <div className="text-center">
             {/* Animated Icon */}
             <div className="mb-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mx-auto flex items-center justify-center animate-pulse">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#E6F0F8]0 to-[#373177] rounded-full mx-auto flex items-center justify-center animate-pulse">
                 <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -4325,7 +4325,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
             <div className="text-left mb-6 space-y-3">
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-blue-600 text-sm font-semibold">1</span>
+                  <span className="text-[#373177] text-sm font-semibold">1</span>
                 </div>
                 <div className="text-sm text-gray-700">
                   <strong>Location & Audio Access Required:</strong> This interview requires location and microphone permissions to ensure data integrity
@@ -4338,7 +4338,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               </div>
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-blue-600 text-sm font-semibold">2</span>
+                  <span className="text-[#373177] text-sm font-semibold">2</span>
                 </div>
                 <p className="text-sm text-gray-700">
                   Answer each question honestly and completely
@@ -4346,7 +4346,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               </div>
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-blue-600 text-sm font-semibold">3</span>
+                  <span className="text-[#373177] text-sm font-semibold">3</span>
                 </div>
                 <p className="text-sm text-gray-700">
                   You can navigate between questions using the sidebar
@@ -4354,7 +4354,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               </div>
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-blue-600 text-sm font-semibold">4</span>
+                  <span className="text-[#373177] text-sm font-semibold">4</span>
                 </div>
                 <p className="text-sm text-gray-700">
                   Take your time - there's no rush
@@ -4362,7 +4362,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               </div>
               <div className="flex items-start space-x-3">
                 <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-blue-600 text-sm font-semibold">5</span>
+                  <span className="text-[#373177] text-sm font-semibold">5</span>
                 </div>
                 <p className="text-sm text-gray-700">
                   Your responses are automatically saved
@@ -4374,7 +4374,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
             {survey.mode === 'capi' && (
               <div className={`p-4 rounded-lg mb-6 ${
                 audioSupported 
-                  ? 'bg-blue-50 border border-blue-200' 
+                  ? 'bg-[#E6F0F8] border border-blue-200' 
                   : 'bg-yellow-50 border border-yellow-200'
               }`}>
                 <div className="flex items-start space-x-3">
@@ -4382,14 +4382,14 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     audioSupported ? 'bg-blue-100' : 'bg-yellow-100'
                   }`}>
                     <span className={`text-sm font-semibold ${
-                      audioSupported ? 'text-blue-600' : 'text-yellow-600'
+                      audioSupported ? 'text-[#373177]' : 'text-yellow-600'
                     }`}>
                       🎙️
                     </span>
                   </div>
                   <div>
                     <h4 className={`font-semibold ${
-                      audioSupported ? 'text-blue-800' : 'text-yellow-800'
+                      audioSupported ? 'text-[#001D48]' : 'text-yellow-800'
                     }`}>
                       Audio Recording
                     </h4>
@@ -4419,7 +4419,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               <button
                 onClick={startActualInterview}
                 disabled={isLoading || isStarting}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-[#E6F0F8]0 to-[#373177] text-white rounded-xl hover:from-[#373177] hover:to-purple-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {isLoading || isStarting ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -4503,14 +4503,14 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                 type="checkbox"
                 checked={showTranslationOnly}
                 onChange={(e) => setShowTranslationOnly(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-[#373177] border-gray-300 rounded focus:ring-blue-500"
               />
             </label>
           </div>
           {/* CATI Respondent Info */}
           {isCatiMode && catiRespondent && (
-            <div className="flex items-center space-x-2 px-3 py-1 bg-blue-50 rounded-lg border border-blue-200">
-              <Phone className="w-4 h-4 text-blue-600" />
+            <div className="flex items-center space-x-2 px-3 py-1 bg-[#E6F0F8] rounded-lg border border-blue-200">
+              <Phone className="w-4 h-4 text-[#373177]" />
               <div className="text-sm">
                 <div className="font-medium text-blue-900">{catiRespondent.name}</div>
                 <div className="text-xs text-blue-700">{catiRespondent.phone}</div>
@@ -4632,7 +4632,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                       onClick={() => navigateToQuestion(question.id)}
                       className={`w-full text-left p-4 rounded-lg transition-all duration-200 ${
                         isCurrent
-                          ? 'bg-blue-500 text-white shadow-lg'
+                          ? 'bg-[#E6F0F8]0 text-white shadow-lg'
                           : hasTargetAudienceError
                           ? 'bg-red-100 text-red-800 hover:bg-red-200 border border-red-200'
                           : hasResponse
@@ -4678,7 +4678,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     <button
                       onClick={goToPreviousQuestion}
                       disabled={currentQuestionIndex === 0}
-                      className="group relative px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:border-blue-500 hover:text-blue-600 transition-all duration-200 disabled:bg-gray-100 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 shadow-sm hover:shadow-md disabled:shadow-none"
+                      className="group relative px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl hover:border-blue-500 hover:text-[#373177] transition-all duration-200 disabled:bg-gray-100 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center space-x-2 shadow-sm hover:shadow-md disabled:shadow-none"
                       style={{ minHeight: '48px', minWidth: '140px' }}
                     >
                       <ChevronLeft className="w-5 h-5 transition-transform group-hover:-translate-x-0.5" />
@@ -4692,7 +4692,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     </span>
                     <div className="w-32 bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                        className="bg-[#E6F0F8]0 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${((currentQuestionIndex + 1) / visibleQuestions.length) * 100}%` }}
                       ></div>
                     </div>
@@ -4755,7 +4755,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                           (!selectedPollingStation.groupName || !selectedPollingStation.stationName)) ||
                           (isCatiMode && currentQuestion && currentQuestion.id === 'call-status' && callStatusResponse !== 'call_connected'))
                             ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl'
+                            : 'bg-[#001D48] text-white hover:bg-blue-700 hover:shadow-xl'
                         }`}
                         style={{ minHeight: '48px', minWidth: '140px' }}
                       >
@@ -4816,7 +4816,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                         }
                       }
                     }
-                    return questionNumber ? <span className="text-blue-600 mr-3">Q{questionNumber}:</span> : null;
+                    return questionNumber ? <span className="text-[#373177] mr-3">Q{questionNumber}:</span> : null;
                   })()}
                   {renderDisplayText(currentQuestion.text, {
                     className: ''
@@ -4855,7 +4855,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     if (hasQuestionNumber16a) {
                       // This is definitely 16.a - show MP name
                       if (mpName) {
-                        return <span className="text-blue-600 font-medium ml-2">: {mpName}</span>;
+                        return <span className="text-[#373177] font-medium ml-2">: {mpName}</span>;
                       }
                       if (isLoadingMPMLA) {
                         return <span className="text-gray-500 ml-2">(Loading...)</span>;
@@ -4866,7 +4866,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     if (hasQuestionNumber16b) {
                       // This is definitely 16.b - show MLA name
                       if (mlaName) {
-                        return <span className="text-blue-600 font-medium ml-2">: {mlaName}</span>;
+                        return <span className="text-[#373177] font-medium ml-2">: {mlaName}</span>;
                       }
                       if (isLoadingMPMLA) {
                         return <span className="text-gray-500 ml-2">(Loading...)</span>;
@@ -4897,10 +4897,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     
                     // Check 16.b first (text fallback), then 16.a
                     if (isQuestion16b && mlaName) {
-                      return <span className="text-blue-600 font-medium ml-2">: {mlaName}</span>;
+                      return <span className="text-[#373177] font-medium ml-2">: {mlaName}</span>;
                     }
                     if (isQuestion16a && mpName) {
-                      return <span className="text-blue-600 font-medium ml-2">: {mpName}</span>;
+                      return <span className="text-[#373177] font-medium ml-2">: {mpName}</span>;
                     }
                     if ((isQuestion16a || isQuestion16b) && isLoadingMPMLA) {
                       return <span className="text-gray-500 ml-2">(Loading...)</span>;
@@ -4930,7 +4930,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                       // Get AC name: for CAPI use selectedAC, for CATI use acFromSessionData
                       const acName = selectedAC || acFromSessionData;
                       if (acName) {
-                        return <span className="text-blue-600 font-medium ml-2">: {acName}</span>;
+                        return <span className="text-[#373177] font-medium ml-2">: {acName}</span>;
                       }
                       return null;
                     }
@@ -4938,7 +4938,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                   })()}
                   {currentQuestion.required && <span className="text-red-500 ml-2">*</span>}
                   {currentQuestion.type === 'multiple_choice' && currentQuestion.settings?.allowMultiple && (
-                    <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-[#001D48]">
                       Multiple selections
                     </span>
                   )}
@@ -5022,7 +5022,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     value={reason.value}
                     checked={abandonReason === reason.value}
                     onChange={(e) => setAbandonReason(e.target.value)}
-                    className="w-4 h-4 text-blue-600"
+                    className="w-4 h-4 text-[#373177]"
                   />
                   <span className="text-sm text-gray-700">{reason.label}</span>
                 </label>
@@ -5115,7 +5115,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                     value={reason.value}
                     checked={abandonReason === reason.value}
                     onChange={(e) => setAbandonReason(e.target.value)}
-                    className="w-4 h-4 text-blue-600"
+                    className="w-4 h-4 text-[#373177]"
                   />
                   <span className="text-sm text-gray-700">{reason.label}</span>
                 </label>
@@ -5189,7 +5189,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                   permissionType === 'location' ? 'bg-blue-100' : 'bg-green-100'
                 }`}>
                   {permissionType === 'location' ? (
-                    <svg className="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-10 h-10 text-[#373177]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -5222,9 +5222,9 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                   />
                 )}
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="bg-[#E6F0F8] border border-blue-200 rounded-lg p-4">
                   <h4 className="font-semibold text-blue-900 mb-2">How to enable access:</h4>
-                  <ol className="text-sm text-blue-800 space-y-1 text-left">
+                  <ol className="text-sm text-[#001D48] space-y-1 text-left">
                     <li>1. Look for the permission prompt in your browser's address bar</li>
                     <li>2. Click "Allow" when prompted</li>
                     <li>3. If you missed it, click the {permissionType === 'location' ? 'location' : 'microphone'} icon in the address bar</li>
@@ -5261,7 +5261,7 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
                       // Retry the permission request
                       startActualInterview();
                     }}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex-1 px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     Try Again
                   </button>

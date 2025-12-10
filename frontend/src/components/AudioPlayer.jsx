@@ -130,7 +130,7 @@ const AudioPlayer = ({
           onClick={handleSeek}
         >
           <div
-            className="h-2 bg-blue-500 rounded-full transition-all duration-100"
+            className="h-2 bg-[#E6F0F8]0 rounded-full transition-all duration-100"
             style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
           />
         </div>
@@ -145,7 +145,7 @@ const AudioPlayer = ({
         {/* Play/Pause Button */}
         <button
           onClick={togglePlayPause}
-          className="p-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+          className="p-3 bg-[#E6F0F8]0 text-white rounded-full hover:bg-[#001D48] transition-colors"
         >
           {isPlaying ? (
             <Pause className="w-5 h-5" />

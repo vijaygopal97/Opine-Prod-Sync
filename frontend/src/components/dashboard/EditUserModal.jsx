@@ -426,7 +426,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                 name="isEmailVerified"
                 checked={formData.isEmailVerified || false}
                 onChange={handleChange}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
               />
               <label className="text-sm font-medium text-gray-700">
                 Email Verified
@@ -438,7 +438,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                 name="isPhoneVerified"
                 checked={formData.isPhoneVerified || false}
                 onChange={handleChange}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
               />
               <label className="text-sm font-medium text-gray-700">
                 Phone Verified
@@ -450,14 +450,14 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
           {['interviewer', 'quality_agent', 'Data_Analyst'].includes(formData.userType) && (
             <div className="border-t border-gray-200 pt-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Gig Work Feature</h3>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-[#E6F0F8] border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
                   <input
                     type="checkbox"
                     name="gig_enabled"
                     checked={formData.gig_enabled || false}
                     onChange={handleChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
+                    className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500 mt-1"
                   />
                   <div className="flex-1">
                     <label className="text-sm font-medium text-gray-700 cursor-pointer">
@@ -546,7 +546,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Interviewers {selectedInterviewers.length > 0 && (
-                    <span className="text-blue-600 font-normal">({selectedInterviewers.length} selected)</span>
+                    <span className="text-[#001D48] font-normal">({selectedInterviewers.length} selected)</span>
                   )}
                 </label>
                 {loadingTeamMembers ? (
@@ -611,7 +611,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                                     setSelectedInterviewers(selectedInterviewers.filter(id => id !== interviewer._id));
                                   }
                                 }}
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -619,7 +619,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                                     {interviewer.firstName} {interviewer.lastName}
                                   </span>
                                   {interviewer.memberId && (
-                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono">
+                                    <span className="text-xs bg-[#E6F0F8] text-blue-700 px-2 py-0.5 rounded font-mono">
                                       ID: {interviewer.memberId}
                                     </span>
                                   )}
@@ -639,7 +639,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Quality Agents {selectedQualityAgents.length > 0 && (
-                    <span className="text-blue-600 font-normal">({selectedQualityAgents.length} selected)</span>
+                    <span className="text-[#001D48] font-normal">({selectedQualityAgents.length} selected)</span>
                   )}
                 </label>
                 {loadingTeamMembers ? (
@@ -704,7 +704,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                                     setSelectedQualityAgents(selectedQualityAgents.filter(id => id !== agent._id));
                                   }
                                 }}
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                               />
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -712,7 +712,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                                     {agent.firstName} {agent.lastName}
                                   </span>
                                   {agent.memberId && (
-                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono">
+                                    <span className="text-xs bg-[#E6F0F8] text-blue-700 px-2 py-0.5 rounded font-mono">
                                       ID: {agent.memberId}
                                     </span>
                                   )}
@@ -740,7 +740,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
               <button
                 type="button"
                 onClick={() => setShowPasswordSection(!showPasswordSection)}
-                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+                className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-[#001D48] hover:text-[#373177] border border-blue-300 rounded-lg hover:bg-[#E6F0F8] transition-colors"
               >
                 <Key className="w-4 h-4" />
                 <span>{showPasswordSection ? 'Hide Password Options' : 'Reset Password'}</span>
@@ -755,7 +755,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                     name="resetPassword"
                     checked={passwordData.resetPassword}
                     onChange={handlePasswordChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-[#001D48] border-gray-300 rounded focus:ring-blue-500"
                   />
                   <label className="text-sm font-medium text-gray-700">
                     Reset user password
@@ -835,8 +835,8 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
                       )}
                     </div>
 
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-sm text-blue-800">
+                    <div className="bg-[#E6F0F8] border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-[#001D48]">
                         <strong>Note:</strong> The user will need to use this new password to log in. 
                         Consider notifying them about the password change.
                       </p>
@@ -1013,7 +1013,7 @@ const EditUserModal = ({ user, onSave, onCancel }) => {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {loading ? (
                 <>

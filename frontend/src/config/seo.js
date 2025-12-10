@@ -1,57 +1,57 @@
-// SEO Configuration for Opine India
+// SEO Configuration for Convergent
 export const SEO_CONFIG = {
   // Default SEO settings
   default: {
-    title: "Opine India - Professional Market Research Platform",
-    description: "Opine India is a leading multi-tenant platform for market research companies to conduct high-quality field interviews through verified gig workers with data security and privacy protection.",
+    title: "Convergent - Professional Market Research Platform",
+    description: "Convergent is a leading multi-tenant platform for market research companies to conduct high-quality field interviews through verified gig workers with data security and privacy protection.",
     keywords: "market research, field interviews, data collection, survey platform, gig workers, India market research",
-    author: "Opine India",
+    author: "Convergent",
     robots: "noindex, nofollow", // Default to no indexing during development
-    canonical: "https://opineindia.com",
+    canonical: "https://opine.exypnossolutions.com",
     ogType: "website",
-    ogImage: "https://opineindia.com/og-image.jpg",
+    ogImage: "https://opine.exypnossolutions.com/og-image.jpg",
     twitterCard: "summary_large_image",
-    twitterSite: "@OpineIndia"
+    twitterSite: "@Convergent"
   },
 
   // Route-specific SEO settings
   routes: {
     "/": {
-      title: "Opine India - Professional Market Research & Field Interview Platform",
-      description: "Transform your market research with Opine India's multi-tenant platform. Connect with verified gig workers for high-quality field interviews across India. Secure, scalable, and professional data collection solutions.",
+      title: "Convergent - Professional Market Research & Field Interview Platform",
+      description: "Transform your market research with Convergent's multi-tenant platform. Connect with verified gig workers for high-quality field interviews across India. Secure, scalable, and professional data collection solutions.",
       keywords: "market research India, field interviews, data collection platform, survey research, gig economy, market research companies, professional interviewers",
-      canonical: "https://opineindia.com",
-      ogTitle: "Opine India - Professional Market Research Platform",
+      canonical: "https://opine.exypnossolutions.com",
+      ogTitle: "Convergent - Professional Market Research Platform",
       ogDescription: "Connect with verified gig workers for high-quality field interviews. Secure, scalable market research solutions across India.",
     },
     
     "/about": {
-      title: "About Opine India - Leading Market Research Platform",
-      description: "Learn about Opine India's mission to revolutionize market research through our innovative multi-tenant platform connecting companies with verified field interviewers across India.",
-      keywords: "about Opine India, market research platform, company information, field interview services",
-      canonical: "https://opineindia.com/about"
+      title: "About Convergent - Leading Market Research Platform",
+      description: "Learn about Convergent's mission to revolutionize market research through our innovative multi-tenant platform connecting companies with verified field interviewers across India.",
+      keywords: "about Convergent, market research platform, company information, field interview services",
+      canonical: "https://opine.exypnossolutions.com/about"
     },
     
     "/contact": {
-      title: "Contact Us - Opine India | Get in Touch",
-      description: "Contact Opine India for inquiries, support, or partnership opportunities. Reach out to our team for market research solutions and field interview services. We respond within 24 hours.",
-      keywords: "contact Opine India, market research support, partnership, customer service, get in touch, contact form",
-      canonical: "https://opineindia.com/contact",
-      ogTitle: "Contact Opine India - Market Research Solutions",
-      ogDescription: "Get in touch with Opine India for market research solutions, partnerships, and support. We're here to help transform your research needs."
+      title: "Contact Us - Convergent | Get in Touch",
+      description: "Contact Convergent for inquiries, support, or partnership opportunities. Reach out to our team for market research solutions and field interview services. We respond within 24 hours.",
+      keywords: "contact Convergent, market research support, partnership, customer service, get in touch, contact form",
+      canonical: "https://opine.exypnossolutions.com/contact",
+      ogTitle: "Contact Convergent - Market Research Solutions",
+      ogDescription: "Get in touch with Convergent for market research solutions, partnerships, and support. We're here to help transform your research needs."
     },
     
     "/register": {
-      title: "Register with Opine India - Join Our Market Research Platform",
-      description: "Join Opine India's network of professional market researchers and field interviewers. Register today to access high-quality research opportunities across India.",
-      keywords: "register Opine India, join market research, field interviewer registration, gig worker platform",
-      canonical: "https://opineindia.com/register"
+      title: "Register with Convergent - Join Our Market Research Platform",
+      description: "Join Convergent's network of professional market researchers and field interviewers. Register today to access high-quality research opportunities across India.",
+      keywords: "register Convergent, join market research, field interviewer registration, gig worker platform",
+      canonical: "https://opine.exypnossolutions.com/register"
     },
     "/login": {
-      title: "Login - Opine India | Access Your Account",
-      description: "Login to your Opine India account to manage your market research projects or interviewer tasks. Secure access to your dashboard.",
-      keywords: "login, sign in, Opine India account, market research login, interviewer login",
-      canonical: "https://opineindia.com/login"
+      title: "Login - Convergent | Access Your Account",
+      description: "Login to your Convergent account to manage your market research projects or interviewer tasks. Secure access to your dashboard.",
+      keywords: "login, sign in, Convergent account, market research login, interviewer login",
+      canonical: "https://opine.exypnossolutions.com/login"
     }
   }
 };
@@ -77,10 +77,10 @@ export const generateStructuredData = (config) => {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "Opine India",
+    "name": "Convergent",
     "description": config.description,
     "url": config.canonical,
-    "logo": "https://opineindia.com/logo.png",
+    "logo": "https://opine.exypnossolutions.com/logo.png",
     "contactPoint": {
       "@type": "ContactPoint",
       "telephone": "+91-XXXX-XXXXXX",
@@ -89,8 +89,8 @@ export const generateStructuredData = (config) => {
       "availableLanguage": ["English", "Hindi"]
     },
     "sameAs": [
-      "https://www.linkedin.com/company/opine-india",
-      "https://twitter.com/OpineIndia"
+      "https://www.linkedin.com/company/convergent",
+      "https://twitter.com/Convergent"
     ],
     "address": {
       "@type": "PostalAddress",

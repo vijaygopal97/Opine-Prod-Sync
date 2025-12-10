@@ -187,8 +187,8 @@ const InterviewerDashboard = () => {
 
   const getColorClasses = (color) => {
     const colors = {
-      blue: "bg-blue-50 text-blue-600",
-      purple: "bg-purple-50 text-purple-600",
+      blue: "bg-[#E6F0F8] text-[#001D48]",
+      purple: "bg-[#E8E6F5] text-[#373177]",
       green: "bg-green-50 text-green-600",
       red: "bg-red-50 text-red-600",
       orange: "bg-orange-50 text-orange-600"
@@ -241,7 +241,7 @@ const InterviewerDashboard = () => {
           <div className="grid grid-cols-2 gap-3">
             <button 
               onClick={() => navigate('/interviewer/available-surveys')}
-              className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+              className="p-4 bg-gradient-to-r from-[#373177] to-[#373177] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
             >
               <ClipboardCheck className="h-6 w-6 mx-auto mb-2" />
               <span className="text-sm font-medium">Browse Interviews</span>
@@ -273,7 +273,7 @@ const InterviewerDashboard = () => {
           <div className="space-y-3">
             {dashboardData.loading ? (
               <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#001D48] mx-auto"></div>
                 <p className="text-sm text-gray-500 mt-2">Loading available interviews...</p>
               </div>
             ) : dashboardData.availableSurveys === 0 ? (
@@ -289,7 +289,7 @@ const InterviewerDashboard = () => {
                 <p className="text-sm text-gray-600">Interview{dashboardData.availableSurveys !== 1 ? 's' : ''} Available</p>
                 <button 
                   onClick={() => navigate('/interviewer/available-surveys')}
-                  className="mt-3 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                  className="mt-3 px-4 py-2 bg-[#001D48] text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   View All Interviews
                 </button>
@@ -304,7 +304,7 @@ const InterviewerDashboard = () => {
           <div className="space-y-3">
             {dashboardData.loading ? (
               <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#001D48] mx-auto"></div>
                 <p className="text-sm text-gray-500 mt-2">Loading performance data...</p>
               </div>
             ) : (
@@ -313,14 +313,14 @@ const InterviewerDashboard = () => {
                   <span className="text-sm text-gray-600">Approval Rate</span>
                   <span className={`text-sm font-medium ${
                     dashboardData.approvalRate >= 80 ? 'text-green-600' : 
-                    dashboardData.approvalRate >= 60 ? 'text-blue-600' : 'text-red-600'
+                    dashboardData.approvalRate >= 60 ? 'text-[#001D48]' : 'text-red-600'
                   }`}>
                     {dashboardData.approvalRate.toFixed(1)}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Total Responses</span>
-                  <span className="text-sm font-medium text-blue-600">{dashboardData.totalInterviews}</span>
+                  <span className="text-sm font-medium text-[#001D48]">{dashboardData.totalInterviews}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Approved</span>
@@ -328,7 +328,7 @@ const InterviewerDashboard = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">This Month Earnings</span>
-                  <span className="text-sm font-medium text-purple-600">₹{dashboardData.monthlyEarnings.toLocaleString()}</span>
+                  <span className="text-sm font-medium text-[#373177]">₹{dashboardData.monthlyEarnings.toLocaleString()}</span>
                 </div>
               </>
             )}
@@ -341,7 +341,7 @@ const InterviewerDashboard = () => {
           <div className="space-y-3">
             {activitiesLoading ? (
               <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#001D48] mx-auto"></div>
                 <p className="text-sm text-gray-500 mt-2">Loading recent activity...</p>
               </div>
             ) : recentActivities.length === 0 ? (
@@ -356,7 +356,7 @@ const InterviewerDashboard = () => {
                   <div className={`w-2 h-2 rounded-full mt-2 ${
                     activity.type === 'success' ? 'bg-green-500' :
                     activity.type === 'warning' ? 'bg-yellow-500' :
-                    activity.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+                    activity.type === 'error' ? 'bg-red-500' : 'bg-[#E6F0F8]0'
                   }`}></div>
                   <div className="flex-1">
                     <p className="text-sm text-gray-900">{activity.message}</p>

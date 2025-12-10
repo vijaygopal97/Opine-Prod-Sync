@@ -1,4 +1,4 @@
-# SEO Control System for Opine India
+# SEO Control System for Convergent
 
 ## Overview
 This system allows you to easily control whether search engines can index your website during development and production phases.

@@ -31,7 +31,7 @@ const ComingSoon = ({ title, description, features = [], icon: Icon = Rocket }) 
       <div className="bg-gradient-to-br from-blue-50 via-white to-purple-50 rounded-xl p-8 shadow-sm border border-gray-100 mb-8">
         <div className="text-center">
           {/* Icon */}
-          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mb-8 shadow-2xl">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] rounded-full mb-8 shadow-2xl">
             <Icon className="h-12 w-12 text-white" />
           </div>
 
@@ -54,7 +54,7 @@ const ComingSoon = ({ title, description, features = [], icon: Icon = Rocket }) 
           {/* Features List */}
           <div className="bg-white/70 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-purple-600 mr-2" />
+              <Sparkles className="h-5 w-5 text-[#373177] mr-2" />
               What's Coming
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -71,22 +71,22 @@ const ComingSoon = ({ title, description, features = [], icon: Icon = Rocket }) 
           <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-gray-700">Development Progress</span>
-              <span className="text-sm font-medium text-blue-600">75%</span>
+              <span className="text-sm font-medium text-[#373177]">75%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-1000 ease-out" style={{ width: '75%' }}></div>
+              <div className="bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] h-2 rounded-full transition-all duration-1000 ease-out" style={{ width: '75%' }}></div>
             </div>
             <p className="text-xs text-gray-600 mt-2">Expected completion: Soon</p>
           </div>
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button className="group px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center">
+            <button className="group px-6 py-3 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-md hover:shadow-lg flex items-center justify-center">
               <Star className="h-4 w-4 mr-2" />
               Get Notified
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
             </button>
-            <button className="px-6 py-3 border-2 border-blue-600 text-blue-600 font-medium rounded-lg hover:bg-blue-600 hover:text-white transition-all duration-300 flex items-center justify-center">
+            <button className="px-6 py-3 border-2 border-[#001D48] text-[#373177] font-medium rounded-lg hover:bg-[#001D48] hover:text-white transition-all duration-300 flex items-center justify-center">
               <Zap className="h-4 w-4 mr-2" />
               Learn More
             </button>
@@ -99,15 +99,15 @@ const ComingSoon = ({ title, description, features = [], icon: Icon = Rocket }) 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="bg-blue-100 p-3 rounded-full w-fit mb-4">
-            <Rocket className="h-6 w-6 text-blue-600" />
+            <Rocket className="h-6 w-6 text-[#373177]" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Innovation</h3>
           <p className="text-gray-600 text-sm">Cutting-edge technology and modern design principles</p>
         </div>
         
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="bg-purple-100 p-3 rounded-full w-fit mb-4">
-            <Zap className="h-6 w-6 text-purple-600" />
+          <div className="bg-[#E8E6F5] p-3 rounded-full w-fit mb-4">
+            <Zap className="h-6 w-6 text-[#373177]" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Performance</h3>
           <p className="text-gray-600 text-sm">Optimized for speed and seamless user experience</p>

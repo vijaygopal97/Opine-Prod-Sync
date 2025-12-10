@@ -356,7 +356,7 @@ const CompanyAdminUserManagement = () => {
         </div>
         <button
           onClick={() => setShowAddUser(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Team Member
@@ -463,7 +463,7 @@ const CompanyAdminUserManagement = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader className="w-6 h-6 animate-spin text-blue-600" />
+            <Loader className="w-6 h-6 animate-spin text-[#373177]" />
             <span className="ml-2 text-gray-600">Loading team members...</span>
           </div>
         ) : error ? (
@@ -503,7 +503,7 @@ const CompanyAdminUserManagement = () => {
                   <tr key={user._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                        <div className="w-10 h-10 bg-gradient-to-r from-[#373177] to-[#373177] rounded-full flex items-center justify-center text-white font-medium">
                           {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                         </div>
                         <div className="ml-4">
@@ -512,7 +512,7 @@ const CompanyAdminUserManagement = () => {
                               {user.firstName} {user.lastName}
                             </span>
                             {(user.userType === 'interviewer' || user.userType === 'quality_agent') && user.memberId && (
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-mono">
+                              <span className="text-xs bg-[#E6F0F8] text-blue-700 px-2 py-0.5 rounded font-mono">
                                 ID: {user.memberId}
                               </span>
                             )}
@@ -633,7 +633,7 @@ const CompanyAdminUserManagement = () => {
                         )}
                         <button
                           onClick={() => handleEditUser(user)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          className="text-[#373177] hover:text-[#001D48] transition-colors"
                           title="Edit User"
                         >
                           <Edit className="w-4 h-4" />
@@ -684,7 +684,7 @@ const CompanyAdminUserManagement = () => {
                   onClick={() => handlePageChange(pageNum)}
                   className={`px-3 py-2 border rounded-lg transition-colors ${
                     pageNum === pagination.currentPage
-                      ? 'bg-blue-600 text-white border-blue-600'
+                      ? 'bg-[#001D48] text-white border-[#373177]'
                       : 'border-gray-300 hover:bg-gray-50'
                   }`}
                 >
@@ -723,8 +723,8 @@ const CompanyAdminUserManagement = () => {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center space-x-4">
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <Shield className="h-6 w-6 text-blue-600" />
+                <div className="p-3 bg-[#E6F0F8] rounded-lg">
+                  <Shield className="h-6 w-6 text-[#373177]" />
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">
@@ -755,7 +755,7 @@ const CompanyAdminUserManagement = () => {
                   {/* Basic Information */}
                   <div className="bg-gray-50 rounded-lg p-6">
                     <div className="flex items-center mb-4">
-                      <User className="h-5 w-5 text-blue-600 mr-2" />
+                      <User className="h-5 w-5 text-[#373177] mr-2" />
                       <h4 className="text-lg font-semibold text-gray-900">Basic Information</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -793,7 +793,7 @@ const CompanyAdminUserManagement = () => {
                         <label className="text-sm font-medium text-gray-600">Languages Spoken</label>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {selectedUser.interviewerProfile?.languagesSpoken?.map((lang, index) => (
-                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#E6F0F8] text-[#001D48]">
                               {lang}
                             </span>
                           ))}
@@ -859,7 +859,7 @@ const CompanyAdminUserManagement = () => {
                   {/* Survey Requirements */}
                   <div className="bg-gray-50 rounded-lg p-6">
                     <div className="flex items-center mb-4">
-                      <Smartphone className="h-5 w-5 text-purple-600 mr-2" />
+                      <Smartphone className="h-5 w-5 text-[#373177] mr-2" />
                       <h4 className="text-lg font-semibold text-gray-900">Survey Requirements</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -963,12 +963,12 @@ const CompanyAdminUserManagement = () => {
                       {selectedUser.interviewerProfile?.cvUpload && (
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center">
-                            <FileText className="h-5 w-5 text-blue-600 mr-3" />
+                            <FileText className="h-5 w-5 text-[#373177] mr-3" />
                             <span className="text-sm font-medium text-gray-900">CV Document</span>
                           </div>
                           <button
                             onClick={() => window.open(getFileUrl(selectedUser.interviewerProfile.cvUpload), '_blank')}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
@@ -985,7 +985,7 @@ const CompanyAdminUserManagement = () => {
                           </div>
                           <button
                             onClick={() => window.open(getFileUrl(selectedUser.interviewerProfile.aadhaarDocument), '_blank')}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
@@ -997,12 +997,12 @@ const CompanyAdminUserManagement = () => {
                       {selectedUser.interviewerProfile?.panDocument && (
                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                           <div className="flex items-center">
-                            <FileImage className="h-5 w-5 text-purple-600 mr-3" />
+                            <FileImage className="h-5 w-5 text-[#373177] mr-3" />
                             <span className="text-sm font-medium text-gray-900">PAN Card</span>
                           </div>
                           <button
                             onClick={() => window.open(getFileUrl(selectedUser.interviewerProfile.panDocument), '_blank')}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
@@ -1019,7 +1019,7 @@ const CompanyAdminUserManagement = () => {
                           </div>
                           <button
                             onClick={() => window.open(getFileUrl(selectedUser.interviewerProfile.passportPhoto), '_blank')}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview
@@ -1036,7 +1036,7 @@ const CompanyAdminUserManagement = () => {
                           </div>
                           <button
                             onClick={() => window.open(getFileUrl(selectedUser.interviewerProfile.bankDocumentUpload), '_blank')}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             Preview

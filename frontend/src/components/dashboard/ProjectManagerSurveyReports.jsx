@@ -76,7 +76,7 @@ const ProjectManagerSurveyReports = () => {
       case 'draft':
         return 'bg-gray-100 text-gray-800';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-[#E6F0F8] text-[#001D48]';
       case 'paused':
         return 'bg-yellow-100 text-yellow-800';
       default:
@@ -107,7 +107,7 @@ const ProjectManagerSurveyReports = () => {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#001D48] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading surveys...</p>
         </div>
       </div>
@@ -222,7 +222,7 @@ const ProjectManagerSurveyReports = () => {
                         <div className="flex flex-col items-end space-y-2">
                           <button
                             onClick={() => handleViewReports(survey)}
-                            className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                            className="inline-flex items-center px-3 py-1.5 bg-[#001D48] text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                           >
                             <BarChart3 className="w-4 h-4 mr-1.5" />
                             Reports
@@ -236,7 +236,7 @@ const ProjectManagerSurveyReports = () => {
                           </button>
                           <button
                             onClick={() => handleViewQCPerformance(survey)}
-                            className="inline-flex items-center px-3 py-1.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                            className="inline-flex items-center px-3 py-1.5 bg-[#373177] text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
                           >
                             <Users className="w-4 h-4 mr-1.5" />
                             QC Performance

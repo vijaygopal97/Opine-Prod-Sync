@@ -112,12 +112,12 @@ const Contact = () => {
       <SEO pathname="/contact" />
       <div className="contact-page">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-blue-50 via-white to-purple-50 py-20 overflow-hidden">
+        <section className="relative bg-gradient-to-br from-[#E6F0F8] via-white to-[#E8E6F5] py-20 overflow-hidden">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-0 left-0 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-            <div className="absolute top-0 right-0 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
-            <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
+            <div className="absolute top-0 left-0 w-72 h-72 bg-[#3FADCC] rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+            <div className="absolute top-0 right-0 w-72 h-72 bg-[#373177] rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
+            <div className="absolute bottom-0 left-1/2 w-72 h-72 bg-[#001D48] rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-2000"></div>
           </div>
 
           <div className="relative w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16">
@@ -131,14 +131,14 @@ const Contact = () => {
               {/* Main Headline */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 Let's Start a
-                <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] bg-clip-text text-transparent">
                   Conversation
                 </span>
               </h1>
 
               {/* Subheadline */}
               <p className="text-xl text-gray-600 mb-8 max-w-4xl mx-auto leading-relaxed">
-                Ready to transform your market research? Get in touch with our team to discuss how Opine India can help your business grow.
+                Ready to transform your market research? Get in touch with our team to discuss how Convergent can help your business grow.
               </p>
             </div>
           </div>
@@ -383,7 +383,7 @@ const Contact = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-4 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
+                    className="w-full bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white font-semibold py-4 px-6 rounded-lg hover:from-[#002855] hover:via-[#3d3a8a] hover:to-[#4bb8d9] transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
                   >
                     {isSubmitting ? (
                       <>
@@ -414,13 +414,13 @@ const Contact = () => {
                 <div className="space-y-6">
                   {/* Email */}
                   <div className="flex items-start space-x-4">
-                    <div className="bg-blue-100 p-3 rounded-lg">
-                      <Mail className="h-6 w-6 text-blue-600" />
+                    <div className="bg-[#E6F0F8] p-3 rounded-lg">
+                      <Mail className="h-6 w-6 text-[#001D48]" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Email</h3>
-                      <p className="text-gray-600">hello@opineindia.com</p>
-                      <p className="text-gray-600">support@opineindia.com</p>
+                      <p className="text-gray-600">hello@convergent.com</p>
+                      <p className="text-gray-600">support@convergent.com</p>
                     </div>
                   </div>
 
@@ -438,13 +438,13 @@ const Contact = () => {
 
                   {/* Address */}
                   <div className="flex items-start space-x-4">
-                    <div className="bg-purple-100 p-3 rounded-lg">
-                      <MapPin className="h-6 w-6 text-purple-600" />
+                    <div className="bg-[#E8E6F5] p-3 rounded-lg">
+                      <MapPin className="h-6 w-6 text-[#373177]" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Office</h3>
                       <p className="text-gray-600">
-                        Opine India Pvt Ltd<br />
+                        Convergent Pvt Ltd<br />
                         Tech Park, Sector 5<br />
                         Mumbai, Maharashtra 400001<br />
                         India
@@ -473,7 +473,7 @@ const Contact = () => {
                 </div>
 
                 {/* Response Time */}
-                <div className="bg-blue-50 p-6 rounded-xl">
+                <div className="bg-[#E6F0F8] p-6 rounded-xl">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Response Time</h3>
                   <p className="text-gray-600">
                     We typically respond to all inquiries within 24 hours during business days.

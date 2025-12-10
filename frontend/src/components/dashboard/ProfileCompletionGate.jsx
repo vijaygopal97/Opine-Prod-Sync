@@ -195,9 +195,9 @@ const ProfileCompletionGate = ({ children }) => {
     // If verification has been changed after approval, show "Unverified" style
     if (status === 'approved' && hasVerificationChanged()) {
       return {
-        bgColor: 'bg-blue-50',
+        bgColor: 'bg-[#E6F0F8]',
         borderColor: 'border-blue-400',
-        textColor: 'text-blue-800',
+        textColor: 'text-[#001D48]',
         iconColor: 'text-blue-400',
         icon: Shield
       };
@@ -238,9 +238,9 @@ const ProfileCompletionGate = ({ children }) => {
         };
       default:
         return {
-          bgColor: 'bg-blue-50',
+          bgColor: 'bg-[#E6F0F8]',
           borderColor: 'border-blue-400',
-          textColor: 'text-blue-800',
+          textColor: 'text-[#001D48]',
           iconColor: 'text-blue-400',
           icon: Shield
         };
@@ -259,9 +259,9 @@ const ProfileCompletionGate = ({ children }) => {
   // If loading, show loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-[#E8E6F5] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#373177] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading profile status...</p>
         </div>
       </div>
@@ -278,14 +278,14 @@ const ProfileCompletionGate = ({ children }) => {
   const StatusIcon = statusStyle.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-[#E8E6F5]">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Shield className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-[#E6F0F8] rounded-lg">
+                <Shield className="h-6 w-6 text-[#001D48]" />
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">Profile Verification Required</h1>
@@ -305,7 +305,7 @@ const ProfileCompletionGate = ({ children }) => {
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] rounded-full mb-6">
             <Lock className="h-10 w-10 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -374,8 +374,8 @@ const ProfileCompletionGate = ({ children }) => {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex items-center space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <AlertCircle className="h-6 w-6 text-blue-600" />
+              <div className="flex items-center space-x-3 p-4 bg-[#E6F0F8] border border-blue-200 rounded-lg">
+                <AlertCircle className="h-6 w-6 text-[#001D48]" />
                 <div>
                   <h4 className="font-medium text-blue-900">Profile Incomplete</h4>
                   <p className="text-sm text-blue-700">Please complete the following sections to submit your profile for review.</p>
@@ -434,8 +434,8 @@ const ProfileCompletionGate = ({ children }) => {
           <h3 className="text-xl font-semibold text-gray-900 mb-6">What You'll Get After Approval</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mb-4">
-                <Star className="h-6 w-6 text-blue-600" />
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-[#E6F0F8] rounded-lg mb-4">
+                <Star className="h-6 w-6 text-[#001D48]" />
               </div>
               <h4 className="font-semibold text-gray-900 mb-2">Access to Surveys</h4>
               <p className="text-sm text-gray-600">Browse and participate in available survey opportunities</p>
@@ -448,8 +448,8 @@ const ProfileCompletionGate = ({ children }) => {
               <p className="text-sm text-gray-600">Monitor your interview performance and earnings</p>
             </div>
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg mb-4">
-                <Award className="h-6 w-6 text-purple-600" />
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-[#E8E6F5] rounded-lg mb-4">
+                <Award className="h-6 w-6 text-[#373177]" />
               </div>
               <h4 className="font-semibold text-gray-900 mb-2">Build Reputation</h4>
               <p className="text-sm text-gray-600">Earn trust scores and build your interviewer profile</p>
@@ -461,7 +461,7 @@ const ProfileCompletionGate = ({ children }) => {
         <div className="text-center">
           <button
             onClick={handleCompleteProfile}
-            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg"
+            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105 shadow-lg"
           >
             {completionStatus.isComplete ? 'View Profile' : 'Complete Profile'}
             <ArrowRight className="ml-2 h-5 w-5" />

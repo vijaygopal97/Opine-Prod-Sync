@@ -12,7 +12,7 @@ const SEO = ({
   ogImage, 
   ogType = "website",
   twitterCard = "summary_large_image",
-  twitterSite = "@OpineIndia",
+  twitterSite = "@Convergent",
   noIndex = false,
   customStructuredData = null,
   pathname = "/"
@@ -54,7 +54,7 @@ const SEO = ({
       <meta property="og:image" content={seoConfig.ogImage} />
       <meta property="og:url" content={seoConfig.canonical} />
       <meta property="og:type" content={seoConfig.ogType} />
-      <meta property="og:site_name" content="Opine India" />
+      <meta property="og:site_name" content="Convergent" />
       
       {/* Twitter Card Meta Tags */}
       <meta name="twitter:card" content={seoConfig.twitterCard} />

@@ -198,7 +198,7 @@ const CatiTest = () => {
     const description = typeof call === 'object' && call.statusDescription ? call.statusDescription : null;
     
     const statusConfig = {
-      'initiated': { color: 'bg-blue-100 text-blue-800', icon: Loader, label: 'Initiated' },
+      'initiated': { color: 'bg-[#E6F0F8] text-[#001D48]', icon: Loader, label: 'Initiated' },
       'ringing': { color: 'bg-yellow-100 text-yellow-800', icon: Phone, label: 'Ringing' },
       'answered': { color: 'bg-green-100 text-green-800', icon: PhoneCall, label: 'Answered' },
       'completed': { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Completed' },
@@ -307,8 +307,8 @@ const CatiTest = () => {
                 <p className="text-sm text-gray-600">Total Calls</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalCalls || 0}</p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Phone className="w-6 h-6 text-blue-600" />
+              <div className="p-3 bg-[#E6F0F8] rounded-lg">
+                <Phone className="w-6 h-6 text-[#001D48]" />
               </div>
             </div>
           </div>
@@ -340,8 +340,8 @@ const CatiTest = () => {
                 <p className="text-sm text-gray-600">Total Duration</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{formatDuration(stats.totalDuration || 0)}</p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Clock className="w-6 h-6 text-purple-600" />
+              <div className="p-3 bg-[#E8E6F5] rounded-lg">
+                <Clock className="w-6 h-6 text-[#373177]" />
               </div>
             </div>
           </div>
@@ -573,7 +573,7 @@ const CatiTest = () => {
                         {call.callStatus === 'initiated' && (
                           <button
                             onClick={() => handleRefreshCall(call)}
-                            className="p-1 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors duration-200"
+                            className="p-1 text-sm font-medium text-[#001D48] bg-[#E6F0F8] rounded-lg hover:bg-[#E6F0F8] transition-colors duration-200"
                             title="Refresh to check for webhook updates"
                           >
                             <RefreshCw className="w-4 h-4" />
@@ -712,7 +712,7 @@ const CatiTest = () => {
                               {detail.status || 'unknown'}
                             </span>
                             {detail.CTC && (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-[#E6F0F8] text-[#001D48]">
                                 {detail.CTC}
                               </span>
                             )}

@@ -296,7 +296,7 @@ const DashboardSidebar = ({ sidebarOpen, userType }) => {
                     to={item.path}
                     className={`flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 ${
                       isActive
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                        ? 'bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white shadow-lg'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
@@ -339,7 +339,7 @@ const DashboardSidebar = ({ sidebarOpen, userType }) => {
                   profileStatus.isComplete && profileStatus.isApproved ? 'text-green-600' : 
                   !profileStatus.isComplete ? 'text-gray-600' :
                   profileStatus.status === 'pending' ? 'text-yellow-600' :
-                  profileStatus.status === 'rejected' ? 'text-red-600' : 'text-blue-600'
+                  profileStatus.status === 'rejected' ? 'text-red-600' : 'text-[#373177]'
                 }`}>
                   {getStatusDisplay(profileStatus.status)}
                 </span>
@@ -348,7 +348,7 @@ const DashboardSidebar = ({ sidebarOpen, userType }) => {
                 <div className="mt-3 pt-2 border-t border-gray-200">
                   <Link
                     to="/interviewer/profile"
-                    className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1"
+                    className="text-xs text-[#373177] hover:text-blue-800 font-medium flex items-center space-x-1"
                   >
                     <User className="h-3 w-3" />
                     <span>Complete Profile</span>
@@ -374,7 +374,7 @@ const DashboardSidebar = ({ sidebarOpen, userType }) => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs text-gray-600">Active Sessions</span>
-              <span className="text-xs font-medium text-blue-600">1,247</span>
+              <span className="text-xs font-medium text-[#001D48]">1,247</span>
             </div>
           </div>
         </div>

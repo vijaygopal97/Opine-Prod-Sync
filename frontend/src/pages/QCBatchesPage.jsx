@@ -214,9 +214,9 @@ const QCBatchesPage = () => {
   // Get status badge
   const getStatusBadge = (status) => {
     const statusConfig = {
-      collecting: { color: 'bg-blue-100 text-blue-800', label: 'Collecting', icon: Clock },
+      collecting: { color: 'bg-[#E6F0F8] text-blue-800', label: 'Collecting', icon: Clock },
       processing: { color: 'bg-yellow-100 text-yellow-800', label: 'Processing', icon: RefreshCw },
-      qc_in_progress: { color: 'bg-purple-100 text-purple-800', label: 'QC In Progress', icon: TrendingUp },
+      qc_in_progress: { color: 'bg-[#E8E6F5] text-purple-800', label: 'QC In Progress', icon: TrendingUp },
       completed: { color: 'bg-green-100 text-green-800', label: 'Completed', icon: CheckCircle },
       auto_approved: { color: 'bg-green-100 text-green-800', label: 'Auto-Approved', icon: CheckCircle },
       queued_for_qc: { color: 'bg-orange-100 text-orange-800', label: 'Queued for QC', icon: FileText }
@@ -303,7 +303,7 @@ const QCBatchesPage = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#001D48] mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading QC batches...</p>
         </div>
       </div>
@@ -317,7 +317,7 @@ const QCBatchesPage = () => {
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Survey Not Found</h2>
           <button
             onClick={() => navigate('/company/surveys')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             Back to Surveys
           </button>
@@ -444,7 +444,7 @@ const QCBatchesPage = () => {
                         )}
                         <button
                           onClick={() => handleViewBatch(batch._id)}
-                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          className="flex items-center space-x-2 px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           <Eye className="w-4 h-4" />
                           <span>View Details</span>
@@ -470,7 +470,7 @@ const QCBatchesPage = () => {
                             </div>
                             <div>
                               <p className="text-sm text-gray-600">In QC Queue</p>
-                              <p className="text-2xl font-semibold text-blue-600">{batch.sampleSize || batch.totalResponses}</p>
+                              <p className="text-2xl font-semibold text-[#001D48]">{batch.sampleSize || batch.totalResponses}</p>
                               {batch.realTimeStats && (
                                 <p className="text-xs text-gray-500 mt-1">
                                   {batch.realTimeStats.pendingCount} pending QC
@@ -504,7 +504,7 @@ const QCBatchesPage = () => {
                             </div>
                             <div>
                               <p className="text-sm text-gray-600">{samplePercentage}% Sample</p>
-                              <p className="text-2xl font-semibold text-blue-600">{batch.sampleSize}</p>
+                              <p className="text-2xl font-semibold text-[#001D48]">{batch.sampleSize}</p>
                               {batch.realTimeStats && (
                                 <p className="text-xs text-gray-500 mt-1">
                                   {batch.realTimeStats.pendingCount} pending QC
@@ -556,7 +556,7 @@ const QCBatchesPage = () => {
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div
-                                className="bg-blue-600 h-2 rounded-full transition-all"
+                                className="bg-[#001D48] h-2 rounded-full transition-all"
                                 style={{
                                   width: `${((batch.realTimeStats.totalQCed || 0) / batch.sampleSize) * 100}%`
                                 }}
@@ -575,7 +575,7 @@ const QCBatchesPage = () => {
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div
-                                className="bg-blue-600 h-2 rounded-full transition-all"
+                                className="bg-[#001D48] h-2 rounded-full transition-all"
                                 style={{
                                   width: `${((batch.realTimeStats.totalQCed || 0) / batch.sampleSize) * 100}%`
                                 }}
@@ -699,11 +699,11 @@ const QCBatchesPage = () => {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600">Total Responses</p>
-                        <p className="text-2xl font-semibold text-blue-600">{selectedBatch.totalResponses}</p>
+                        <p className="text-2xl font-semibold text-[#001D48]">{selectedBatch.totalResponses}</p>
                       </div>
                       <div className="bg-purple-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600">In QC Queue</p>
-                        <p className="text-2xl font-semibold text-purple-600">{selectedBatch.sampleSize || selectedBatch.totalResponses}</p>
+                        <p className="text-2xl font-semibold text-[#373177]">{selectedBatch.sampleSize || selectedBatch.totalResponses}</p>
                       </div>
                       <div className="bg-green-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600">Approval Rate</p>
@@ -718,11 +718,11 @@ const QCBatchesPage = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600">Total Responses</p>
-                        <p className="text-2xl font-semibold text-blue-600">{selectedBatch.totalResponses}</p>
+                        <p className="text-2xl font-semibold text-[#001D48]">{selectedBatch.totalResponses}</p>
                       </div>
                       <div className="bg-purple-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600">{samplePercentage}% Sample</p>
-                        <p className="text-2xl font-semibold text-purple-600">{selectedBatch.sampleSize}</p>
+                        <p className="text-2xl font-semibold text-[#373177]">{selectedBatch.sampleSize}</p>
                       </div>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <p className="text-sm text-gray-600">{remainingPercentage}% Remaining</p>
@@ -790,7 +790,7 @@ const QCBatchesPage = () => {
                               {!is100Percent && (
                                 <td className="px-4 py-3">
                                   {response.isSampleResponse ? (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#E8E6F5] text-purple-800">
                                       {samplePercentage}% Sample
                                     </span>
                                   ) : (
@@ -800,7 +800,7 @@ const QCBatchesPage = () => {
                               )}
                               <td className="px-4 py-3">
                                 {(is100Percent || response.isSampleResponse) && response.status === 'Pending_Approval' ? (
-                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#E6F0F8] text-blue-800">
                                     <Clock className="w-3 h-3 mr-1" />
                                     In QC Queue
                                   </span>
@@ -816,7 +816,7 @@ const QCBatchesPage = () => {
                               <td className="px-4 py-3">
                                 <button
                                   onClick={() => handleViewResponse(response)}
-                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                  className="text-[#001D48] hover:text-blue-800 text-sm font-medium"
                                 >
                                   View
                                 </button>
@@ -898,7 +898,7 @@ const QCBatchesPage = () => {
                       {config.samplePercentage < 100 && (
                         <button
                           onClick={handleAddRule}
-                          className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                          className="flex items-center space-x-2 px-3 py-1.5 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                         >
                           <Plus className="w-4 h-4" />
                           <span>Add Rule</span>
@@ -1031,7 +1031,7 @@ const QCBatchesPage = () => {
               <button
                 onClick={handleSaveConfig}
                 disabled={savingConfig || configLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="px-4 py-2 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {savingConfig && <RefreshCw className="w-4 h-4 animate-spin" />}
                 <span>Save Configuration</span>

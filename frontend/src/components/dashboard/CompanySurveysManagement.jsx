@@ -93,7 +93,7 @@ const CompanySurveysManagement = () => {
       case 'draft':
         return 'bg-gray-100 text-gray-800';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-[#E6F0F8] text-[#001D48]';
       case 'paused':
         return 'bg-yellow-100 text-yellow-800';
       default:
@@ -352,7 +352,7 @@ const CompanySurveysManagement = () => {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#001D48] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading surveys...</p>
         </div>
       </div>
@@ -371,7 +371,7 @@ const CompanySurveysManagement = () => {
           
           <button
             onClick={handleCreateSurvey}
-            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
           >
             <Plus className="w-5 h-5" />
             <span>Create New Survey</span>
@@ -387,8 +387,8 @@ const CompanySurveysManagement = () => {
               <p className="text-sm font-medium text-gray-600">Total Surveys</p>
               <p className="text-2xl font-bold text-gray-900">{overallStats.totalSurveys}</p>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-[#E6F0F8] rounded-lg">
+              <BarChart3 className="w-6 h-6 text-[#001D48]" />
             </div>
           </div>
         </div>
@@ -411,12 +411,12 @@ const CompanySurveysManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Responses</p>
-              <p className="text-2xl font-bold text-purple-600">
+              <p className="text-2xl font-bold text-[#373177]">
                 {overallStats.totalResponses.toLocaleString()}
               </p>
             </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <Users className="w-6 h-6 text-purple-600" />
+            <div className="p-3 bg-[#E8E6F5] rounded-lg">
+              <Users className="w-6 h-6 text-[#373177]" />
             </div>
           </div>
         </div>
@@ -450,7 +450,7 @@ const CompanySurveysManagement = () => {
             />
             {searchLoading && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#001D48]"></div>
               </div>
             )}
           </div>
@@ -505,7 +505,7 @@ const CompanySurveysManagement = () => {
         {(loading || searchLoading) && !initialLoad && (
           <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-xl">
             <div className="flex items-center space-x-3 bg-white px-4 py-2 rounded-lg shadow-lg">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#001D48]"></div>
               <span className="text-gray-600 text-sm">
                 {searchLoading ? 'Searching...' : 'Loading...'}
               </span>
@@ -528,7 +528,7 @@ const CompanySurveysManagement = () => {
                 
                 {/* Interview Mode Display */}
                 <div className="mb-3">
-                  <span className="inline-flex items-center space-x-1 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                  <span className="inline-flex items-center space-x-1 px-2 py-1 text-xs font-medium bg-[#E6F0F8] text-[#001D48] rounded-full">
                     <span>{getModeDisplayText(survey.mode)}</span>
                   </span>
                 </div>
@@ -582,7 +582,7 @@ const CompanySurveysManagement = () => {
                     </button>
                     <button
                       onClick={() => handleQCPerformance(survey)}
-                      className="flex items-center space-x-1 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
+                      className="flex items-center space-x-1 px-3 py-1.5 bg-[#E8E6F5] text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
                       title="QC Performance"
                     >
                       <Target className="w-4 h-4" />
@@ -595,7 +595,7 @@ const CompanySurveysManagement = () => {
                 <div className="flex flex-col space-y-2">
                   <button
                     onClick={() => handleSurveyAction(survey._id || survey.id, 'view')}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                    className="flex items-center space-x-1 px-3 py-1.5 bg-[#E6F0F8] text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
                     title="View Survey"
                   >
                     <Eye className="w-4 h-4" />
@@ -615,7 +615,7 @@ const CompanySurveysManagement = () => {
                 <div className="flex flex-col space-y-2">
                   <button
                     onClick={() => handleSurveyAction(survey._id || survey.id, 'reports')}
-                    className="flex items-center space-x-1 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
+                    className="flex items-center space-x-1 px-3 py-1.5 bg-[#E8E6F5] text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
                     title="View Reports"
                   >
                     <BarChart3 className="w-4 h-4" />
@@ -673,7 +673,7 @@ const CompanySurveysManagement = () => {
           <p className="text-gray-600 mb-6">Try adjusting your search criteria or create a new survey</p>
           <button
             onClick={handleCreateSurvey}
-            className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+            className="flex items-center space-x-2 px-6 py-3 bg-[#001D48] text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
           >
             <Plus className="w-5 h-5" />
             <span>Create Your First Survey</span>
@@ -730,7 +730,7 @@ const CompanySurveysManagement = () => {
                       onClick={() => handlePageChange(pageNum)}
                       className={`px-3 py-2 border rounded-lg transition-colors ${
                         pageNum === pagination.currentPage
-                          ? 'bg-blue-600 text-white border-blue-600'
+                          ? 'bg-[#001D48] text-white border-[#001D48]'
                           : 'border-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -915,7 +915,7 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
       case 'draft':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'completed':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-[#E6F0F8] text-[#001D48] border-blue-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -924,9 +924,9 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
   const getModeColor = (mode) => {
     switch (mode) {
       case 'capi':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-[#E6F0F8] text-[#001D48] border-blue-200';
       case 'cati':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'bg-[#E8E6F5] text-purple-800 border-purple-200';
       case 'online':
         return 'bg-green-100 text-green-800 border-green-200';
       default:
@@ -981,7 +981,7 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
               onClick={() => setActiveTab('specifications')}
               className={`px-8 py-4 text-sm font-semibold border-b-2 transition-all duration-200 ${
                 activeTab === 'specifications'
-                  ? 'border-blue-500 text-blue-600 bg-blue-50/50'
+                  ? 'border-blue-500 text-[#001D48] bg-[#E6F0F8]/50'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50/50'
               }`}
             >
@@ -994,7 +994,7 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
               onClick={() => setActiveTab('questionnaire')}
               className={`px-8 py-4 text-sm font-semibold border-b-2 transition-all duration-200 ${
                 activeTab === 'questionnaire'
-                  ? 'border-blue-500 text-blue-600 bg-blue-50/50'
+                  ? 'border-blue-500 text-[#001D48] bg-[#E6F0F8]/50'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50/50'
               }`}
             >
@@ -1015,8 +1015,8 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Calendar className="w-5 h-5 text-blue-600" />
+                      <div className="p-2 bg-[#E6F0F8] rounded-lg">
+                        <Calendar className="w-5 h-5 text-[#001D48]" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600">Start Date</p>
@@ -1051,8 +1051,8 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
                   
                   <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <DollarSign className="w-5 h-5 text-purple-600" />
+                      <div className="p-2 bg-[#E8E6F5] rounded-lg">
+                        <DollarSign className="w-5 h-5 text-[#373177]" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600">Cost per Interview</p>
@@ -1071,9 +1071,9 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
                   <div className="prose prose-gray max-w-none">
                     <p className="text-gray-700 leading-relaxed">{survey.description}</p>
                     {survey.purpose && (
-                      <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="mt-4 p-4 bg-[#E6F0F8] rounded-lg border border-blue-200">
                         <h4 className="text-sm font-semibold text-blue-900 mb-2">Purpose</h4>
-                        <p className="text-blue-800">{survey.purpose}</p>
+                        <p className="text-[#001D48]">{survey.purpose}</p>
                       </div>
                     )}
                   </div>
@@ -1117,7 +1117,7 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
                     <div key={section.id || sectionIndex} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                       <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-gray-200">
                         <h3 className="text-xl font-semibold text-gray-900 flex items-center space-x-3">
-                          <span className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 text-sm font-bold rounded-lg flex items-center justify-center">
+                          <span className="flex-shrink-0 w-8 h-8 bg-[#E6F0F8] text-[#001D48] text-sm font-bold rounded-lg flex items-center justify-center">
                             {sectionIndex + 1}
                           </span>
                           <span>{section.title}</span>
@@ -1132,7 +1132,7 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
                           {section.questions && section.questions.map((question, questionIndex) => (
                             <div key={question.id || questionIndex} className="border border-gray-200 rounded-lg p-5 hover:border-gray-300 transition-colors">
                               <div className="flex items-start space-x-4">
-                                <span className="flex-shrink-0 w-7 h-7 bg-blue-100 text-blue-600 text-sm font-semibold rounded-full flex items-center justify-center">
+                                <span className="flex-shrink-0 w-7 h-7 bg-[#E6F0F8] text-[#001D48] text-sm font-semibold rounded-full flex items-center justify-center">
                                   {questionIndex + 1}
                                 </span>
                                 <div className="flex-1">
@@ -1178,7 +1178,7 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         {question.options.map((option, optionIndex) => (
                                           <div key={option.id || optionIndex} className="flex items-center space-x-2 p-2 bg-white rounded border border-gray-200">
-                                            <span className="w-4 h-4 bg-blue-100 text-blue-600 text-xs font-medium rounded-full flex items-center justify-center">
+                                            <span className="w-4 h-4 bg-[#E6F0F8] text-[#001D48] text-xs font-medium rounded-full flex items-center justify-center">
                                               {String.fromCharCode(65 + optionIndex)}
                                             </span>
                                             <span className="text-sm text-gray-700">{option.text}</span>
@@ -1195,7 +1195,7 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
                                       <div className="flex items-center space-x-2">
                                         <span className="text-sm text-gray-600">{question.scale.min}</span>
                                         <div className="flex-1 h-2 bg-gray-200 rounded-full">
-                                          <div className="h-2 bg-blue-500 rounded-full"></div>
+                                          <div className="h-2 bg-[#E6F0F8]0 rounded-full"></div>
                                         </div>
                                         <span className="text-sm text-gray-600">{question.scale.max}</span>
                                       </div>
@@ -1220,7 +1220,7 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
                     {survey.questions.map((question, questionIndex) => (
                       <div key={question.id || questionIndex} className="bg-white border border-gray-200 rounded-lg p-5 hover:border-gray-300 transition-colors">
                         <div className="flex items-start space-x-4">
-                          <span className="flex-shrink-0 w-7 h-7 bg-blue-100 text-blue-600 text-sm font-semibold rounded-full flex items-center justify-center">
+                          <span className="flex-shrink-0 w-7 h-7 bg-[#E6F0F8] text-[#001D48] text-sm font-semibold rounded-full flex items-center justify-center">
                             {questionIndex + 1}
                           </span>
                           <div className="flex-1">
@@ -1264,7 +1264,7 @@ const SurveyDetailsModal = ({ survey, onClose }) => {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                   {question.options.map((option, optionIndex) => (
                                     <div key={option.id || optionIndex} className="flex items-center space-x-2 p-2 bg-white rounded border border-gray-200">
-                                      <span className="w-4 h-4 bg-blue-100 text-blue-600 text-xs font-medium rounded-full flex items-center justify-center">
+                                      <span className="w-4 h-4 bg-[#E6F0F8] text-[#001D48] text-xs font-medium rounded-full flex items-center justify-center">
                                         {String.fromCharCode(65 + optionIndex)}
                                       </span>
                                       <span className="text-sm text-gray-700">{option.text}</span>

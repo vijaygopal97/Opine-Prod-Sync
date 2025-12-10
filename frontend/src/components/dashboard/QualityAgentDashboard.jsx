@@ -189,8 +189,8 @@ const QualityAgentDashboard = () => {
 
   const getColorClasses = (color) => {
     const colors = {
-      blue: "bg-blue-50 text-blue-600",
-      purple: "bg-purple-50 text-purple-600",
+      blue: "bg-[#E6F0F8] text-[#373177]",
+      purple: "bg-[#E8E6F5] text-[#373177]",
       green: "bg-green-50 text-green-600",
       orange: "bg-orange-50 text-orange-600"
     };
@@ -258,7 +258,7 @@ const QualityAgentDashboard = () => {
                   <div className={`w-2 h-2 rounded-full ${
                     activity.type === 'success' ? 'bg-green-500' :
                     activity.type === 'error' ? 'bg-red-500' :
-                    activity.type === 'info' ? 'bg-blue-500' :
+                    activity.type === 'info' ? 'bg-[#E6F0F8]0' :
                     activity.type === 'warning' ? 'bg-yellow-500' : 'bg-gray-500'
                   }`}></div>
                   <div className="flex-1">
@@ -283,7 +283,7 @@ const QualityAgentDashboard = () => {
           <div className="grid grid-cols-2 gap-3">
             <button 
               onClick={() => navigate('/quality-agent/survey-approvals')}
-              className="p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+              className="p-4 bg-gradient-to-r from-[#001D48] via-[#373177] to-[#3FADCC] text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
             >
               <ClipboardCheck className="h-6 w-6 mx-auto mb-2" />
               <span className="text-sm font-medium">Review Surveys</span>
@@ -334,11 +334,11 @@ const QualityAgentDashboard = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Validations Today</span>
-                <span className="text-sm font-medium text-purple-600">{qualityMetrics.validationsToday}</span>
+                <span className="text-sm font-medium text-[#373177]">{qualityMetrics.validationsToday}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Total Reviewed</span>
-                <span className="text-sm font-medium text-blue-600">{qualityMetrics.totalReviewed}</span>
+                <span className="text-sm font-medium text-[#373177]">{qualityMetrics.totalReviewed}</span>
               </div>
             </div>
           )}
@@ -367,7 +367,7 @@ const QualityAgentDashboard = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Overall Performance</span>
-                <span className="text-sm font-medium text-blue-600">{stats.approvalRate}%</span>
+                <span className="text-sm font-medium text-[#373177]">{stats.approvalRate}%</span>
               </div>
             </div>
           )}

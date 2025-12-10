@@ -807,9 +807,9 @@ const InterviewerProfile = () => {
     // If verification has been changed after approval, show "Unverified" style
     if (status === 'approved' && hasVerificationChanged()) {
       return {
-        bgColor: 'bg-blue-50',
+        bgColor: 'bg-[#E6F0F8]',
         borderColor: 'border-blue-400',
-        textColor: 'text-blue-800',
+        textColor: 'text-[#001D48]',
         iconColor: 'text-blue-400',
         icon: Shield
       };
@@ -850,9 +850,9 @@ const InterviewerProfile = () => {
         };
       default:
         return {
-          bgColor: 'bg-blue-50',
+          bgColor: 'bg-[#E6F0F8]',
           borderColor: 'border-blue-400',
-          textColor: 'text-blue-800',
+          textColor: 'text-[#001D48]',
           iconColor: 'text-blue-400',
           icon: Shield
         };
@@ -870,7 +870,7 @@ const InterviewerProfile = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader className="h-8 w-8 animate-spin text-[#373177]" />
       </div>
     );
   }
@@ -934,7 +934,7 @@ const InterviewerProfile = () => {
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
                       activeTab === tab.id
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg transform scale-105'
+                        ? 'bg-gradient-to-r from-[#373177] to-indigo-600 text-white shadow-lg transform scale-105'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                     }`}
                   >
@@ -954,8 +954,8 @@ const InterviewerProfile = () => {
             {/* Section Header */}
             <div className="mb-8">
               <div className="flex items-center space-x-3 mb-2">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <User className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-[#E6F0F8] rounded-lg">
+                  <User className="h-6 w-6 text-[#373177]" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">Basic Information</h3>
               </div>
@@ -1129,7 +1129,7 @@ const InterviewerProfile = () => {
                     selectedLanguages.map((language) => (
                       <span
                         key={language}
-                        className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-gradient-to-r from-blue-500 to-indigo-500 text-white border border-blue-300 shadow-sm"
+                        className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-gradient-to-r from-[#E6F0F8]0 to-indigo-500 text-white border border-blue-300 shadow-sm"
                       >
                         {language}
                         <button
@@ -1173,7 +1173,7 @@ const InterviewerProfile = () => {
                             key={language}
                             type="button"
                             onClick={() => handleLanguageSelect(language)}
-                            className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 focus:outline-none focus:bg-gradient-to-r focus:from-blue-50 focus:to-indigo-50 focus:text-blue-700 transition-all duration-200"
+                            className="w-full px-4 py-3 text-left text-sm hover:bg-gradient-to-r hover:from-[#E6F0F8] hover:to-indigo-50 hover:text-[#373177] focus:outline-none focus:bg-gradient-to-r focus:from-[#E6F0F8] focus:to-indigo-50 focus:text-blue-700 transition-all duration-200"
                           >
                             {language}
                           </button>
@@ -1192,8 +1192,8 @@ const InterviewerProfile = () => {
             {/* Educational Qualifications */}
             <div className="mt-8 pt-6 border-t border-gray-100">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <GraduationCap className="h-6 w-6 text-purple-600" />
+                <div className="p-2 bg-[#E8E6F5] rounded-lg">
+                  <GraduationCap className="h-6 w-6 text-[#373177]" />
                 </div>
                 <h4 className="text-xl font-bold text-gray-900">Educational Qualifications</h4>
               </div>
@@ -1255,7 +1255,7 @@ const InterviewerProfile = () => {
                         value="true"
                         checked={profileData.interviewerProfile.hasSurveyExperience === true}
                         onChange={(e) => handleInputChange('interviewerProfile', 'hasSurveyExperience', true)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">Yes</span>
                     </label>
@@ -1266,7 +1266,7 @@ const InterviewerProfile = () => {
                         value="false"
                         checked={profileData.interviewerProfile.hasSurveyExperience === false}
                         onChange={(e) => handleInputChange('interviewerProfile', 'hasSurveyExperience', false)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">No</span>
                     </label>
@@ -1332,7 +1332,7 @@ const InterviewerProfile = () => {
                     type="file"
                     accept=".pdf,.doc,.docx"
                     onChange={(e) => handleFileUpload('cvUpload', e.target.files[0])}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-blue-500 file:to-indigo-500 file:text-white hover:file:from-blue-600 hover:file:to-indigo-600 transition-all duration-200"
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-[#E6F0F8]0 file:to-indigo-500 file:text-white hover:file:from-[#373177] hover:file:to-indigo-600 transition-all duration-200"
                   />
                 </div>
                 {profileData.interviewerProfile.cvUpload && (
@@ -1351,7 +1351,7 @@ const InterviewerProfile = () => {
                     <button
                       type="button"
                       onClick={handleCvPreview}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
                     >
                       <Eye className="w-4 h-4 mr-2" />
                       View Preview
@@ -1368,8 +1368,8 @@ const InterviewerProfile = () => {
             {/* Section Header */}
             <div className="mb-8">
               <div className="flex items-center space-x-3 mb-2">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Smartphone className="h-6 w-6 text-purple-600" />
+                <div className="p-2 bg-[#E8E6F5] rounded-lg">
+                  <Smartphone className="h-6 w-6 text-[#373177]" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">Survey Requirements</h3>
               </div>
@@ -1387,7 +1387,7 @@ const InterviewerProfile = () => {
                       name="ownsSmartphone"
                       checked={profileData.interviewerProfile.ownsSmartphone === true}
                       onChange={() => handleInputChange('interviewerProfile', 'ownsSmartphone', true)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">Yes</span>
                   </label>
@@ -1397,7 +1397,7 @@ const InterviewerProfile = () => {
                       name="ownsSmartphone"
                       checked={profileData.interviewerProfile.ownsSmartphone === false}
                       onChange={() => handleInputChange('interviewerProfile', 'ownsSmartphone', false)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">No</span>
                   </label>
@@ -1488,7 +1488,7 @@ const InterviewerProfile = () => {
                       name="willingToTravel"
                       checked={profileData.interviewerProfile.willingToTravel === true}
                       onChange={() => handleInputChange('interviewerProfile', 'willingToTravel', true)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">Yes</span>
                   </label>
@@ -1498,7 +1498,7 @@ const InterviewerProfile = () => {
                       name="willingToTravel"
                       checked={profileData.interviewerProfile.willingToTravel === false}
                       onChange={() => handleInputChange('interviewerProfile', 'willingToTravel', false)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">No</span>
                   </label>
@@ -1515,7 +1515,7 @@ const InterviewerProfile = () => {
                       name="hasVehicle"
                       checked={profileData.interviewerProfile.hasVehicle === true}
                       onChange={() => handleInputChange('interviewerProfile', 'hasVehicle', true)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">Yes</span>
                   </label>
@@ -1525,7 +1525,7 @@ const InterviewerProfile = () => {
                       name="hasVehicle"
                       checked={profileData.interviewerProfile.hasVehicle === false}
                       onChange={() => handleInputChange('interviewerProfile', 'hasVehicle', false)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">No</span>
                   </label>
@@ -1542,7 +1542,7 @@ const InterviewerProfile = () => {
                       name="willingToRecordAudio"
                       checked={profileData.interviewerProfile.willingToRecordAudio === true}
                       onChange={() => handleInputChange('interviewerProfile', 'willingToRecordAudio', true)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">Yes</span>
                   </label>
@@ -1552,7 +1552,7 @@ const InterviewerProfile = () => {
                       name="willingToRecordAudio"
                       checked={profileData.interviewerProfile.willingToRecordAudio === false}
                       onChange={() => handleInputChange('interviewerProfile', 'willingToRecordAudio', false)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">No</span>
                   </label>
@@ -1569,7 +1569,7 @@ const InterviewerProfile = () => {
                       name="agreesToRemuneration"
                       checked={profileData.interviewerProfile.agreesToRemuneration === true}
                       onChange={() => handleInputChange('interviewerProfile', 'agreesToRemuneration', true)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">Yes</span>
                   </label>
@@ -1579,7 +1579,7 @@ const InterviewerProfile = () => {
                       name="agreesToRemuneration"
                       checked={profileData.interviewerProfile.agreesToRemuneration === false}
                       onChange={() => handleInputChange('interviewerProfile', 'agreesToRemuneration', false)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">No</span>
                   </label>
@@ -1648,32 +1648,32 @@ const InterviewerProfile = () => {
             {/* Bank Document Upload */}
             <div className="mt-8 pt-6 border-t border-gray-100">
               <div className="flex items-center space-x-3 mb-6">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <FileImage className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-[#E6F0F8] rounded-lg">
+                  <FileImage className="h-6 w-6 text-[#373177]" />
                 </div>
                 <h4 className="text-xl font-bold text-gray-900">Bank Document Upload</h4>
               </div>
               
               {/* Document Requirements Instructions */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+              <div className="bg-[#E6F0F8] border border-blue-200 rounded-xl p-4 mb-6">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <AlertCircle className="h-5 w-5 text-[#373177] mt-0.5" />
                   </div>
                   <div className="ml-3">
-                    <h4 className="text-sm font-semibold text-blue-800 mb-2">Document Requirements</h4>
+                    <h4 className="text-sm font-semibold text-[#001D48] mb-2">Document Requirements</h4>
                     <p className="text-sm text-blue-700 mb-3">
                       Please upload either one of the following documents:
                     </p>
                     <ul className="text-sm text-blue-700 space-y-2">
                       <li className="flex items-start">
-                        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mr-3 mt-2 flex-shrink-0"></span>
+                        <span className="w-1.5 h-1.5 bg-[#001D48] rounded-full mr-3 mt-2 flex-shrink-0"></span>
                         <div>
                           <strong>Cancelled Cheque</strong> - A cancelled cheque from your bank account showing account details
                         </div>
                       </li>
                       <li className="flex items-start">
-                        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mr-3 mt-2 flex-shrink-0"></span>
+                        <span className="w-1.5 h-1.5 bg-[#001D48] rounded-full mr-3 mt-2 flex-shrink-0"></span>
                         <div>
                           <strong>Passbook Image</strong> - A clear photo of your bank passbook's first page with account details
                         </div>
@@ -1708,7 +1708,7 @@ const InterviewerProfile = () => {
                     <button
                       type="button"
                       onClick={handleBankDocPreview}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
                     >
                       <Eye className="w-4 h-4 mr-2" />
                       View Preview
@@ -1769,7 +1769,7 @@ const InterviewerProfile = () => {
                       <button
                         type="button"
                         onClick={handleAadhaarPreview}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
                       >
                         <Eye className="w-4 h-4 mr-2" />
                         View Preview
@@ -1795,7 +1795,7 @@ const InterviewerProfile = () => {
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleFileUpload('panDocument', e.target.files[0])}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-purple-500 file:to-indigo-500 file:text-white hover:file:from-purple-600 hover:file:to-indigo-600 transition-all duration-200"
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-purple-500 file:to-indigo-500 file:text-white hover:file:from-[#373177] hover:file:to-indigo-600 transition-all duration-200"
                   />
                   {profileData.interviewerProfile.panDocument && (
                     <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl shadow-sm">
@@ -1813,7 +1813,7 @@ const InterviewerProfile = () => {
                       <button
                         type="button"
                         onClick={handlePanPreview}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
                       >
                         <Eye className="w-4 h-4 mr-2" />
                         View Preview
@@ -1857,7 +1857,7 @@ const InterviewerProfile = () => {
                     <button
                       type="button"
                       onClick={handlePassportPreview}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-blue-700 bg-[#E6F0F8] hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
                     >
                       <Eye className="w-4 h-4 mr-2" />
                       View Preview
@@ -1882,7 +1882,7 @@ const InterviewerProfile = () => {
                       type="checkbox"
                       checked={profileData.interviewerProfile.agreesToShareInfo === true}
                       onChange={(e) => handleInputChange('interviewerProfile', 'agreesToShareInfo', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">
                       I agree to share my information which would be kept confidential
@@ -1895,7 +1895,7 @@ const InterviewerProfile = () => {
                       type="checkbox"
                       checked={profileData.interviewerProfile.agreesToParticipateInSurvey === true}
                       onChange={(e) => handleInputChange('interviewerProfile', 'agreesToParticipateInSurvey', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      className="w-4 h-4 text-[#373177] bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     />
                     <span className="ml-3 text-sm font-medium text-gray-700">
                       I agree to participate in surveys through the App
@@ -1911,14 +1911,14 @@ const InterviewerProfile = () => {
       {/* Modern Action Buttons */}
       <div className="mt-8">
         {/* Instructions */}
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+        <div className="mb-6 p-4 bg-[#E6F0F8] border border-blue-200 rounded-xl">
           <div className="flex items-start space-x-3">
-            <div className="p-1 bg-blue-100 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-blue-600" />
+            <div className="p-1 bg-[#E6F0F8] rounded-lg">
+              <AlertCircle className="h-5 w-5 text-[#373177]" />
             </div>
             <div>
               <h4 className="text-sm font-semibold text-blue-900 mb-1">Submission Requirements</h4>
-              <p className="text-sm text-blue-800">
+              <p className="text-sm text-[#001D48]">
                 {!isProfileComplete() 
                   ? "Complete all required fields and upload all documents in all tabs to submit for approval."
                   : profileData.interviewerProfile.approvalStatus === 'pending'
@@ -1949,7 +1949,7 @@ const InterviewerProfile = () => {
               className={`inline-flex items-center px-6 py-3 font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl ${
                 !isProfileComplete()
                   ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 focus:ring-blue-500'
+                  : 'bg-gradient-to-r from-[#373177] to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 focus:ring-blue-500'
               }`}
             >
               {submitting ? <Loader className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
@@ -1995,7 +1995,7 @@ const InterviewerProfile = () => {
                         href={cvPreviewUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                       >
                         <Eye className="w-4 h-4 mr-2" />
                         Open in New Tab
@@ -2018,7 +2018,7 @@ const InterviewerProfile = () => {
                 href={cvPreviewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 Open in New Tab
@@ -2066,7 +2066,7 @@ const InterviewerProfile = () => {
                 href={bankDocPreviewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 Open in New Tab
@@ -2114,7 +2114,7 @@ const InterviewerProfile = () => {
                 href={panPreviewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 Open in New Tab
@@ -2162,7 +2162,7 @@ const InterviewerProfile = () => {
                 href={aadhaarPreviewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 Open in New Tab
@@ -2210,7 +2210,7 @@ const InterviewerProfile = () => {
                 href={passportPreviewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#001D48] hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <Eye className="w-4 h-4 mr-2" />
                 Open in New Tab
