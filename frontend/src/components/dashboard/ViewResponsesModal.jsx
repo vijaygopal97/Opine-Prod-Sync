@@ -15,6 +15,7 @@ import {
 import { surveyResponseAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import ResponseDetailsModal from './ResponseDetailsModal';
+import assemblyConstituenciesData from '../../data/assemblyConstituencies.json';
 
 const ViewResponsesModal = ({ survey, onClose }) => {
   const [responses, setResponses] = useState([]);

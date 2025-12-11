@@ -32,6 +32,7 @@ import { useToast } from '../contexts/ToastContext';
 import { findGenderResponse, normalizeGenderResponse } from '../utils/genderUtils';
 import { getMainText } from '../utils/translations';
 import { getACByName } from '../utils/assemblyConstituencies';
+import assemblyConstituenciesData from '../data/assemblyConstituencies.json';
 import {
   Chart as ChartJS,
   CategoryScale,

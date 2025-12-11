@@ -22,6 +22,7 @@ import { surveyResponseAPI, surveyAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import ResponseDetailsModal from '../components/dashboard/ResponseDetailsModal';
 import { getMainText } from '../utils/translations';
+import assemblyConstituenciesData from '../data/assemblyConstituencies.json';
 
 const ViewResponsesPage = () => {
   const { surveyId } = useParams();
@@ -84,8 +85,8 @@ const ViewResponsesPage = () => {
     pageSize: 10
   });
 
-  // Load assembly constituencies data
-  const [assemblyConstituencies, setAssemblyConstituencies] = useState({});
+  // Load assembly constituencies data (imported directly, bundled in build)
+  const [assemblyConstituencies, setAssemblyConstituencies] = useState(assemblyConstituenciesData);
   
   // Interviewer filter states
   const [interviewerSearchTerm, setInterviewerSearchTerm] = useState('');
@@ -98,22 +99,8 @@ const ViewResponsesPage = () => {
   const acDropdownRef = useRef(null);
   
   useEffect(() => {
-    // Load assembly constituencies data
-    const loadAssemblyData = async () => {
-      try {
-        const response = await fetch('/assemblyConstituencies.json');
-        if (!response.ok) {
-          throw new Error(`Failed to load assembly constituencies: ${response.status}`);
-        }
-        const data = await response.json();
-        setAssemblyConstituencies(data);
-      } catch (error) {
-        console.error('Error loading assembly constituencies:', error);
-        // Set empty object to prevent further errors
-        setAssemblyConstituencies({});
-      }
-    };
-    loadAssemblyData();
+    // Data is already loaded via import, no need to fetch
+    setAssemblyConstituencies(assemblyConstituenciesData);
   }, []);
 
   // Fetch survey details and responses
