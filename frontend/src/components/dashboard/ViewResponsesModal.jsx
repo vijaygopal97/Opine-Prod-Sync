@@ -62,7 +62,7 @@ const ViewResponsesModal = ({ survey, onClose }) => {
     // Load assembly constituencies data
     const loadAssemblyData = async () => {
       try {
-        const response = await fetch('/src/data/assemblyConstituencies.json');
+        const response = await fetch('/assemblyConstituencies.json');
         const data = await response.json();
         setAssemblyConstituencies(data);
       } catch (error) {

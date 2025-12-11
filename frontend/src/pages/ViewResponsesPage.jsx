@@ -101,7 +101,7 @@ const ViewResponsesPage = () => {
     // Load assembly constituencies data
     const loadAssemblyData = async () => {
       try {
-        const response = await fetch('/src/data/assemblyConstituencies.json');
+        const response = await fetch('/assemblyConstituencies.json');
         if (!response.ok) {
           throw new Error(`Failed to load assembly constituencies: ${response.status}`);
         }
