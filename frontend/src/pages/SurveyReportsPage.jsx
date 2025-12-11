@@ -27,7 +27,7 @@ import {
   ChevronRight,
   Phone
 } from 'lucide-react';
-import { surveyResponseAPI, surveyAPI } from '../services/api';
+import { surveyResponseAPI, surveyAPI, pollingStationAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { findGenderResponse, normalizeGenderResponse } from '../utils/genderUtils';
 import { getMainText } from '../utils/translations';
@@ -78,6 +78,7 @@ const SurveyReportsPage = () => {
   const [catiStats, setCatiStats] = useState(null);
   const [acPerformanceStats, setAcPerformanceStats] = useState(null);
   const [interviewerPerformanceStats, setInterviewerPerformanceStats] = useState(null);
+  const [acPCMappingCache, setAcPCMappingCache] = useState(new Map()); // Cache for AC -> PC data
   const { showError } = useToast();
 
   // CATI Performance filter states (separate from main filters)
@@ -1182,6 +1183,20 @@ const SurveyReportsPage = () => {
     return null;
   };
 
+  // Helper function to extract numeric AC code (remove state prefix and leading zeros)
+  // e.g., "WB001" -> "1", "WB010" -> "10", "WB100" -> "100"
+  const getNumericACCode = (acCode) => {
+    if (!acCode || typeof acCode !== 'string') return '';
+    
+    // Remove state prefix (alphabets at the start) and extract numeric part
+    const numericPart = acCode.replace(/^[A-Z]+/, '');
+    
+    // Remove leading zeros and return as string
+    // If all zeros, return "0", otherwise return the number without leading zeros
+    const numericValue = parseInt(numericPart, 10);
+    return isNaN(numericValue) ? '' : numericValue.toString();
+  };
+
   // Analytics calculations
   const analytics = useMemo(() => {
     if (!filteredResponses || filteredResponses.length === 0) {
@@ -1242,7 +1257,28 @@ const SurveyReportsPage = () => {
     }, 0);
     const averageResponseTime = totalResponseTime / totalResponses;
 
-    // AC-wise stats
+    // Helper function to find question response by keywords
+    const findQuestionResponse = (responses, keywords) => {
+      if (!responses || !Array.isArray(responses)) return null;
+      return responses.find(r => {
+        const questionText = getMainText(r.questionText || r.question?.text || '').toLowerCase();
+        return keywords.some(keyword => questionText.includes(keyword.toLowerCase()));
+      });
+    };
+
+    // Helper function to get main text value (handle translations)
+    const getMainTextValue = (text) => {
+      if (!text) return '';
+      if (typeof text === 'string') {
+        return getMainText(text);
+      }
+      if (typeof text === 'object' && text !== null) {
+        return getMainText(text.text || text.value || text || '');
+      }
+      return String(text);
+    };
+
+    // AC-wise stats with demographic data
     const acMap = new Map();
     const districtMap = new Map();
     const lokSabhaMap = new Map();
@@ -1253,10 +1289,48 @@ const SurveyReportsPage = () => {
 
     filteredResponses.forEach(response => {
       const respondentInfo = getRespondentInfo(response.responses, response);
+      const responseData = response.responses || [];
+      
+      // Extract AC code from response (prefer selectedPollingStation.acNo, fallback to extracting from AC name)
+      const getACCodeFromResponse = (response) => {
+        // Priority 1: Use selectedPollingStation.acNo if available
+        if (response.selectedPollingStation?.acNo) {
+          return getNumericACCode(String(response.selectedPollingStation.acNo));
+        }
+        
+        // Priority 2: Extract from AC name
+        const ac = respondentInfo.ac;
+        if (ac && ac !== 'N/A') {
+          const acData = getACByName(ac);
+          if (acData?.acCode) {
+            return getNumericACCode(acData.acCode);
+          }
+        }
+        
+        return '';
+      };
+      
+      // Extract polling station info for PS Covered calculation
+      const getPollingStationInfo = (response) => {
+        const psInfo = response.selectedPollingStation;
+        if (psInfo?.stationName) {
+          return {
+            stationName: psInfo.stationName,
+            groupName: psInfo.groupName,
+            acNo: psInfo.acNo ? getNumericACCode(String(psInfo.acNo)) : '',
+            pcNo: psInfo.pcNo,
+            pcName: psInfo.pcName
+          };
+        }
+        return null;
+      };
       
       // AC stats
       const ac = respondentInfo.ac;
       if (ac && ac !== 'N/A') {
+        const acCode = getACCodeFromResponse(response);
+        const psInfo = getPollingStationInfo(response);
+        
         const currentCount = acMap.get(ac) || { 
           total: 0, 
           capi: 0, 
@@ -1264,9 +1338,36 @@ const SurveyReportsPage = () => {
           interviewers: new Set(),
           approved: 0,
           rejected: 0,
-          underQC: 0
+          underQC: 0,
+          femaleCount: 0,
+          withoutPhoneCount: 0,
+          scCount: 0,
+          muslimCount: 0,
+          age18to24Count: 0,
+          age50PlusCount: 0,
+          pollingStations: new Set(), // Track unique polling stations for PS Covered
+          acCode: acCode, // Store AC code for this AC
+          pcNo: null, // Will be set from polling station data
+          pcName: null // Will be set from polling station data
         };
         currentCount.total += 1;
+        
+        // Track unique polling stations (PS Covered)
+        if (psInfo?.stationName) {
+          const psKey = `${psInfo.stationName}${psInfo.groupName ? `-${psInfo.groupName}` : ''}`;
+          currentCount.pollingStations.add(psKey);
+        }
+        
+        // Update PC data from polling station info if available
+        if (psInfo?.pcNo) {
+          currentCount.pcNo = psInfo.pcNo;
+        }
+        if (psInfo?.pcName) {
+          currentCount.pcName = psInfo.pcName;
+        }
+        if (psInfo?.acNo && !currentCount.acCode) {
+          currentCount.acCode = psInfo.acNo;
+        }
         
         // Check interview mode
         const interviewMode = response.interviewMode?.toUpperCase();
@@ -1289,6 +1390,74 @@ const SurveyReportsPage = () => {
         } else if (response.status === 'Pending_Approval') {
           currentCount.underQC += 1;
         }
+
+        // Demographic calculations
+        // Female count
+        const genderResponse = findGenderResponse(responseData, survey) || findQuestionResponse(responseData, ['gender', 'sex']);
+        if (genderResponse?.response) {
+          const normalizedGender = normalizeGenderResponse(genderResponse.response);
+          if (normalizedGender === 'female') {
+            currentCount.femaleCount += 1;
+          }
+        }
+
+        // Phone number check - look for specific phone question text
+        let phoneResponse = responseData.find(r => {
+          const questionText = getMainText(r.questionText || r.question?.text || '').toLowerCase();
+          return questionText.includes('mobile number') || 
+                 questionText.includes('phone number') ||
+                 questionText.includes('share your mobile') ||
+                 questionText.includes('would you like to share your mobile');
+        });
+        
+        // If not found, try generic search
+        if (!phoneResponse) {
+          phoneResponse = findQuestionResponse(responseData, ['phone', 'mobile', 'contact', 'number']);
+        }
+        
+        // Check if phone number is missing or invalid
+        if (!phoneResponse?.response || 
+            String(phoneResponse.response).trim() === '' || 
+            String(phoneResponse.response).trim() === 'N/A' ||
+            String(phoneResponse.response).trim() === '0') {
+          currentCount.withoutPhoneCount += 1;
+        }
+
+        // SC count (only for survey 68fd1915d41841da463f0d46)
+        if (surveyId === '68fd1915d41841da463f0d46') {
+          const casteResponse = findQuestionResponse(responseData, ['caste', 'scheduled cast', 'sc', 'category']);
+          if (casteResponse?.response) {
+            const casteValue = getMainTextValue(String(casteResponse.response)).toLowerCase();
+            if (casteValue.includes('scheduled cast') || 
+                casteValue.includes('sc') || 
+                casteValue.includes('scheduled caste')) {
+              currentCount.scCount += 1;
+            }
+          }
+        }
+
+        // Muslim count
+        const religionResponse = findQuestionResponse(responseData, ['religion', 'muslim', 'hindu', 'christian']);
+        if (religionResponse?.response) {
+          const religionValue = getMainTextValue(String(religionResponse.response)).toLowerCase();
+          if (religionValue.includes('muslim') || religionValue.includes('islam')) {
+            currentCount.muslimCount += 1;
+          }
+        }
+
+        // Age groups
+        const ageResponse = findQuestionResponse(responseData, ['age', 'year']);
+        if (ageResponse?.response) {
+          const age = parseInt(ageResponse.response);
+          if (!isNaN(age) && age > 0 && age < 150) {
+            if (age >= 18 && age <= 24) {
+              currentCount.age18to24Count += 1;
+            }
+            if (age >= 50) {
+              currentCount.age50PlusCount += 1;
+            }
+          }
+        }
         
         acMap.set(ac, currentCount);
       }
@@ -1305,11 +1474,31 @@ const SurveyReportsPage = () => {
         lokSabhaMap.set(lokSabha, (lokSabhaMap.get(lokSabha) || 0) + 1);
       }
 
-      // Interviewer stats
+      // Interviewer stats with polling stations and demographics
       if (response.interviewer) {
         const interviewerName = `${response.interviewer.firstName} ${response.interviewer.lastName}`;
-        const currentCount = interviewerMap.get(interviewerName) || { total: 0, approved: 0, rejected: 0, pending: 0 };
+        const psInfo = getPollingStationInfo(response);
+        
+        const currentCount = interviewerMap.get(interviewerName) || { 
+          total: 0, 
+          approved: 0, 
+          rejected: 0, 
+          pending: 0,
+          pollingStations: new Set(), // Track unique polling stations for PS Covered
+          femaleCount: 0,
+          withoutPhoneCount: 0,
+          scCount: 0,
+          muslimCount: 0,
+          age18to24Count: 0,
+          age50PlusCount: 0
+        };
         currentCount.total += 1;
+        
+        // Track unique polling stations (PS Covered)
+        if (psInfo?.stationName) {
+          const psKey = `${psInfo.stationName}${psInfo.groupName ? `-${psInfo.groupName}` : ''}`;
+          currentCount.pollingStations.add(psKey);
+        }
         
         // Track status counts
         if (response.status === 'Approved') {
@@ -1318,6 +1507,70 @@ const SurveyReportsPage = () => {
           currentCount.rejected += 1;
         } else if (response.status === 'Pending_Approval') {
           currentCount.pending += 1;
+        }
+        
+        // Demographic calculations for interviewer
+        const genderResponse = findGenderResponse(responseData, survey) || findQuestionResponse(responseData, ['gender', 'sex']);
+        if (genderResponse?.response) {
+          const normalizedGender = normalizeGenderResponse(genderResponse.response);
+          if (normalizedGender === 'female') {
+            currentCount.femaleCount += 1;
+          }
+        }
+
+        // Phone number check for interviewer - look for specific phone question text
+        let phoneResponse = responseData.find(r => {
+          const questionText = getMainText(r.questionText || r.question?.text || '').toLowerCase();
+          return questionText.includes('mobile number') || 
+                 questionText.includes('phone number') ||
+                 questionText.includes('share your mobile') ||
+                 questionText.includes('would you like to share your mobile');
+        });
+        
+        // If not found, try generic search
+        if (!phoneResponse) {
+          phoneResponse = findQuestionResponse(responseData, ['phone', 'mobile', 'contact', 'number']);
+        }
+        
+        // Check if phone number is missing or invalid
+        if (!phoneResponse?.response || 
+            String(phoneResponse.response).trim() === '' || 
+            String(phoneResponse.response).trim() === 'N/A' ||
+            String(phoneResponse.response).trim() === '0') {
+          currentCount.withoutPhoneCount += 1;
+        }
+
+        if (surveyId === '68fd1915d41841da463f0d46') {
+          const casteResponse = findQuestionResponse(responseData, ['caste', 'scheduled cast', 'sc', 'category']);
+          if (casteResponse?.response) {
+            const casteValue = getMainTextValue(String(casteResponse.response)).toLowerCase();
+            if (casteValue.includes('scheduled cast') || 
+                casteValue.includes('sc') || 
+                casteValue.includes('scheduled caste')) {
+              currentCount.scCount += 1;
+            }
+          }
+        }
+
+        const religionResponse = findQuestionResponse(responseData, ['religion', 'muslim', 'hindu', 'christian']);
+        if (religionResponse?.response) {
+          const religionValue = getMainTextValue(String(religionResponse.response)).toLowerCase();
+          if (religionValue.includes('muslim') || religionValue.includes('islam')) {
+            currentCount.muslimCount += 1;
+          }
+        }
+
+        const ageResponse = findQuestionResponse(responseData, ['age', 'year']);
+        if (ageResponse?.response) {
+          const age = parseInt(ageResponse.response);
+          if (!isNaN(age) && age > 0 && age < 150) {
+            if (age >= 18 && age <= 24) {
+              currentCount.age18to24Count += 1;
+            }
+            if (age >= 50) {
+              currentCount.age50PlusCount += 1;
+            }
+          }
         }
         
         interviewerMap.set(interviewerName, currentCount);
@@ -1360,20 +1613,80 @@ const SurveyReportsPage = () => {
       return acName.trim().toLowerCase().replace(/\s+/g, ' ');
     };
 
+    // Helper to get AC/PC data from AC name or AC code
+    // Match by AC code (numeric) - this is the reliable way to match
+    const getACPCData = (acName, acCodeFromMap = null) => {
+      // Use AC code from map if available (more reliable)
+      let numericACCode = acCodeFromMap || '';
+      
+      // If no AC code from map, try to get from AC name
+      if (!numericACCode) {
+        const acData = getACByName(acName);
+        if (acData?.acCode) {
+          numericACCode = getNumericACCode(acData.acCode);
+        }
+      }
+      
+      // Check cache by AC code first (most reliable)
+      if (numericACCode) {
+        for (const [cachedAcName, cachedData] of acPCMappingCache.entries()) {
+          if (cachedData.acCode === numericACCode) {
+            return {
+              acCode: numericACCode,
+              pcCode: cachedData.pcCode || '',
+              pcName: cachedData.pcName || ''
+            };
+          }
+        }
+      }
+      
+      // Check cache by AC name (fallback)
+      if (acPCMappingCache.has(acName)) {
+        const cached = acPCMappingCache.get(acName);
+        return {
+          acCode: numericACCode || cached.acCode || '',
+          pcCode: cached.pcCode || '',
+          pcName: cached.pcName || ''
+        };
+      }
+      
+      // Return AC code, PC data will be fetched async and cached
+      return {
+        acCode: numericACCode,
+        pcCode: '',
+        pcName: ''
+      };
+    };
+
     // Convert maps to sorted arrays - First get ACs with responses
     const acStatsWithResponses = Array.from(acMap.entries())
-      .map(([ac, data]) => ({ 
-        ac, 
-        count: data.total, 
-        capi: data.capi, 
-        cati: data.cati, 
-        percentage: totalResponses > 0 ? (data.total / totalResponses) * 100 : 0,
-        pcName: '', // Empty for now, will be populated later
-        interviewersCount: data.interviewers ? data.interviewers.size : 0,
-        approved: data.approved || 0,
-        rejected: data.rejected || 0,
-        underQC: data.underQC || 0
-      }))
+      .map(([ac, data]) => {
+        const acPCData = getACPCData(ac, data.acCode);
+        const total = data.total;
+        
+        return { 
+          ac, 
+          acCode: acPCData.acCode || data.acCode || '',
+          pcCode: data.pcNo ? String(data.pcNo) : (acPCData.pcCode || ''),
+          pcName: data.pcName || acPCData.pcName || '',
+          count: total, 
+          capi: data.capi, 
+          cati: data.cati, 
+          percentage: totalResponses > 0 ? (total / totalResponses) * 100 : 0,
+          interviewersCount: data.interviewers ? data.interviewers.size : 0,
+          approved: data.approved || 0,
+          rejected: data.rejected || 0,
+          underQC: data.underQC || 0,
+          psCovered: data.pollingStations ? data.pollingStations.size : 0, // PS Covered = unique polling stations
+          // Demographic percentages (calculated from filtered responses)
+          femalePercentage: total > 0 ? (data.femaleCount / total) * 100 : 0,
+          withoutPhonePercentage: total > 0 ? (data.withoutPhoneCount / total) * 100 : 0,
+          scPercentage: total > 0 ? (data.scCount / total) * 100 : 0,
+          muslimPercentage: total > 0 ? (data.muslimCount / total) * 100 : 0,
+          age18to24Percentage: total > 0 ? (data.age18to24Count / total) * 100 : 0,
+          age50PlusPercentage: total > 0 ? (data.age50PlusCount / total) * 100 : 0
+        };
+      })
       .sort((a, b) => b.count - a.count);
 
     // Get all ACs for the state
@@ -1403,18 +1716,30 @@ const SurveyReportsPage = () => {
         const normalized = normalizeACName(acName);
         return !acsWithResponsesNormalized.has(normalized);
       })
-      .map(acName => ({
-        ac: acName,
-        count: 0,
-        capi: 0,
-        cati: 0,
-        percentage: 0,
-        pcName: '', // Empty for now
-        interviewersCount: 0,
-        approved: 0,
-        rejected: 0,
-        underQC: 0
-      }))
+      .map(acName => {
+        const acPCData = getACPCData(acName);
+        return {
+          ac: acName,
+          acCode: acPCData.acCode,
+          pcCode: acPCData.pcCode,
+          pcName: acPCData.pcName,
+          count: 0,
+          capi: 0,
+          cati: 0,
+          percentage: 0,
+          interviewersCount: 0,
+          approved: 0,
+          rejected: 0,
+          underQC: 0,
+          psCovered: 0,
+          femalePercentage: 0,
+          withoutPhonePercentage: 0,
+          scPercentage: 0,
+          muslimPercentage: 0,
+          age18to24Percentage: 0,
+          age50PlusPercentage: 0
+        };
+      })
       .sort((a, b) => a.ac.localeCompare(b.ac));
 
     console.log('🔍 Analytics - acsWithZeroResponses:', acsWithZeroResponses.length, 'ACs with 0 responses');
@@ -1451,7 +1776,15 @@ const SurveyReportsPage = () => {
           approved: approved,
           rejected: rejected,
           pending: pending,
-          percentage: totalResponses > 0 ? (total / totalResponses) * 100 : 0
+          percentage: totalResponses > 0 ? (total / totalResponses) * 100 : 0,
+          psCovered: isObject && data.pollingStations ? data.pollingStations.size : 0,
+          // Demographic percentages
+          femalePercentage: total > 0 && isObject ? (data.femaleCount / total) * 100 : 0,
+          withoutPhonePercentage: total > 0 && isObject ? (data.withoutPhoneCount / total) * 100 : 0,
+          scPercentage: total > 0 && isObject ? (data.scCount / total) * 100 : 0,
+          muslimPercentage: total > 0 && isObject ? (data.muslimCount / total) * 100 : 0,
+          age18to24Percentage: total > 0 && isObject ? (data.age18to24Count / total) * 100 : 0,
+          age50PlusPercentage: total > 0 && isObject ? (data.age50PlusCount / total) * 100 : 0
         };
       })
       .sort((a, b) => b.count - a.count);
@@ -1516,20 +1849,88 @@ const SurveyReportsPage = () => {
     };
   }, [filteredResponses, survey, catiStats]);
 
-
-  // Helper function to extract numeric AC code (remove state prefix and leading zeros)
-  // e.g., "WB001" -> "1", "WB010" -> "10", "WB100" -> "100"
-  const getNumericACCode = (acCode) => {
-    if (!acCode || typeof acCode !== 'string') return '';
+  // Fetch PC data for ACs that don't have it cached (after analytics is defined)
+  // Use AC code for matching - more reliable than AC name
+  useEffect(() => {
+    const fetchPCDataForACs = async () => {
+      if (!survey || !analytics?.acStats) return;
+      
+      const state = survey.acAssignmentState || 'West Bengal';
+      
+      // Get ACs with their codes from analytics
+      const acsToFetch = analytics.acStats
+        .filter(stat => {
+          // Only fetch if we have AC code and don't have PC data yet
+          if (!stat.acCode) return false;
+          // Check if we already have this AC code cached
+          const alreadyCached = Array.from(acPCMappingCache.values()).some(
+            cached => cached.acCode === stat.acCode && cached.pcCode && cached.pcName
+          );
+          return !alreadyCached;
+        })
+        .slice(0, 30); // Limit to 30 at a time
+      
+      if (acsToFetch.length === 0) return;
+      
+      const newCache = new Map(acPCMappingCache);
+      
+      // Fetch in parallel - use AC code (numeric) for fetching (most reliable)
+      const fetchPromises = acsToFetch.map(async (acStat) => {
+        try {
+          // Priority: Use AC code (numeric) for fetching - this is the most reliable
+          // The backend API accepts AC number (numeric) or AC name
+          let acIdentifier = acStat.acCode || '';
+          
+          // If we have AC code, use it directly (backend expects numeric string like "1", "2", etc.)
+          if (acIdentifier) {
+            // AC code is already numeric (e.g., "1", "2", "10")
+            const response = await pollingStationAPI.getGroupsByAC(state, acIdentifier);
+            if (response.success && response.data) {
+              return {
+                ac: acStat.ac,
+                acCode: acStat.acCode,
+                pcCode: response.data.pc_no?.toString() || '',
+                pcName: response.data.pc_name || ''
+              };
+            }
+          }
+          
+          // Fallback: Try with AC name
+          const response = await pollingStationAPI.getGroupsByAC(state, acStat.ac);
+          if (response.success && response.data) {
+            return {
+              ac: acStat.ac,
+              acCode: acStat.acCode || response.data.ac_no?.toString() || '',
+              pcCode: response.data.pc_no?.toString() || '',
+              pcName: response.data.pc_name || ''
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching PC data for AC ${acStat.ac} (code: ${acStat.acCode}):`, error);
+        }
+        return null;
+      });
+      
+      const results = await Promise.allSettled(fetchPromises);
+      results.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value) {
+          // Cache by both AC name and AC code for reliable lookup
+          newCache.set(result.value.ac, {
+            acCode: result.value.acCode,
+            pcCode: result.value.pcCode,
+            pcName: result.value.pcName
+          });
+        }
+      });
+      
+      if (newCache.size > acPCMappingCache.size) {
+        setAcPCMappingCache(newCache);
+      }
+    };
     
-    // Remove state prefix (alphabets at the start) and extract numeric part
-    const numericPart = acCode.replace(/^[A-Z]+/, '');
-    
-    // Remove leading zeros and return as string
-    // If all zeros, return "0", otherwise return the number without leading zeros
-    const numericValue = parseInt(numericPart, 10);
-    return isNaN(numericValue) ? '' : numericValue.toString();
-  };
+    fetchPCDataForACs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analytics?.acStats, survey]);
 
   // All ACs from ALL responses (Approved, Rejected, Pending_Approval) - for dropdown/search
   // This should NOT be filtered by current filters, so users can always see all available ACs
@@ -3139,92 +3540,84 @@ const SurveyReportsPage = () => {
             return acName.trim().toLowerCase().replace(/\s+/g, ' ');
           };
 
+          // Helper to get AC/PC data - use cached data from analytics or cache
+          const getACPCDataForModal = (acName) => {
+            // First try to get from analytics stats (already calculated)
+            const acStat = analytics.acStats?.find(s => normalizeACName(s.ac) === normalizeACName(acName));
+            if (acStat) {
+              // Check cache for PC data if not in stat
+              const cached = acPCMappingCache.get(acName);
+              return {
+                acCode: acStat.acCode || '',
+                pcCode: acStat.pcCode || cached?.pcCode || '',
+                pcName: acStat.pcName || cached?.pcName || ''
+              };
+            }
+            
+            // Check cache
+            if (acPCMappingCache.has(acName)) {
+              const cached = acPCMappingCache.get(acName);
+              const acData = getACByName(acName);
+              return {
+                acCode: acData ? getNumericACCode(acData.acCode || '') : '',
+                pcCode: cached.pcCode || '',
+                pcName: cached.pcName || ''
+              };
+            }
+            
+            // Fallback: get from assemblyConstituencies
+            const acData = getACByName(acName);
+            if (acData) {
+              return {
+                acCode: getNumericACCode(acData.acCode || ''),
+                pcCode: '',
+                pcName: ''
+              };
+            }
+            
+            return { acCode: '', pcCode: '', pcName: '' };
+          };
+
           // Get all ACs from the state
           const allStateACs = getAllACsForState();
           
-          // Get stats - prefer backend if available, otherwise use frontend
-          const statsFromBackend = acPerformanceStats || [];
+          // IMPORTANT: Always use frontend filtered stats (analytics.acStats) which respect all filters
+          // analytics.acStats is calculated from filteredResponses and matches what's shown on the main page
+          // acPerformanceStats is from backend and doesn't respect filters, so it should NOT be used for counts
           const statsFromFrontend = analytics.acStats || [];
+          const totalFilteredResponses = analytics.totalResponses || 0;
           
-          // If backend stats exist, use them; otherwise use frontend stats
-          // Frontend stats already include all ACs (with responses + zeros), so we can use them directly
-          // But if backend stats exist, we need to merge them with all state ACs
           let allACStatsForModal = [];
           
-          if (statsFromBackend.length > 0) {
-            // Backend stats available - merge with all state ACs
-            const statsMap = new Map();
-            statsFromBackend.forEach(stat => {
-              const normalized = normalizeACName(stat.ac);
-              if (!statsMap.has(normalized)) {
-                statsMap.set(normalized, stat);
-              }
-            });
-            
-            // Create a set of normalized AC names that have stats
-            const acsWithStatsNormalized = new Set(
-              statsFromBackend.map(stat => normalizeACName(stat.ac))
-            );
-            
-            // Separate ACs with stats and ACs without stats
-            const acsWithStats = [];
-            const acsWithoutStats = [];
-            
-            allStateACs.forEach(acName => {
-              const normalized = normalizeACName(acName);
-              const existingStat = statsMap.get(normalized);
-              
-              if (existingStat) {
-                // AC has stats - use backend stat
-                acsWithStats.push({
-                  ...existingStat,
-                  ac: acName // Use original AC name from state list
-                });
-              } else {
-                // AC has no stats - create zero stat entry
-                acsWithoutStats.push({
-                  ac: acName,
-                  count: 0,
-                  capi: 0,
-                  cati: 0,
-                  percentage: 0,
-                  pcName: '',
-                  interviewersCount: 0,
-                  approved: 0,
-                  rejected: 0,
-                  underQC: 0,
-                  totalResponses: 0,
-                  psCovered: 0,
-                  systemRejections: 0,
-                  countsAfterRejection: 0,
-                  gpsPending: 0,
-                  gpsFail: 0,
-                  femalePercentage: 0,
-                  withoutPhonePercentage: 0,
-                  scPercentage: 0,
-                  muslimPercentage: 0,
-                  age18to24Percentage: 0,
-                  age50PlusPercentage: 0
-                });
-              }
-            });
-            
-            // Sort ACs with stats by count descending
-            acsWithStats.sort((a, b) => {
-              const countA = a.totalResponses || a.count || 0;
-              const countB = b.totalResponses || b.count || 0;
-              return countB - countA;
-            });
-            
-            // Sort ACs without stats alphabetically
-            acsWithoutStats.sort((a, b) => a.ac.localeCompare(b.ac));
-            
-            // Combine: ACs with stats first, then ACs without stats
-            allACStatsForModal = [...acsWithStats, ...acsWithoutStats];
-          } else {
-            // No backend stats - use frontend stats which already includes all ACs
-            // Frontend analytics.acStats already has the correct merged list
-            allACStatsForModal = statsFromFrontend.length > 0 ? statsFromFrontend : [];
+          // CRITICAL: If there are 0 filtered responses, all stats should be 0
+          // Always use frontend stats (filtered) - they match the current filters
+          if (statsFromFrontend.length > 0) {
+            // Frontend stats already include all ACs (with responses + zeros), so we can use them directly
+            // But ensure all counts are 0 if totalFilteredResponses is 0
+            if (totalFilteredResponses === 0) {
+              // When there are 0 filtered responses, all ACs should show 0 for everything
+              allACStatsForModal = statsFromFrontend.map(stat => ({
+                ...stat,
+                count: 0,
+                capi: 0,
+                cati: 0,
+                percentage: 0,
+                interviewersCount: 0,
+                approved: 0,
+                rejected: 0,
+                underQC: 0,
+                psCovered: 0,
+                femalePercentage: 0,
+                withoutPhonePercentage: 0,
+                scPercentage: 0,
+                muslimPercentage: 0,
+                age18to24Percentage: 0,
+                age50PlusPercentage: 0
+              }));
+            } else {
+              // Use frontend stats as-is (they're already filtered correctly)
+              allACStatsForModal = statsFromFrontend;
+            }
             
             // Ensure all state ACs are included (in case frontend stats are incomplete)
             if (allACStatsForModal.length < allStateACs.length) {
@@ -3244,7 +3637,14 @@ const SurveyReportsPage = () => {
                   interviewersCount: 0,
                   approved: 0,
                   rejected: 0,
-                  underQC: 0
+                  underQC: 0,
+                  psCovered: 0,
+                  femalePercentage: 0,
+                  withoutPhonePercentage: 0,
+                  scPercentage: 0,
+                  muslimPercentage: 0,
+                  age18to24Percentage: 0,
+                  age50PlusPercentage: 0
                 }));
               
               // Sort: ACs with responses first, then zeros alphabetically
@@ -3255,7 +3655,32 @@ const SurveyReportsPage = () => {
                 return a.ac.localeCompare(b.ac);
               });
             }
+          } else {
+            // No frontend stats available - create empty entries for all ACs
+            // This should only happen if analytics is not yet calculated
+            allACStatsForModal = allStateACs.map(acName => ({
+              ac: acName,
+              count: 0,
+              capi: 0,
+              cati: 0,
+              percentage: 0,
+              pcName: '',
+              interviewersCount: 0,
+              approved: 0,
+              rejected: 0,
+              underQC: 0,
+              psCovered: 0,
+              femalePercentage: 0,
+              withoutPhonePercentage: 0,
+              scPercentage: 0,
+              muslimPercentage: 0,
+              age18to24Percentage: 0,
+              age50PlusPercentage: 0
+            })).sort((a, b) => a.ac.localeCompare(b.ac));
           }
+          
+          // REMOVED: Fallback to backend stats - they don't respect filters and cause data inconsistency
+          // The modal should ONLY use frontend filtered stats to match what's shown on the main page
           
           console.log('🔍 Modal - allACStatsForModal length:', allACStatsForModal.length);
           console.log('🔍 Modal - ACs with responses:', allACStatsForModal.filter(s => (s.count || s.totalResponses || 0) > 0).length);
@@ -3278,27 +3703,31 @@ const SurveyReportsPage = () => {
                     onClick={() => {
                       const statsToUse = allACStatsForModal;
                       const csvData = statsToUse.map(stat => {
-                        const displayStat = (acPerformanceStats && acPerformanceStats.length > 0) ? stat : {
+                        // Use frontend calculated data (filtered) - it has all stats including PS Covered and demographics
+                        const displayStat = {
                           ...stat,
-                          pcName: stat.pcName || '',
-                          psCovered: 0,
+                          pcName: stat.pcName || acPCData.pcName || '',
+                          psCovered: stat.psCovered || 0,
                           completedInterviews: stat.count,
-                          systemRejections: 0,
+                          systemRejections: 0, // Not calculated in frontend
                           countsAfterRejection: stat.count,
-                          gpsPending: 0,
-                          gpsFail: 0,
-                          femalePercentage: 0,
-                          withoutPhonePercentage: 0,
-                          scPercentage: 0,
-                          muslimPercentage: 0,
-                          age18to24Percentage: 0,
-                          age50PlusPercentage: 0
+                          gpsPending: 0, // Not calculated in frontend
+                          gpsFail: 0, // Not calculated in frontend
+                          // Use demographic percentages from stat (already calculated from filtered responses)
+                          femalePercentage: stat.femalePercentage || 0,
+                          withoutPhonePercentage: stat.withoutPhonePercentage || 0,
+                          scPercentage: stat.scPercentage || 0,
+                          muslimPercentage: stat.muslimPercentage || 0,
+                          age18to24Percentage: stat.age18to24Percentage || 0,
+                          age50PlusPercentage: stat.age50PlusPercentage || 0
                         };
                         
                         const csvRow = {
                           'Assembly Constituency': stat.ac,
-                          'PC Name': displayStat.pcName || '',
-                          'PS Covered': displayStat.psCovered || 0,
+                          'AC Code': displayStat.acCode || stat.acCode || '',
+                          'PC Code': displayStat.pcCode || stat.pcCode || '',
+                          'PC Name': displayStat.pcName || stat.pcName || '',
+                          'PS Covered': displayStat.psCovered || stat.psCovered || 0,
                           'Completed Interviews': displayStat.completedInterviews || displayStat.totalResponses || stat.count,
                           'System Rejections': displayStat.systemRejections || 0,
                           'Counts after Terminated and System Rejection': displayStat.countsAfterRejection || displayStat.totalResponses || stat.count,
@@ -3357,6 +3786,8 @@ const SurveyReportsPage = () => {
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Rank</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Assembly Constituency</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">AC Code</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">PC Code</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">PC Name</th>
                       <th className="text-right py-3 px-4 font-medium text-gray-900">PS Covered</th>
                       <th className="text-right py-3 px-4 font-medium text-gray-900">Completed Interviews</th>
@@ -3382,22 +3813,28 @@ const SurveyReportsPage = () => {
                   </thead>
                   <tbody>
                     {allACStatsForModal.map((stat, index) => {
-                      // Use backend data if available, otherwise use frontend calculated data
-                      const displayStat = (acPerformanceStats && acPerformanceStats.length > 0) ? stat : {
+                      // Get AC/PC data
+                      const acPCData = getACPCDataForModal(stat.ac);
+                      
+                      // Use frontend calculated data (filtered) - it has all the demographic percentages and PS Covered
+                      const displayStat = {
                         ...stat,
-                        pcName: stat.pcName || '',
-                        psCovered: 0,
+                        acCode: stat.acCode || acPCData.acCode,
+                        pcCode: stat.pcCode || acPCData.pcCode,
+                        pcName: stat.pcName || acPCData.pcName,
+                        psCovered: stat.psCovered || 0, // PS Covered from analytics
                         completedInterviews: stat.count,
-                        systemRejections: 0,
+                        systemRejections: 0, // Not calculated in frontend
                         countsAfterRejection: stat.count,
-                        gpsPending: 0,
-                        gpsFail: 0,
-                        femalePercentage: 0,
-                        withoutPhonePercentage: 0,
-                        scPercentage: 0,
-                        muslimPercentage: 0,
-                        age18to24Percentage: 0,
-                        age50PlusPercentage: 0
+                        gpsPending: 0, // Not calculated in frontend
+                        gpsFail: 0, // Not calculated in frontend
+                        // Use demographic percentages from stat (already calculated from filtered responses)
+                        femalePercentage: stat.femalePercentage || 0,
+                        withoutPhonePercentage: stat.withoutPhonePercentage || 0,
+                        scPercentage: stat.scPercentage || 0,
+                        muslimPercentage: stat.muslimPercentage || 0,
+                        age18to24Percentage: stat.age18to24Percentage || 0,
+                        age50PlusPercentage: stat.age50PlusPercentage || 0
                       };
                       
                       return (
@@ -3408,11 +3845,13 @@ const SurveyReportsPage = () => {
                             </span>
                           </td>
                           <td className="py-3 px-4 font-medium text-gray-900">{stat.ac}</td>
+                          <td className="py-3 px-4 text-gray-600">{displayStat.acCode || '-'}</td>
+                          <td className="py-3 px-4 text-gray-600">{displayStat.pcCode || '-'}</td>
                           <td className="py-3 px-4 text-gray-600">{displayStat.pcName || '-'}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.psCovered || 0}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.completedInterviews || displayStat.totalResponses || stat.count}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.psCovered || stat.psCovered || 0}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.completedInterviews || stat.count}</td>
                           <td className="py-3 px-4 text-right font-semibold text-red-600">{displayStat.systemRejections || 0}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.countsAfterRejection || displayStat.totalResponses || stat.count}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.countsAfterRejection || stat.count}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.gpsPending || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.gpsFail || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.interviewersCount || stat.interviewersCount || 0}</td>
@@ -3421,14 +3860,14 @@ const SurveyReportsPage = () => {
                           <td className="py-3 px-4 text-right font-semibold text-yellow-600">{displayStat.underQC || stat.underQC || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-green-600">{displayStat.capi || stat.capi || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-orange-600">{displayStat.cati || stat.cati || 0}</td>
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.femalePercentage?.toFixed(2) || '0.00'}%</td>
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.withoutPhonePercentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.femalePercentage?.toFixed(2) || stat.femalePercentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.withoutPhonePercentage?.toFixed(2) || stat.withoutPhonePercentage?.toFixed(2) || '0.00'}%</td>
                           {surveyId === '68fd1915d41841da463f0d46' && (
-                            <td className="py-3 px-4 text-right text-gray-600">{displayStat.scPercentage?.toFixed(2) || '0.00'}%</td>
+                            <td className="py-3 px-4 text-right text-gray-600">{displayStat.scPercentage?.toFixed(2) || stat.scPercentage?.toFixed(2) || '0.00'}%</td>
                           )}
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.muslimPercentage?.toFixed(2) || '0.00'}%</td>
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.age18to24Percentage?.toFixed(2) || '0.00'}%</td>
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.age50PlusPercentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.muslimPercentage?.toFixed(2) || stat.muslimPercentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.age18to24Percentage?.toFixed(2) || stat.age18to24Percentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.age50PlusPercentage?.toFixed(2) || stat.age50PlusPercentage?.toFixed(2) || '0.00'}%</td>
                         </tr>
                       );
                     })}
@@ -3449,25 +3888,27 @@ const SurveyReportsPage = () => {
                 <div className="flex flex-col items-end space-y-2 ml-4">
                   <button
                     onClick={() => {
-                      const statsToUse = interviewerPerformanceStats || analytics.interviewerStats;
+                      // Always use filtered frontend stats (analytics.interviewerStats) which respect all filters
+                      const statsToUse = analytics.interviewerStats || [];
                       const csvData = statsToUse.map(stat => {
-                        const displayStat = interviewerPerformanceStats ? stat : {
+                        // Use frontend calculated data (filtered) - it respects current filters
+                        const displayStat = {
                           ...stat,
-                          psCovered: 0,
+                          psCovered: 0, // Not calculated in frontend
                           completedInterviews: stat.count,
-                          systemRejections: 0,
+                          systemRejections: 0, // Not calculated in frontend
                           countsAfterRejection: stat.count,
-                          gpsPending: 0,
-                          gpsFail: 0,
-                          underQC: 0,
-                          capi: 0,
-                          cati: 0,
-                          femalePercentage: 0,
-                          withoutPhonePercentage: 0,
-                          scPercentage: 0,
-                          muslimPercentage: 0,
-                          age18to24Percentage: 0,
-                          age50PlusPercentage: 0
+                          gpsPending: 0, // Not calculated in frontend
+                          gpsFail: 0, // Not calculated in frontend
+                          underQC: stat.pending || 0,
+                          capi: 0, // Not calculated per interviewer in frontend
+                          cati: 0, // Not calculated per interviewer in frontend
+                          femalePercentage: 0, // Not calculated per interviewer in frontend
+                          withoutPhonePercentage: 0, // Not calculated per interviewer in frontend
+                          scPercentage: 0, // Not calculated per interviewer in frontend
+                          muslimPercentage: 0, // Not calculated per interviewer in frontend
+                          age18to24Percentage: 0, // Not calculated per interviewer in frontend
+                          age50PlusPercentage: 0 // Not calculated per interviewer in frontend
                         };
                         
                         const csvRow = {
@@ -3552,25 +3993,27 @@ const SurveyReportsPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(interviewerPerformanceStats || analytics.interviewerStats).map((stat, index) => {
-                      // Use backend data if available, otherwise use frontend calculated data
-                      const displayStat = interviewerPerformanceStats ? stat : {
+                    {/* Always use filtered frontend stats (analytics.interviewerStats) which respect all filters */}
+                    {(analytics.interviewerStats || []).map((stat, index) => {
+                      // Use frontend calculated data (filtered) - it respects current filters and has all stats
+                      const displayStat = {
                         ...stat,
-                        psCovered: 0,
+                        psCovered: stat.psCovered || 0, // PS Covered from analytics
                         completedInterviews: stat.count,
-                        systemRejections: 0,
+                        systemRejections: 0, // Not calculated in frontend
                         countsAfterRejection: stat.count,
-                        gpsPending: 0,
-                        gpsFail: 0,
-                        underQC: 0,
-                        capi: 0,
-                        cati: 0,
-                        femalePercentage: 0,
-                        withoutPhonePercentage: 0,
-                        scPercentage: 0,
-                        muslimPercentage: 0,
-                        age18to24Percentage: 0,
-                        age50PlusPercentage: 0
+                        gpsPending: 0, // Not calculated in frontend
+                        gpsFail: 0, // Not calculated in frontend
+                        underQC: stat.pending || 0,
+                        capi: 0, // Not calculated per interviewer in frontend
+                        cati: 0, // Not calculated per interviewer in frontend
+                        // Use demographic percentages from stat (already calculated from filtered responses)
+                        femalePercentage: stat.femalePercentage || 0,
+                        withoutPhonePercentage: stat.withoutPhonePercentage || 0,
+                        scPercentage: stat.scPercentage || 0,
+                        muslimPercentage: stat.muslimPercentage || 0,
+                        age18to24Percentage: stat.age18to24Percentage || 0,
+                        age50PlusPercentage: stat.age50PlusPercentage || 0
                       };
                       
                       return (
@@ -3581,10 +4024,10 @@ const SurveyReportsPage = () => {
                             </span>
                           </td>
                           <td className="py-3 px-4 font-medium text-gray-900">{stat.interviewer}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.psCovered || 0}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.completedInterviews || displayStat.totalResponses || stat.count}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.psCovered || stat.psCovered || 0}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.completedInterviews || stat.count}</td>
                           <td className="py-3 px-4 text-right font-semibold text-red-600">{displayStat.systemRejections || 0}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.countsAfterRejection || displayStat.totalResponses || stat.count}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.countsAfterRejection || stat.count}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.gpsPending || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.gpsFail || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-green-600">{displayStat.approved || stat.approved || 0}</td>
@@ -3592,14 +4035,14 @@ const SurveyReportsPage = () => {
                           <td className="py-3 px-4 text-right font-semibold text-yellow-600">{displayStat.underQC || stat.underQC || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-green-600">{displayStat.capi || stat.capi || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-orange-600">{displayStat.cati || stat.cati || 0}</td>
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.femalePercentage?.toFixed(2) || '0.00'}%</td>
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.withoutPhonePercentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.femalePercentage?.toFixed(2) || stat.femalePercentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.withoutPhonePercentage?.toFixed(2) || stat.withoutPhonePercentage?.toFixed(2) || '0.00'}%</td>
                           {surveyId === '68fd1915d41841da463f0d46' && (
-                            <td className="py-3 px-4 text-right text-gray-600">{displayStat.scPercentage?.toFixed(2) || '0.00'}%</td>
+                            <td className="py-3 px-4 text-right text-gray-600">{displayStat.scPercentage?.toFixed(2) || stat.scPercentage?.toFixed(2) || '0.00'}%</td>
                           )}
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.muslimPercentage?.toFixed(2) || '0.00'}%</td>
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.age18to24Percentage?.toFixed(2) || '0.00'}%</td>
-                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.age50PlusPercentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.muslimPercentage?.toFixed(2) || stat.muslimPercentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.age18to24Percentage?.toFixed(2) || stat.age18to24Percentage?.toFixed(2) || '0.00'}%</td>
+                          <td className="py-3 px-4 text-right text-gray-600">{displayStat.age50PlusPercentage?.toFixed(2) || stat.age50PlusPercentage?.toFixed(2) || '0.00'}%</td>
                         </tr>
                       );
                     })}
