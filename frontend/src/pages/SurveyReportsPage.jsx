@@ -126,11 +126,8 @@ const SurveyReportsPage = () => {
   const [showACDropdown, setShowACDropdown] = useState(false);
   const acDropdownRef = useRef(null);
 
-  // Load assembly constituencies data
-  const [assemblyConstituencies, setAssemblyConstituencies] = useState({});
-  
-  // Import assembly constituencies data directly (bundled in build)
-  import assemblyConstituenciesData from '../data/assemblyConstituencies.json';
+  // Load assembly constituencies data (imported directly, bundled in build)
+  const [assemblyConstituencies, setAssemblyConstituencies] = useState(assemblyConstituenciesData);
 
   useEffect(() => {
     // Data is already loaded via import, no need to fetch
