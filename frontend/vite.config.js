@@ -28,6 +28,10 @@ export default defineConfig({
         }
         warn(warning);
       }
-    }
-  }
+    },
+    // Copy public assets to dist
+    copyPublicDir: true
+  },
+  // Ensure public files are accessible
+  publicDir: 'public'
 })
