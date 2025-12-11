@@ -58,18 +58,12 @@ const ViewResponsesModal = ({ survey, onClose }) => {
   // Load assembly constituencies data
   const [assemblyConstituencies, setAssemblyConstituencies] = useState({});
   
+  // Import assembly constituencies data directly (bundled in build)
+  import assemblyConstituenciesData from '../../data/assemblyConstituencies.json';
+
   useEffect(() => {
-    // Load assembly constituencies data
-    const loadAssemblyData = async () => {
-      try {
-        const response = await fetch('/assemblyConstituencies.json');
-        const data = await response.json();
-        setAssemblyConstituencies(data);
-      } catch (error) {
-        console.error('Error loading assembly constituencies:', error);
-      }
-    };
-    loadAssemblyData();
+    // Data is already loaded via import, no need to fetch
+    setAssemblyConstituencies(assemblyConstituenciesData);
   }, []);
 
   // Fetch responses (without filters - get all data for client-side filtering)

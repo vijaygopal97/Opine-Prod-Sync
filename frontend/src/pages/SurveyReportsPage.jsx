@@ -128,22 +128,12 @@ const SurveyReportsPage = () => {
   // Load assembly constituencies data
   const [assemblyConstituencies, setAssemblyConstituencies] = useState({});
   
+  // Import assembly constituencies data directly (bundled in build)
+  import assemblyConstituenciesData from '../data/assemblyConstituencies.json';
+
   useEffect(() => {
-    const loadAssemblyData = async () => {
-      try {
-        const response = await fetch('/assemblyConstituencies.json');
-        if (!response.ok) {
-          throw new Error(`Failed to load assembly constituencies: ${response.status}`);
-        }
-        const data = await response.json();
-        setAssemblyConstituencies(data);
-      } catch (error) {
-        console.error('Error loading assembly constituencies:', error);
-        // Set empty object to prevent further errors
-        setAssemblyConstituencies({});
-      }
-    };
-    loadAssemblyData();
+    // Data is already loaded via import, no need to fetch
+    setAssemblyConstituencies(assemblyConstituenciesData);
   }, []);
 
   // Get all ACs for the survey's target state
