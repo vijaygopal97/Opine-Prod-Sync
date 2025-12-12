@@ -2990,6 +2990,9 @@ exports.getCatiStats = async (req, res) => {
       const responseStatus = response.status ? response.status.trim() : '';
       const normalizedResponseStatus = responseStatus.toLowerCase();
       
+      // Check if this is a completed interview (call was connected)
+      const isCompleted = normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected';
+      
       // IMPORTANT: Rejected responses should be counted regardless of call status
       // because they represent completed interviews that were later rejected during QC
       // They might not have call status set properly, but they are still completed interviews
@@ -3002,14 +3005,9 @@ exports.getCatiStats = async (req, res) => {
           stat.formDuration += (response.totalTimeSpent || 0);
           console.log(`⏱️  Adding form duration: ${response.totalTimeSpent || 0}s for interviewer ${interviewerId}, total now: ${stat.formDuration}s`);
         }
-        // Continue to call status breakdown (don't return early)
-        // We still want to count these in call status stats
-      }
-      
-      // Check if this is a completed interview (call was connected)
-      const isCompleted = normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected';
-      
-      if (isCompleted) {
+        // Skip to call status breakdown - don't process as completed/incomplete again
+        // Rejected responses are already counted in "Completed", so skip the isCompleted block
+      } else if (isCompleted) {
         // Completed: Call was connected and interview completed
         stat.completed += 1;
         
@@ -3018,7 +3016,6 @@ exports.getCatiStats = async (req, res) => {
         console.log(`⏱️  Adding form duration: ${response.totalTimeSpent || 0}s for interviewer ${interviewerId}, total now: ${stat.formDuration}s`);
         
         // Categorize completed interviews into: Successful, Under QC Queue, or Processing in Batch
-        // (Rejected is already handled above)
         if (responseStatus === 'Approved') {
           // Split Under QC into two categories based on batch status (only for completed interviews)
           let batchId = null;
