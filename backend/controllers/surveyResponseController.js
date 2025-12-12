@@ -1929,7 +1929,10 @@ const getNextReviewAssignment = async (req, res) => {
           select: 'firstName lastName email _id'
         }
       })
-      .populate('interviewer', 'firstName lastName email phone memberId')
+      .populate({
+        path: 'interviewer',
+        select: 'firstName lastName email phone memberId'
+      })
       .sort({ 'reviewAssignment.assignedAt': 1 }) // Oldest assignment first
       .lean();
 
@@ -2043,33 +2046,13 @@ const getNextReviewAssignment = async (req, res) => {
           interviewerKeys: activeAssignment.interviewer ? Object.keys(activeAssignment.interviewer) : [],
           interviewerId: activeAssignment.interviewer?._id?.toString(),
           interviewerMemberId: activeAssignment.interviewer?.memberId,
+          interviewerMemberID: activeAssignment.interviewer?.memberID,
           fullInterviewer: JSON.stringify(activeAssignment.interviewer, null, 2)
         });
         
-        // Ensure interviewer is properly populated and has memberId
-        let interviewerData = null;
-        if (activeAssignment.interviewer) {
-          // If interviewer is an ObjectId (not populated), it will be a string/ObjectId
-          if (typeof activeAssignment.interviewer === 'object' && activeAssignment.interviewer.firstName) {
-            // It's populated, use it directly
-            interviewerData = {
-              _id: activeAssignment.interviewer._id,
-              firstName: activeAssignment.interviewer.firstName,
-              lastName: activeAssignment.interviewer.lastName,
-              email: activeAssignment.interviewer.email,
-              phone: activeAssignment.interviewer.phone,
-              memberId: activeAssignment.interviewer.memberId || activeAssignment.interviewer.memberID || null
-            };
-          } else {
-            // It's not populated, log warning but keep it as is
-            console.warn('⚠️ getNextReviewAssignment - Active assignment interviewer not populated, is ObjectId:', activeAssignment.interviewer);
-            interviewerData = activeAssignment.interviewer;
-          }
-        }
-        
+        // Use interviewer directly from populate (same as getPendingApprovals)
         const transformedResponse = {
           ...activeAssignment,
-          interviewer: interviewerData,
           totalQuestions: effectiveQuestions,
           answeredQuestions,
           completionPercentage
@@ -2082,7 +2065,13 @@ const getNextReviewAssignment = async (req, res) => {
           interviewerId: transformedResponse.interviewer?._id?.toString(),
           interviewerName: transformedResponse.interviewer ? `${transformedResponse.interviewer.firstName} ${transformedResponse.interviewer.lastName}` : 'null',
           interviewerMemberId: transformedResponse.interviewer?.memberId || 'null',
+          interviewerKeys: transformedResponse.interviewer ? Object.keys(transformedResponse.interviewer) : [],
           fullTransformedInterviewer: JSON.stringify(transformedResponse.interviewer, null, 2)
+        });
+        console.log('🔍 getNextReviewAssignment - Final response interviewer memberId check:', {
+          memberId: transformedResponse.interviewer?.memberId,
+          hasMemberId: !!transformedResponse.interviewer?.memberId,
+          interviewerObject: transformedResponse.interviewer
         });
 
         return res.status(200).json({
@@ -2105,7 +2094,10 @@ const getNextReviewAssignment = async (req, res) => {
           select: 'firstName lastName email _id'
         }
       })
-      .populate('interviewer', 'firstName lastName email phone memberId')
+      .populate({
+        path: 'interviewer',
+        select: 'firstName lastName email phone memberId'
+      })
       .sort({ createdAt: 1 }) // Oldest first
       .lean();
 
@@ -2241,7 +2233,11 @@ const getNextReviewAssignment = async (req, res) => {
         select: 'firstName lastName email _id'
       }
     })
-    .populate('interviewer', 'firstName lastName email phone memberId')
+    .populate({
+      path: 'interviewer',
+      select: 'firstName lastName email phone memberId',
+      options: { lean: true }
+    })
     .lean();
 
     // Calculate effective questions (same logic as getPendingApprovals)
@@ -2339,42 +2335,9 @@ const getNextReviewAssignment = async (req, res) => {
     const answeredQuestions = updatedResponse.responses?.filter(r => !r.isSkipped).length || 0;
     const completionPercentage = effectiveQuestions > 0 ? Math.round((answeredQuestions / effectiveQuestions) * 100) : 0;
 
-    // Explicitly preserve interviewer field with memberId
-    // Log raw interviewer data before transformation
-    console.log('🔍 getNextReviewAssignment - Raw interviewer data before transformation:', {
-      hasInterviewer: !!updatedResponse.interviewer,
-      interviewerType: typeof updatedResponse.interviewer,
-      interviewerIsObject: updatedResponse.interviewer && typeof updatedResponse.interviewer === 'object',
-      interviewerKeys: updatedResponse.interviewer ? Object.keys(updatedResponse.interviewer) : [],
-      interviewerId: updatedResponse.interviewer?._id?.toString(),
-      interviewerMemberId: updatedResponse.interviewer?.memberId,
-      fullInterviewer: JSON.stringify(updatedResponse.interviewer, null, 2)
-    });
-    
-    // Ensure interviewer is properly populated and has memberId
-    let interviewerData = null;
-    if (updatedResponse.interviewer) {
-      // If interviewer is an ObjectId (not populated), it will be a string/ObjectId
-      if (typeof updatedResponse.interviewer === 'object' && updatedResponse.interviewer.firstName) {
-        // It's populated, use it directly
-        interviewerData = {
-          _id: updatedResponse.interviewer._id,
-          firstName: updatedResponse.interviewer.firstName,
-          lastName: updatedResponse.interviewer.lastName,
-          email: updatedResponse.interviewer.email,
-          phone: updatedResponse.interviewer.phone,
-          memberId: updatedResponse.interviewer.memberId || updatedResponse.interviewer.memberID || null
-        };
-      } else {
-        // It's not populated, log warning but keep it as is
-        console.warn('⚠️ getNextReviewAssignment - Interviewer not populated, is ObjectId:', updatedResponse.interviewer);
-        interviewerData = updatedResponse.interviewer;
-      }
-    }
-    
+    // Use interviewer directly from populate (same as getPendingApprovals)
     const transformedResponse = {
       ...updatedResponse,
-      interviewer: interviewerData,
       totalQuestions: effectiveQuestions,
       answeredQuestions,
       completionPercentage
@@ -2387,7 +2350,13 @@ const getNextReviewAssignment = async (req, res) => {
       interviewerId: transformedResponse.interviewer?._id?.toString(),
       interviewerName: transformedResponse.interviewer ? `${transformedResponse.interviewer.firstName} ${transformedResponse.interviewer.lastName}` : 'null',
       interviewerMemberId: transformedResponse.interviewer?.memberId || 'null',
+      interviewerKeys: transformedResponse.interviewer ? Object.keys(transformedResponse.interviewer) : [],
       fullTransformedInterviewer: JSON.stringify(transformedResponse.interviewer, null, 2)
+    });
+    console.log('🔍 getNextReviewAssignment - Final response interviewer memberId check:', {
+      memberId: transformedResponse.interviewer?.memberId,
+      hasMemberId: !!transformedResponse.interviewer?.memberId,
+      interviewerObject: transformedResponse.interviewer
     });
 
     res.status(200).json({
@@ -2597,6 +2566,86 @@ const releaseReviewAssignment = async (req, res) => {
 };
 
 // Submit survey response verification
+// Helper function to generate rejection reason from verification criteria
+const generateRejectionReason = (verificationCriteria, status) => {
+  if (status !== 'rejected') return '';
+  
+  const reasons = [];
+  
+  // Audio Status - fails if not '1', '4', or '7'
+  if (verificationCriteria.audioStatus && !['1', '4', '7'].includes(verificationCriteria.audioStatus)) {
+    reasons.push('Audio quality did not meet standards');
+  }
+  
+  // Gender Matching - fails if not '1'
+  if (verificationCriteria.genderMatching && verificationCriteria.genderMatching !== '1') {
+    if (verificationCriteria.genderMatching === '2') {
+      reasons.push('Gender response did not match');
+    } else if (verificationCriteria.genderMatching === '3') {
+      reasons.push('Male answering on behalf of female');
+    } else {
+      reasons.push('Gender verification failed');
+    }
+  }
+  
+  // Upcoming Elections Matching - fails if not '1' or '3'
+  if (verificationCriteria.upcomingElectionsMatching && !['1', '3'].includes(verificationCriteria.upcomingElectionsMatching)) {
+    if (verificationCriteria.upcomingElectionsMatching === '2') {
+      reasons.push('Upcoming elections response did not match');
+    } else if (verificationCriteria.upcomingElectionsMatching === '4') {
+      reasons.push('Upcoming elections question not asked');
+    } else {
+      reasons.push('Upcoming elections verification failed');
+    }
+  }
+  
+  // Previous Elections Matching (Assembly 2021) - fails if not '1' or '3'
+  if (verificationCriteria.previousElectionsMatching && !['1', '3'].includes(verificationCriteria.previousElectionsMatching)) {
+    if (verificationCriteria.previousElectionsMatching === '2') {
+      reasons.push('Previous assembly elections response did not match');
+    } else if (verificationCriteria.previousElectionsMatching === '4') {
+      reasons.push('Previous assembly elections question not asked');
+    } else {
+      reasons.push('Previous assembly elections verification failed');
+    }
+  }
+  
+  // Previous Lok Sabha Elections Matching - fails if not '1' or '3'
+  if (verificationCriteria.previousLoksabhaElectionsMatching && !['1', '3'].includes(verificationCriteria.previousLoksabhaElectionsMatching)) {
+    if (verificationCriteria.previousLoksabhaElectionsMatching === '2') {
+      reasons.push('Previous Lok Sabha elections response did not match');
+    } else if (verificationCriteria.previousLoksabhaElectionsMatching === '4') {
+      reasons.push('Previous Lok Sabha elections question not asked');
+    } else {
+      reasons.push('Previous Lok Sabha elections verification failed');
+    }
+  }
+  
+  // Name Matching - fails if not '1' or '3'
+  if (verificationCriteria.nameMatching && !['1', '3'].includes(verificationCriteria.nameMatching)) {
+    if (verificationCriteria.nameMatching === '2') {
+      reasons.push('Name response did not match');
+    } else if (verificationCriteria.nameMatching === '4') {
+      reasons.push('Name question not asked');
+    } else {
+      reasons.push('Name verification failed');
+    }
+  }
+  
+  // Age Matching - fails if not '1' or '3'
+  if (verificationCriteria.ageMatching && !['1', '3'].includes(verificationCriteria.ageMatching)) {
+    if (verificationCriteria.ageMatching === '2') {
+      reasons.push('Age response did not match');
+    } else if (verificationCriteria.ageMatching === '4') {
+      reasons.push('Age question not asked');
+    } else {
+      reasons.push('Age verification failed');
+    }
+  }
+  
+  return reasons.length > 0 ? reasons.join('; ') : 'QC verification failed';
+};
+
 const submitVerification = async (req, res) => {
   try {
     const { responseId, status, verificationCriteria, feedback } = req.body;
@@ -2666,44 +2715,111 @@ const submitVerification = async (req, res) => {
       });
     }
 
+    // Determine the new status based on the submitted status
+    const newStatus = status === 'approved' ? 'Approved' : 'Rejected';
+    
+    // Generate rejection reason from criteria if rejected and no custom feedback provided
+    const rejectionReason = status === 'rejected' && !feedback 
+      ? generateRejectionReason(verificationCriteria, status)
+      : feedback || '';
+    
+    console.log('🔍 submitVerification - Status update:', {
+      submittedStatus: status,
+      newStatus: newStatus,
+      currentStatus: surveyResponse.status,
+      responseId: responseId,
+      surveyResponseId: surveyResponse._id.toString(),
+      hasCustomFeedback: !!feedback,
+      generatedRejectionReason: rejectionReason
+    });
+
     // Update the survey response with verification data and clear assignment
+    // Use MongoDB operators consistently
     const updateData = {
-      status: status === 'approved' ? 'Approved' : 'Rejected',
-      verificationData: {
-        reviewer: reviewerId,
-        reviewedAt: new Date(),
-        criteria: verificationCriteria,
-        feedback: feedback || '',
-        // New verification criteria fields
-        audioStatus: verificationCriteria.audioStatus,
-        genderMatching: verificationCriteria.genderMatching,
-        upcomingElectionsMatching: verificationCriteria.upcomingElectionsMatching,
-        previousElectionsMatching: verificationCriteria.previousElectionsMatching,
-        previousLoksabhaElectionsMatching: verificationCriteria.previousLoksabhaElectionsMatching,
-        nameMatching: verificationCriteria.nameMatching,
-        ageMatching: verificationCriteria.ageMatching,
-        phoneNumberAsked: verificationCriteria.phoneNumberAsked,
-        // Keep old fields for backward compatibility (if present)
-        audioQuality: verificationCriteria.audioQuality,
-        questionAccuracy: verificationCriteria.questionAccuracy,
-        dataAccuracy: verificationCriteria.dataAccuracy,
-        locationMatch: verificationCriteria.locationMatch
+      $set: {
+        status: newStatus,
+        verificationData: {
+          reviewer: reviewerId,
+          reviewedAt: new Date(),
+          criteria: verificationCriteria,
+          feedback: rejectionReason,
+          // New verification criteria fields
+          audioStatus: verificationCriteria.audioStatus,
+          genderMatching: verificationCriteria.genderMatching,
+          upcomingElectionsMatching: verificationCriteria.upcomingElectionsMatching,
+          previousElectionsMatching: verificationCriteria.previousElectionsMatching,
+          previousLoksabhaElectionsMatching: verificationCriteria.previousLoksabhaElectionsMatching,
+          nameMatching: verificationCriteria.nameMatching,
+          ageMatching: verificationCriteria.ageMatching,
+          phoneNumberAsked: verificationCriteria.phoneNumberAsked,
+          // Keep old fields for backward compatibility (if present)
+          audioQuality: verificationCriteria.audioQuality,
+          questionAccuracy: verificationCriteria.questionAccuracy,
+          dataAccuracy: verificationCriteria.dataAccuracy,
+          locationMatch: verificationCriteria.locationMatch
+        }
       },
-      $unset: { reviewAssignment: 1 } // Clear assignment on completion
+      $unset: { reviewAssignment: '' } // Clear assignment on completion (use empty string for $unset)
     };
 
-    const updatedResponse = await SurveyResponse.findByIdAndUpdate(
-      surveyResponse._id,
+    console.log('🔍 submitVerification - Update data:', {
+      status: updateData.$set.status,
+      hasVerificationData: !!updateData.$set.verificationData,
+      reviewer: updateData.$set.verificationData.reviewer?.toString(),
+      responseId: responseId
+    });
+
+    // Use findOneAndUpdate with explicit status update
+    const updatedResponse = await SurveyResponse.findOneAndUpdate(
+      { _id: surveyResponse._id },
       updateData,
-      { new: true }
+      { new: true, runValidators: false }
     ).populate('interviewer', 'firstName lastName email');
 
-    console.log('submitVerification - Updated response:', {
-      id: updatedResponse._id,
+    if (!updatedResponse) {
+      console.error('❌ submitVerification - Failed to find and update response!', {
+        responseId: responseId,
+        surveyResponseId: surveyResponse._id.toString()
+      });
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update survey response'
+      });
+    }
+
+    console.log('✅ submitVerification - Updated response:', {
+      id: updatedResponse._id.toString(),
       responseId: updatedResponse.responseId,
       status: updatedResponse.status,
-      interviewer: updatedResponse.interviewer?.email
+      previousStatus: surveyResponse.status,
+      interviewer: updatedResponse.interviewer?.email,
+      verificationDataExists: !!updatedResponse.verificationData,
+      reviewer: updatedResponse.verificationData?.reviewer?.toString()
     });
+    
+    // Verify the update actually happened
+    if (updatedResponse.status !== newStatus) {
+      console.error('❌ submitVerification - Status update failed!', {
+        expectedStatus: newStatus,
+        actualStatus: updatedResponse.status,
+        responseId: responseId,
+        updateDataStatus: updateData.status
+      });
+      
+      // Try a direct update as fallback
+      console.log('🔄 submitVerification - Attempting direct status update as fallback...');
+      const fallbackUpdate = await SurveyResponse.findByIdAndUpdate(
+        surveyResponse._id,
+        { $set: { status: newStatus } },
+        { new: true }
+      );
+      console.log('🔄 submitVerification - Fallback update result:', {
+        status: fallbackUpdate?.status,
+        success: fallbackUpdate?.status === newStatus
+      });
+    } else {
+      console.log('✅ submitVerification - Status update successful!');
+    }
 
     res.status(200).json({
       success: true,

@@ -2719,7 +2719,7 @@ const SurveyApprovals = () => {
                   
                   return (
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      {selectedInterview.interviewer && (
+                      {selectedInterview.interviewer ? (
                         <>
                           <div>
                             <span className="text-gray-600">Interviewer:</span>
@@ -2734,6 +2734,10 @@ const SurveyApprovals = () => {
                             </span>
                           </div>
                         </>
+                      ) : (
+                        <div className="col-span-2 text-xs text-gray-400">
+                          Interviewer information not available
+                        </div>
                       )}
                       <div>
                         <span className="text-gray-600">Duration:</span>
