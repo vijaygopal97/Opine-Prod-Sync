@@ -32,7 +32,15 @@ export default defineConfig({
     // Copy public assets to dist
     copyPublicDir: true,
     // Ensure JSON files are properly inlined in the bundle (set high limit to inline JSON)
-    assetsInlineLimit: 1000000 // 1MB - ensures JSON files are inlined, not fetched
+    assetsInlineLimit: 1000000, // 1MB - ensures JSON files are inlined, not fetched
+    // Ensure all JSON imports are inlined
+    commonjsOptions: {
+      transformMixedEsModules: true
+    }
+  },
+  // Optimize dependencies to ensure JSON is bundled
+  optimizeDeps: {
+    include: ['../data/assemblyConstituencies.json']
   },
   // Ensure public files are accessible
   publicDir: 'public'
