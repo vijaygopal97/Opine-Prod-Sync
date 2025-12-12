@@ -569,45 +569,25 @@ const CompanySurveysManagement = () => {
               
               {/* Vertical Action Buttons */}
               <div className="flex flex-col space-y-2 ml-4">
-                {/* View Responses Button - Show if there are ANY responses (approved, rejected, pending, terminated, abandoned, etc.) */}
-                {(() => {
-                  const allResponsesCount = survey.analytics?.allResponsesCount || 0;
-                  const totalResponses = survey.analytics?.totalResponses || 0;
-                  const shouldShow = allResponsesCount > 0 || totalResponses > 0;
-                  
-                  // Debug logging
-                  if (survey._id === '68fd1915d41841da463f0d46' || survey.id === '68fd1915d41841da463f0d46') {
-                    console.log('🔍 Survey button visibility check:', {
-                      surveyId: survey._id || survey.id,
-                      surveyName: survey.surveyName,
-                      allResponsesCount,
-                      totalResponses,
-                      shouldShow,
-                      analytics: survey.analytics
-                    });
-                  }
-                  
-                  return shouldShow;
-                })() && (
-                  <>
-                    <button
-                      onClick={() => handleViewResponses(survey)}
-                      className="flex items-center space-x-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
-                      title="View Responses"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      <span>View Responses</span>
-                    </button>
-                    <button
-                      onClick={() => handleQCPerformance(survey)}
-                      className="flex items-center space-x-1 px-3 py-1.5 bg-[#E8E6F5] text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
-                      title="QC Performance"
-                    >
-                      <Target className="w-4 h-4" />
-                      <span>QC Performance</span>
-                    </button>
-                  </>
-                )}
+                {/* View Responses and QC Performance Buttons - Always show */}
+                <>
+                  <button
+                    onClick={() => handleViewResponses(survey)}
+                    className="flex items-center space-x-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
+                    title="View Responses"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    <span>View Responses</span>
+                  </button>
+                  <button
+                    onClick={() => handleQCPerformance(survey)}
+                    className="flex items-center space-x-1 px-3 py-1.5 bg-[#E8E6F5] text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
+                    title="QC Performance"
+                  >
+                    <Target className="w-4 h-4" />
+                    <span>QC Performance</span>
+                  </button>
+                </>
                 
                 {/* Action Buttons Row 1 */}
                 <div className="flex flex-col space-y-2">
