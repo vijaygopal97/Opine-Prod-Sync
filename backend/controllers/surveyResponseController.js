@@ -1450,6 +1450,10 @@ const getPendingApprovals = async (req, res) => {
       surveyId: i.survey?._id || i.survey,
       surveyName: i.survey?.surveyName,
       hasSurvey: !!i.survey,
+      hasInterviewer: !!i.interviewer,
+      interviewerId: i.interviewer?._id?.toString() || i.interviewer?.toString() || 'null',
+      interviewerName: i.interviewer ? `${i.interviewer.firstName} ${i.interviewer.lastName}` : 'null',
+      interviewerMemberId: i.interviewer?.memberId || 'null',
       createdAt: i.createdAt
     })));
 

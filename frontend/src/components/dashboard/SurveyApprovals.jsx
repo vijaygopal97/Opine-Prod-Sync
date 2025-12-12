@@ -3595,9 +3595,9 @@ const SurveyApprovals = () => {
                         
                         // NEVER set S3 keys directly - they will be resolved relative to current page
                         if (audioUrl && (audioUrl.startsWith('audio/') || audioUrl.startsWith('documents/') || audioUrl.startsWith('reports/'))) {
-                          // This is an S3 key - return empty, will be fetched in useEffect or onError
+                          // This is an S3 key - return null to prevent empty string src, will be fetched in useEffect or onError
                           console.log('⚠️ S3 key detected, waiting for signed URL...');
-                          return '';
+                          return null;
                         }
                         // Check for mock URLs - return null to prevent browser from trying to load them
                         if (audioUrl && (audioUrl.startsWith('mock://') || audioUrl.includes('mock://'))) {
