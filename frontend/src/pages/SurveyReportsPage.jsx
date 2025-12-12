@@ -3357,7 +3357,7 @@ const SurveyReportsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-[#E6F0F8] rounded-lg border border-blue-200">
                 <div className="text-2xl font-bold text-[#373177] mb-1">{analytics.catiPerformance.callerPerformance.callsMade || 0}</div>
-                <div className="text-xs font-medium text-blue-800">Calls Made</div>
+                <div className="text-xs font-medium text-blue-800">Total Number of Dials</div>
               </div>
               <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
                 <div className="text-2xl font-bold text-green-600 mb-1">{analytics.catiPerformance.callerPerformance.callsAttended || 0}</div>
