@@ -255,15 +255,15 @@ exports.getSurveys = async (req, res) => {
     const surveysWithAnalytics = await Promise.all(surveys.map(async (survey) => {
       console.log(`📊 Calculating analytics for: ${survey.surveyName} (ID: ${survey._id})`);
       
-      // Get ALL survey responses count (including approved, rejected, pending, terminated, abandoned, etc.)
-      const totalResponses = await SurveyResponse.countDocuments({
-        survey: survey._id
-      });
-      
-      // Get approved survey responses count (for completion rate calculation)
+      // Get approved survey responses count
       const approvedResponses = await SurveyResponse.countDocuments({
         survey: survey._id,
         status: 'Approved'
+      });
+      
+      // Get ALL responses count (for button visibility - any response type)
+      const allResponsesCount = await SurveyResponse.countDocuments({
+        survey: survey._id
       });
       
       // Also check what statuses actually exist
@@ -273,7 +273,7 @@ exports.getSurveys = async (req, res) => {
         statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
       });
       
-      console.log(`✅ Found ${totalResponses} total responses (${approvedResponses} approved) for ${survey.surveyName}`);
+      console.log(`✅ Found ${approvedResponses} approved responses for ${survey.surveyName}`);
       console.log(`📊 All status counts for ${survey.surveyName}:`, statusCounts);
 
 
@@ -296,7 +296,8 @@ exports.getSurveys = async (req, res) => {
       return {
         ...survey.toObject(),
         analytics: {
-          totalResponses: totalResponses, // Count ALL responses (approved, rejected, pending, terminated, abandoned, etc.)
+          totalResponses: approvedResponses,
+          allResponsesCount: allResponsesCount, // Count of ALL responses (for button visibility)
           completionRate: completionRate,
           assignedInterviewersCount: assignedInterviewersCount
         }

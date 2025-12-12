@@ -570,7 +570,7 @@ const CompanySurveysManagement = () => {
               {/* Vertical Action Buttons */}
               <div className="flex flex-col space-y-2 ml-4">
                 {/* View Responses Button - Show if there are ANY responses (approved, rejected, pending, terminated, abandoned, etc.) */}
-                {(survey.analytics?.totalResponses || 0) > 0 && (
+                {(survey.analytics?.allResponsesCount || survey.analytics?.totalResponses || 0) > 0 && (
                   <>
                     <button
                       onClick={() => handleViewResponses(survey)}
