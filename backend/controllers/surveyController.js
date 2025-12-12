@@ -3019,14 +3019,10 @@ exports.getCatiStats = async (req, res) => {
         stat.formDuration += (response.totalTimeSpent || 0);
         console.log(`⏱️  Adding form duration: ${response.totalTimeSpent || 0}s for interviewer ${interviewerId}, total now: ${stat.formDuration}s`);
         
-        // Categorize completed interviews into: Approved, Rejected, Under QC Queue, or Processing in Batch
-        // IMPORTANT: Approved and Rejected responses should be counted in their respective categories
-        // regardless of batch status. Only Pending_Approval responses should be categorized by batch status.
-        if (responseStatus === 'Approved') {
-          // Approved: SurveyResponse with Approved status (from completed interviews)
-          // Count in "Approved" regardless of batch status
-          stat.approved += 1;
-        } else if (responseStatus === 'Pending_Approval') {
+        // Categorize completed interviews into: Under QC Queue, or Processing in Batch
+        // NOTE: Approved and Rejected responses are already handled above (before isCompleted check)
+        // Only Pending_Approval responses should be categorized by batch status here
+        if (responseStatus === 'Pending_Approval') {
           // Split Under QC into two categories based on batch status (only for Pending_Approval responses)
           let batchId = null;
           if (response.qcBatch) {
