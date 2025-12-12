@@ -2209,7 +2209,7 @@ const getNextReviewAssignment = async (req, res) => {
         select: 'firstName lastName email _id'
       }
     })
-    .populate('interviewer', 'firstName lastName email')
+    .populate('interviewer', 'firstName lastName email phone memberId')
     .lean();
 
     // Calculate effective questions (same logic as getPendingApprovals)
@@ -2307,8 +2307,17 @@ const getNextReviewAssignment = async (req, res) => {
     const answeredQuestions = updatedResponse.responses?.filter(r => !r.isSkipped).length || 0;
     const completionPercentage = effectiveQuestions > 0 ? Math.round((answeredQuestions / effectiveQuestions) * 100) : 0;
 
+    // Explicitly preserve interviewer field with memberId
     const transformedResponse = {
       ...updatedResponse,
+      interviewer: updatedResponse.interviewer ? {
+        _id: updatedResponse.interviewer._id,
+        firstName: updatedResponse.interviewer.firstName,
+        lastName: updatedResponse.interviewer.lastName,
+        email: updatedResponse.interviewer.email,
+        phone: updatedResponse.interviewer.phone,
+        memberId: updatedResponse.interviewer.memberId
+      } : updatedResponse.interviewer,
       totalQuestions: effectiveQuestions,
       answeredQuestions,
       completionPercentage
