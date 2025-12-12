@@ -2853,7 +2853,7 @@ const ViewResponsesPage = () => {
                                 {response.verificationData?.feedback ? (
                                   <div className="max-w-xs">
                                     <div className="text-xs text-gray-600 mb-1">
-                                      {response.verificationData.autoRejected ? 'Auto Rejected' : 'Rejected by QC'}
+                                      {response.verificationData.autoRejected === true ? 'Auto Rejected' : 'Rejected by QC'}
                                     </div>
                                     <div className="text-sm text-red-700 truncate" title={response.verificationData.feedback}>
                                       {response.verificationData.feedback}
