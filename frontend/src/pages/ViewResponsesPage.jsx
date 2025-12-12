@@ -2100,6 +2100,7 @@ const ViewResponsesPage = () => {
                   >
                     <option value="all">All Time</option>
                     <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
                     <option value="week">Last 7 Days</option>
                     <option value="month">Last 30 Days</option>
                     <option value="custom">Custom Range</option>

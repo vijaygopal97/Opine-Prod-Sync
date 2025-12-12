@@ -887,6 +887,11 @@ const SurveyReportsPage = () => {
           case 'today':
             if (responseDate.toDateString() !== now.toDateString()) return false;
             break;
+          case 'yesterday':
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (responseDate.toDateString() !== yesterday.toDateString()) return false;
+            break;
           case 'week':
             const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             if (responseDate < weekAgo) return false;
@@ -3102,6 +3107,7 @@ const SurveyReportsPage = () => {
                     >
                       <option value="all">All Time</option>
                       <option value="today">Today</option>
+                      <option value="yesterday">Yesterday</option>
                       <option value="week">Last 7 Days</option>
                       <option value="month">Last 30 Days</option>
                       <option value="custom">Custom Range</option>
