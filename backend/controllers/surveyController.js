@@ -3115,30 +3115,21 @@ exports.getCatiStats = async (req, res) => {
         // Call Not Received: API failure, not interviewer's fault
         // This IS counted in "Number of Dials"
         stat.callNotReceivedToTelecaller += 1;
-      } else if (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected' || 
-                 normalizedCallStatus === 'busy' || normalizedCallStatus === 'did_not_pick_up') {
-        // Ringing: Call rang (success, call_connected, busy, did_not_pick_up)
-        // These are counted in "Number of Dials"
-        stat.ringing += 1;
       } else if (normalizedCallStatus === 'switched_off' || normalizedCallStatus === 'not_reachable' || 
                  normalizedCallStatus === 'number_does_not_exist') {
-        // Not Ringing: Number issues (switched_off, not_reachable, number_does_not_exist)
+        // Not Ringing: ONLY these three specific statuses
+        // - switched_off (Switch Off)
+        // - not_reachable (Number Not Reachable)
+        // - number_does_not_exist (Number Does Not Exist)
         // These are counted in "Number of Dials"
         stat.notRinging += 1;
       } else {
-        // Other statuses (unknown, abandoned, terminated, etc.)
-        // Categorize them based on common patterns:
-        // - If it's 'unknown' or empty, it's likely an incomplete attempt - count as "Not Ringing"
-        // - If it's 'abandoned' or 'terminated', it's an incomplete attempt - count as "Not Ringing"
+        // All other statuses go to "Ringing" (including unknown, abandoned, terminated, etc.)
+        // This includes:
+        // - success, call_connected, busy, did_not_pick_up (explicit ringing statuses)
+        // - unknown, abandoned, terminated, or any other status (default to Ringing)
         // This ensures: Number of Dials = Ringing + Not Ringing + Call Not Received
-        if (normalizedCallStatus === 'unknown' || normalizedCallStatus === '' || 
-            normalizedCallStatus === 'abandoned' || normalizedCallStatus === 'terminated') {
-          stat.notRinging += 1;
-        } else {
-          // For any other unknown status, default to "Not Ringing" to ensure completeness
-          console.warn(`⚠️ Unknown call status "${normalizedCallStatus}" for response ${response._id} - counting as "Not Ringing"`);
-          stat.notRinging += 1;
-        }
+        stat.ringing += 1;
       }
       
       if (normalizedCallStatus === 'switched_off') {
