@@ -3088,19 +3088,25 @@ exports.getCatiStats = async (req, res) => {
           stat.processingInBatch += 1;
         }
       } else {
-        // Incomplete: Only responses with 'abandoned' or 'Terminated' status
-        // These are interviews that were started but not completed
+        // Incomplete: All responses that were counted in "Number of Dials" but are NOT completed
+        // This includes:
+        // - Responses with status 'abandoned' or 'Terminated'
+        // - Responses with call status that is NOT 'success'/'call_connected' (busy, switched_off, did_not_pick_up, etc.)
+        // - Responses with no call status or 'unknown' call status (but were counted as dials)
         // EXCLUDE:
         // - Rejected (already counted in "Completed" and "Rejected")
         // - Approved (already counted in "Completed" and "Approved")
-        // - Pending_Approval (counted in "Under QC Queue" or "Processing in Batch")
-        // - completed (counted in "Completed")
-        // - Responses with call status 'success' or 'call_connected' (counted in "Completed")
-        if (normalizedResponseStatus === 'abandoned' || normalizedResponseStatus === 'terminated') {
+        // - Responses with call status 'didnt_get_call' (not counted in "Number of Dials")
+        // - Responses that are completed (call status 'success'/'call_connected') - already counted in "Completed"
+        if (normalizedResponseStatus !== 'rejected' && 
+            normalizedResponseStatus !== 'approved' &&
+            normalizedCallStatus !== 'didnt_get_call' && 
+            normalizedCallStatus !== 'didn\'t_get_call') {
+          // This response was counted in "Number of Dials" but is not completed
+          // Count it in "Incomplete"
           stat.incomplete += 1;
         }
-        // All other responses (rejected, approved, pending_approval, completed, or unknown statuses)
-        // are already counted in their respective categories above, so don't count in incomplete
+        // Rejected and Approved responses are already counted in "Completed" above, so don't count here
       }
         
       // Call Status Breakdown
