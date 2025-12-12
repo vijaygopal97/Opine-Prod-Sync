@@ -2840,11 +2840,12 @@ exports.getCatiStats = async (req, res) => {
         interviewerPhone: info.interviewerPhone,
         memberID: info.memberID || '',
         numberOfDials: 0, // Total calls attempted (from CatiCall)
-        completed: 0, // Total number of responses created by this interviewer
-        successful: 0, // SurveyResponse with Approved status
-        underQCQueue: 0, // Responses in batches completed and sent to review
-        processingInBatch: 0, // Responses still in collecting phase in batches
+        completed: 0, // Interviews completed (call_connected status only)
+        successful: 0, // SurveyResponse with Approved status (from completed interviews)
+        underQCQueue: 0, // Responses in batches completed and sent to review (from completed interviews)
+        processingInBatch: 0, // Responses still in collecting phase in batches (from completed interviews)
         rejected: 0, // SurveyResponse with Rejected status (from completed interviews only)
+        incomplete: 0, // All other responses (abandoned, not connected, etc.)
         formDuration: 0, // Total duration from SurveyResponse + CatiCall talkDuration
         callNotReceivedToTelecaller: 0, // Call status: didnt_get_call
         ringing: 0, // Call status: success, busy, did_not_pick_up
@@ -2944,9 +2945,6 @@ exports.getCatiStats = async (req, res) => {
       
       const stat = interviewerStatsMap.get(interviewerId);
       
-      // Count ALL responses created by this interviewer (for "Completed" column)
-      stat.completed += 1;
-      
       // Get call status from response - PRIORITY ORDER:
       // 1. knownCallStatus field (dedicated field for call status)
       // 2. metadata.callStatus (legacy)
@@ -2988,21 +2986,29 @@ exports.getCatiStats = async (req, res) => {
         responseToCallIdMap.set(response._id.toString(), { callRecordId, callId });
       }
       
-      // Form Duration - Sum of all CATI interview durations (totalTimeSpent from timer)
-      // Only count for completed interviews (call_connected status)
-      if (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected') {
+      // Check if this is a completed interview (call was connected)
+      const isCompleted = normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected';
+      
+      if (isCompleted) {
+        // Completed: Call was connected and interview completed
+        stat.completed += 1;
+        
+        // Form Duration - Sum of all CATI interview durations (totalTimeSpent from timer)
         stat.formDuration += (response.totalTimeSpent || 0);
         console.log(`⏱️  Adding form duration: ${response.totalTimeSpent || 0}s for interviewer ${interviewerId}, total now: ${stat.formDuration}s`);
-      }
-      
-      // Successful: SurveyResponse with Approved status (only from completed interviews)
-      if (response.status === 'Approved' && 
-          (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected')) {
-        stat.successful += 1;
-      }
-      
-      // Split Under QC into two categories based on batch status
-      if (response.status === 'Pending_Approval') {
+        
+        // Successful: SurveyResponse with Approved status (only from completed interviews)
+        if (response.status === 'Approved') {
+          stat.successful += 1;
+        }
+        
+        // Rejected: SurveyResponse with Rejected status (only from completed interviews)
+        if (response.status === 'Rejected') {
+          stat.rejected += 1;
+        }
+        
+        // Split Under QC into two categories based on batch status (only for completed interviews)
+        if (response.status === 'Pending_Approval') {
         let batchId = null;
         if (response.qcBatch) {
           if (typeof response.qcBatch === 'object' && response.qcBatch._id) {
@@ -3044,13 +3050,11 @@ exports.getCatiStats = async (req, res) => {
           // Response not in any batch (legacy) - count as processingInBatch
           stat.processingInBatch += 1;
         }
-      }
-      
-      // Rejected: SurveyResponse with Rejected status (only from completed interviews)
-      if (response.status === 'Rejected' && 
-          (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected')) {
-        stat.rejected += 1;
         }
+      } else {
+        // Incomplete: All other responses (abandoned, not connected, etc.)
+        stat.incomplete += 1;
+      }
         
       // Call Status Breakdown
       if (normalizedCallStatus === 'didnt_get_call' || normalizedCallStatus === 'didn\'t_get_call') {
@@ -3238,6 +3242,7 @@ exports.getCatiStats = async (req, res) => {
         underQCQueue: stat.underQCQueue || 0,
         processingInBatch: stat.processingInBatch || 0,
         rejected: stat.rejected,
+        incomplete: stat.incomplete || 0,
         formDuration: formatDuration(stat.formDuration || 0),
         callNotReceivedToTelecaller: stat.callNotReceivedToTelecaller,
         ringing: stat.ringing,

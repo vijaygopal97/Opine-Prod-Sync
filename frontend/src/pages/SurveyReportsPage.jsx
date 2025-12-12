@@ -3450,6 +3450,7 @@ const SurveyReportsPage = () => {
                       'Under QC Queue': stat.underQCQueue || 0,
                       'Processing in Batch': stat.processingInBatch || 0,
                       'Rejected': stat.rejected || 0,
+                      'Incomplete': stat.incomplete || 0,
                       'Form Duration': stat.formDuration || '0:00:00',
                       'Call Not Received to Telecaller': stat.callNotReceivedToTelecaller || 0,
                       'Interviewer Picked up': stat.ringing || 0,
@@ -3494,6 +3495,7 @@ const SurveyReportsPage = () => {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Under QC Queue</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Processing in Batch</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Rejected</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Incomplete</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Form Duration</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Call Not Received to Telecaller</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Interviewer Picked up</th>
@@ -3517,6 +3519,7 @@ const SurveyReportsPage = () => {
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.underQCQueue || 0}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.processingInBatch || 0}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.rejected || 0}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.incomplete || 0}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.formDuration || '0:00:00'}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.callNotReceivedToTelecaller || 0}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.ringing || 0}</td>
