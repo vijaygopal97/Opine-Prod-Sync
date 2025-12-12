@@ -2035,6 +2035,17 @@ const getNextReviewAssignment = async (req, res) => {
         const completionPercentage = effectiveQuestions > 0 ? Math.round((answeredQuestions / effectiveQuestions) * 100) : 0;
 
         // Explicitly preserve interviewer field with memberId
+        // Log raw interviewer data before transformation
+        console.log('🔍 getNextReviewAssignment - Active assignment raw interviewer:', {
+          hasInterviewer: !!activeAssignment.interviewer,
+          interviewerType: typeof activeAssignment.interviewer,
+          interviewerIsObject: activeAssignment.interviewer && typeof activeAssignment.interviewer === 'object',
+          interviewerKeys: activeAssignment.interviewer ? Object.keys(activeAssignment.interviewer) : [],
+          interviewerId: activeAssignment.interviewer?._id?.toString(),
+          interviewerMemberId: activeAssignment.interviewer?.memberId,
+          fullInterviewer: JSON.stringify(activeAssignment.interviewer, null, 2)
+        });
+        
         const transformedResponse = {
           ...activeAssignment,
           interviewer: activeAssignment.interviewer ? {
@@ -2043,7 +2054,7 @@ const getNextReviewAssignment = async (req, res) => {
             lastName: activeAssignment.interviewer.lastName,
             email: activeAssignment.interviewer.email,
             phone: activeAssignment.interviewer.phone,
-            memberId: activeAssignment.interviewer.memberId
+            memberId: activeAssignment.interviewer.memberId || activeAssignment.interviewer.memberID || null
           } : activeAssignment.interviewer,
           totalQuestions: effectiveQuestions,
           answeredQuestions,
@@ -2052,11 +2063,12 @@ const getNextReviewAssignment = async (req, res) => {
 
         console.log('🔍 getNextReviewAssignment - Active assignment call_id:', transformedResponse.call_id);
         console.log('🔍 getNextReviewAssignment - Active assignment interviewMode:', transformedResponse.interviewMode);
-        console.log('🔍 getNextReviewAssignment - Active assignment interviewer:', {
+        console.log('🔍 getNextReviewAssignment - Active assignment transformed interviewer:', {
           hasInterviewer: !!transformedResponse.interviewer,
           interviewerId: transformedResponse.interviewer?._id?.toString(),
           interviewerName: transformedResponse.interviewer ? `${transformedResponse.interviewer.firstName} ${transformedResponse.interviewer.lastName}` : 'null',
-          interviewerMemberId: transformedResponse.interviewer?.memberId || 'null'
+          interviewerMemberId: transformedResponse.interviewer?.memberId || 'null',
+          fullTransformedInterviewer: JSON.stringify(transformedResponse.interviewer, null, 2)
         });
 
         return res.status(200).json({
@@ -2314,6 +2326,17 @@ const getNextReviewAssignment = async (req, res) => {
     const completionPercentage = effectiveQuestions > 0 ? Math.round((answeredQuestions / effectiveQuestions) * 100) : 0;
 
     // Explicitly preserve interviewer field with memberId
+    // Log raw interviewer data before transformation
+    console.log('🔍 getNextReviewAssignment - Raw interviewer data before transformation:', {
+      hasInterviewer: !!updatedResponse.interviewer,
+      interviewerType: typeof updatedResponse.interviewer,
+      interviewerIsObject: updatedResponse.interviewer && typeof updatedResponse.interviewer === 'object',
+      interviewerKeys: updatedResponse.interviewer ? Object.keys(updatedResponse.interviewer) : [],
+      interviewerId: updatedResponse.interviewer?._id?.toString(),
+      interviewerMemberId: updatedResponse.interviewer?.memberId,
+      fullInterviewer: JSON.stringify(updatedResponse.interviewer, null, 2)
+    });
+    
     const transformedResponse = {
       ...updatedResponse,
       interviewer: updatedResponse.interviewer ? {
@@ -2322,7 +2345,7 @@ const getNextReviewAssignment = async (req, res) => {
         lastName: updatedResponse.interviewer.lastName,
         email: updatedResponse.interviewer.email,
         phone: updatedResponse.interviewer.phone,
-        memberId: updatedResponse.interviewer.memberId
+        memberId: updatedResponse.interviewer.memberId || updatedResponse.interviewer.memberID || null
       } : updatedResponse.interviewer,
       totalQuestions: effectiveQuestions,
       answeredQuestions,
@@ -2331,11 +2354,12 @@ const getNextReviewAssignment = async (req, res) => {
 
     console.log('🔍 getNextReviewAssignment - New assignment call_id:', transformedResponse.call_id);
     console.log('🔍 getNextReviewAssignment - New assignment interviewMode:', transformedResponse.interviewMode);
-    console.log('🔍 getNextReviewAssignment - New assignment interviewer:', {
+    console.log('🔍 getNextReviewAssignment - Transformed interviewer data:', {
       hasInterviewer: !!transformedResponse.interviewer,
       interviewerId: transformedResponse.interviewer?._id?.toString(),
       interviewerName: transformedResponse.interviewer ? `${transformedResponse.interviewer.firstName} ${transformedResponse.interviewer.lastName}` : 'null',
-      interviewerMemberId: transformedResponse.interviewer?.memberId || 'null'
+      interviewerMemberId: transformedResponse.interviewer?.memberId || 'null',
+      fullTransformedInterviewer: JSON.stringify(transformedResponse.interviewer, null, 2)
     });
 
     res.status(200).json({
