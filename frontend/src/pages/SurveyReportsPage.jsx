@@ -3361,11 +3361,11 @@ const SurveyReportsPage = () => {
               </div>
               <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
                 <div className="text-2xl font-bold text-green-600 mb-1">{analytics.catiPerformance.callerPerformance.callsAttended || 0}</div>
-                <div className="text-xs font-medium text-green-800">Calls Attended</div>
+                <div className="text-xs font-medium text-green-800">Interviewer Picked up</div>
               </div>
               <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
                 <div className="text-2xl font-bold text-orange-600 mb-1">{analytics.catiPerformance.callerPerformance.callsConnected || 0}</div>
-                <div className="text-xs font-medium text-orange-800">Calls Connected</div>
+                <div className="text-xs font-medium text-orange-800">Respondent Picked Up</div>
               </div>
               <div className="text-center p-3 bg-indigo-50 rounded-lg border border-indigo-200">
                 <div className="text-2xl font-bold text-indigo-600 mb-1">{analytics.catiPerformance.callerPerformance.totalTalkDuration || '0:00:00'}</div>
@@ -3380,7 +3380,7 @@ const SurveyReportsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="text-2xl font-bold text-gray-600 mb-1">{analytics.catiPerformance.numberStats.callNotReceived}</div>
-                <div className="text-xs font-medium text-gray-800">Call Not Received</div>
+                <div className="text-xs font-medium text-gray-800">Call Not Received to Telecaller</div>
               </div>
               <div className="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                 <div className="text-2xl font-bold text-yellow-600 mb-1">{analytics.catiPerformance.numberStats.ringing}</div>
@@ -3418,7 +3418,7 @@ const SurveyReportsPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
                 <div className="text-2xl font-bold text-green-600 mb-1">{analytics.catiPerformance.callRingStatus.callsConnected}</div>
-                <div className="text-xs font-medium text-green-800">Calls Connected</div>
+                <div className="text-xs font-medium text-green-800">Respondent Picked Up</div>
               </div>
               <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
                 <div className="text-2xl font-bold text-red-600 mb-1">{analytics.catiPerformance.callRingStatus.callsNotConnected}</div>
