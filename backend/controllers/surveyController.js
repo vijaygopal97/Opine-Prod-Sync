@@ -3007,6 +3007,7 @@ exports.getCatiStats = async (req, res) => {
         }
         // Skip to call status breakdown - don't process as completed/incomplete again
         // Rejected responses are already counted in "Completed", so skip the isCompleted block
+        // Continue to call status breakdown for stats
       } else if (isCompleted) {
         // Completed: Call was connected and interview completed
         stat.completed += 1;
@@ -3065,8 +3066,9 @@ exports.getCatiStats = async (req, res) => {
           console.warn(`⚠️ Completed interview with unexpected status: ${responseStatus} for response ${response._id}`);
           stat.processingInBatch += 1;
         }
-      } else {
+      } else if (normalizedResponseStatus !== 'rejected') {
         // Incomplete: All other responses (abandoned, not connected, etc.)
+        // EXCLUDE rejected responses (they are already counted in "Completed")
         stat.incomplete += 1;
       }
         
