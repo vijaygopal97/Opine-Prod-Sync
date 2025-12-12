@@ -3179,6 +3179,12 @@ exports.getCatiStats = async (req, res) => {
     // 2. Calls Attended = Total count of "Ringing" from all filtered interviewers
     const totalCallsAttendedFromStats = interviewerStats.reduce((sum, stat) => sum + (stat.ringing || 0), 0);
     
+    // 3. Call Not Received to Telecaller = Total count of "Call Not Received to Telecaller" from all filtered interviewers
+    const totalCallNotReceivedFromStats = interviewerStats.reduce((sum, stat) => sum + (stat.callNotReceivedToTelecaller || 0), 0);
+    
+    // 4. Not Ringing = Total count of "Not Ringing" from all filtered interviewers
+    const totalNotRingingFromStats = interviewerStats.reduce((sum, stat) => sum + (stat.notRinging || 0), 0);
+    
     // 3. Calls Connected = Total count of knownCallStatus = "call_connected" in filtered responses
     // Check both 'call_connected' and 'success' (legacy value)
     // Also check metadata.callStatus as fallback
