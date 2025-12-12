@@ -3384,11 +3384,11 @@ const SurveyReportsPage = () => {
               </div>
               <div className="text-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                 <div className="text-2xl font-bold text-yellow-600 mb-1">{analytics.catiPerformance.numberStats.ringing}</div>
-                <div className="text-xs font-medium text-yellow-800">Ringing</div>
+                <div className="text-xs font-medium text-yellow-800">Respondent Ph. Ringing</div>
               </div>
               <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
                 <div className="text-2xl font-bold text-red-600 mb-1">{analytics.catiPerformance.numberStats.notRinging}</div>
-                <div className="text-xs font-medium text-red-800">Not Ringing</div>
+                <div className="text-xs font-medium text-red-800">Respondent Ph. Not Ringing</div>
               </div>
             </div>
           </div>

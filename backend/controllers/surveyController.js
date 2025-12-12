@@ -3288,9 +3288,9 @@ exports.getCatiStats = async (req, res) => {
         totalTalkDuration: formatDuration(totalTalkDurationFromResponses)
       },
       numberStats: {
-        callNotReceived: callNotReceived,
-        ringing: ringing,
-        notRinging: notRinging
+        callNotReceived: totalCallNotReceivedFromStats || callNotReceived, // Use aggregated from interviewer stats, fallback to response-based calculation
+        ringing: totalCallsAttendedFromStats || ringing, // Respondent Ph. Ringing = Interviewer Picked up (aggregated from interviewer stats)
+        notRinging: totalNotRingingFromStats || notRinging // Respondent Ph. Not Ringing = Switch Off + Not Reachable + Number Does Not Exist (aggregated from interviewer stats)
         // Removed noResponseByTelecaller from Number Stats
       },
       callNotRingStatus: callNotRingStatus,
