@@ -1431,7 +1431,7 @@ const getPendingApprovals = async (req, res) => {
       })
       .populate({
         path: 'interviewer',
-        select: 'firstName lastName email phone memberId memberID'
+        select: 'firstName lastName email phone memberId'
       })
       .populate({
         path: 'qcBatch',

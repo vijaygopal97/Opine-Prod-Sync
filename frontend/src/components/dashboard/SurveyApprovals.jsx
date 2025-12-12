@@ -2730,7 +2730,7 @@ const SurveyApprovals = () => {
                           <div>
                             <span className="text-gray-600">Interviewer ID:</span>
                             <span className="ml-2 font-medium">
-                              {selectedInterview.interviewer.memberId || selectedInterview.interviewer.memberID || 'N/A'}
+                              {selectedInterview.interviewer.memberId || 'N/A'}
                             </span>
                           </div>
                         </>
