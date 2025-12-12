@@ -2840,9 +2840,10 @@ exports.getCatiStats = async (req, res) => {
         interviewerPhone: info.interviewerPhone,
         memberID: info.memberID || '',
         numberOfDials: 0, // Total calls attempted (from CatiCall)
-        completed: 0, // Interviews completed (call_connected status)
+        completed: 0, // Total number of responses created by this interviewer
         successful: 0, // SurveyResponse with Approved status
-        underQC: 0, // SurveyResponse with Pending_Approval status
+        underQCQueue: 0, // Responses in batches completed and sent to review
+        processingInBatch: 0, // Responses still in collecting phase in batches
         rejected: 0, // SurveyResponse with Rejected status (from completed interviews only)
         formDuration: 0, // Total duration from SurveyResponse + CatiCall talkDuration
         callNotReceivedToTelecaller: 0, // Call status: didnt_get_call
@@ -2906,7 +2907,30 @@ exports.getCatiStats = async (req, res) => {
       }
     });
     
-    // Step 3: Process SurveyResponse objects to get interview outcomes
+    // Step 3: Fetch batch information for all responses to determine QC status
+    const QCBatch = require('../models/QCBatch');
+    const batchIds = [...new Set(catiResponses
+      .filter(r => r.qcBatch)
+      .map(r => {
+        if (typeof r.qcBatch === 'string') {
+          return mongoose.Types.ObjectId.isValid(r.qcBatch) ? new mongoose.Types.ObjectId(r.qcBatch) : null;
+        }
+        return r.qcBatch;
+      })
+      .filter(id => id !== null)
+    )];
+    
+    const batchesMap = new Map();
+    if (batchIds.length > 0) {
+      const batches = await QCBatch.find({ _id: { $in: batchIds } })
+        .select('_id status remainingDecision')
+        .lean();
+      batches.forEach(batch => {
+        batchesMap.set(batch._id.toString(), batch);
+      });
+    }
+    
+    // Step 4: Process SurveyResponse objects to get interview outcomes
     // Include BOTH completed interviews AND abandoned interviews (with call status)
     // Create a map of callId/callRecordId -> SurveyResponse for linking
     const callIdToResponseMap = new Map();
@@ -2919,6 +2943,9 @@ exports.getCatiStats = async (req, res) => {
       if (!interviewerStatsMap.has(interviewerId)) return;
       
       const stat = interviewerStatsMap.get(interviewerId);
+      
+      // Count ALL responses created by this interviewer (for "Completed" column)
+      stat.completed += 1;
       
       // Get call status from response - PRIORITY ORDER:
       // 1. knownCallStatus field (dedicated field for call status)
@@ -2961,13 +2988,9 @@ exports.getCatiStats = async (req, res) => {
         responseToCallIdMap.set(response._id.toString(), { callRecordId, callId });
       }
       
-      // Completed: Call was connected and interview completed
+      // Form Duration - Sum of all CATI interview durations (totalTimeSpent from timer)
+      // Only count for completed interviews (call_connected status)
       if (normalizedCallStatus === 'success' || normalizedCallStatus === 'call_connected') {
-        stat.completed += 1;
-        
-        // Form Duration - Sum of all CATI interview durations (totalTimeSpent from timer)
-        // This shows total time spent by interviewer on calls (from the timer in CATI interface)
-        // Only use totalTimeSpent from SurveyResponse, NOT CatiCall.talkDuration
         stat.formDuration += (response.totalTimeSpent || 0);
         console.log(`⏱️  Adding form duration: ${response.totalTimeSpent || 0}s for interviewer ${interviewerId}, total now: ${stat.formDuration}s`);
       }
@@ -2978,9 +3001,49 @@ exports.getCatiStats = async (req, res) => {
         stat.successful += 1;
       }
       
-      // Under QC: SurveyResponse with Pending_Approval status
+      // Split Under QC into two categories based on batch status
       if (response.status === 'Pending_Approval') {
-        stat.underQC += 1;
+        let batchId = null;
+        if (response.qcBatch) {
+          if (typeof response.qcBatch === 'object' && response.qcBatch._id) {
+            batchId = response.qcBatch._id.toString();
+          } else if (typeof response.qcBatch === 'object') {
+            batchId = response.qcBatch.toString();
+          } else {
+            batchId = response.qcBatch.toString();
+          }
+        }
+        const batch = batchId ? batchesMap.get(batchId) : null;
+        const isSampleResponse = response.isSampleResponse || false;
+        
+        if (batch) {
+          const batchStatus = batch.status;
+          const remainingDecision = batch.remainingDecision?.decision;
+          
+          // "Under QC Queue": Batches completed and sent to review
+          // - Responses in batches with status 'queued_for_qc'
+          // - Sample responses (40%) in batches with status 'qc_in_progress' or 'completed'
+          // - Remaining responses (60%) in batches where remainingDecision is 'queued_for_qc'
+          if (batchStatus === 'queued_for_qc' ||
+              (isSampleResponse && (batchStatus === 'qc_in_progress' || batchStatus === 'completed')) ||
+              (!isSampleResponse && remainingDecision === 'queued_for_qc')) {
+            stat.underQCQueue += 1;
+          }
+          // "Processing in Batch": Responses still in collecting phase
+          // - Responses in batches with status 'collecting'
+          // - Responses in batches with status 'processing' that are not sample responses
+          else if (batchStatus === 'collecting' ||
+                   (batchStatus === 'processing' && !isSampleResponse)) {
+            stat.processingInBatch += 1;
+          }
+          // For other statuses, default to processingInBatch (safer fallback)
+          else {
+            stat.processingInBatch += 1;
+          }
+        } else {
+          // Response not in any batch (legacy) - count as processingInBatch
+          stat.processingInBatch += 1;
+        }
       }
       
       // Rejected: SurveyResponse with Rejected status (only from completed interviews)
@@ -3017,7 +3080,7 @@ exports.getCatiStats = async (req, res) => {
       }
     });
     
-    // Step 4: Calculate "No Response by Telecaller" from CatiCall objects
+    // Step 5: Calculate "No Response by Telecaller" from CatiCall objects
     callRecords.forEach(call => {
       let interviewerId = null;
       
@@ -3172,7 +3235,8 @@ exports.getCatiStats = async (req, res) => {
         numberOfDials: stat.numberOfDials,
         completed: stat.completed,
         successful: stat.successful,
-        underQC: stat.underQC,
+        underQCQueue: stat.underQCQueue || 0,
+        processingInBatch: stat.processingInBatch || 0,
         rejected: stat.rejected,
         formDuration: formatDuration(stat.formDuration || 0),
         callNotReceivedToTelecaller: stat.callNotReceivedToTelecaller,
