@@ -905,7 +905,7 @@ const uploadAudioFile = async (req, res) => {
         
         // Clean up local temp file
         if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
+        fs.unlinkSync(req.file.path);
         }
         
       } catch (s3Error) {
@@ -2406,12 +2406,12 @@ const getLastCatiSetNumber = async (req, res) => {
     } else {
       // Find the index of the last set in the sorted array
       const lastSetIndex = setArray.indexOf(lastSetNumber);
-      
+        
       if (lastSetIndex === -1) {
         // Last set is not in available sets (shouldn't happen, but handle gracefully)
         nextSetNumber = setArray[0];
         console.log(`🔵 Last set ${lastSetNumber} not found in available sets - using first set: ${nextSetNumber}`);
-      } else {
+        } else {
         // Rotate to the next set in the array (circular rotation)
         const nextIndex = (lastSetIndex + 1) % setArray.length;
         nextSetNumber = setArray[nextIndex];
