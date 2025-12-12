@@ -1367,6 +1367,13 @@ const ViewResponsesPage = () => {
           const tomorrow = new Date(today);
           tomorrow.setDate(tomorrow.getDate() + 1);
           if (responseDate < today || responseDate >= tomorrow) return false;
+        } else if (filters.dateRange === 'yesterday') {
+          const yesterday = new Date(now);
+          yesterday.setDate(yesterday.getDate() - 1);
+          yesterday.setHours(0, 0, 0, 0);
+          const yesterdayEnd = new Date(yesterday);
+          yesterdayEnd.setHours(23, 59, 59, 999);
+          if (responseDate < yesterday || responseDate > yesterdayEnd) return false;
         } else if (filters.dateRange === 'week') {
           const weekAgo = new Date(now);
           weekAgo.setDate(weekAgo.getDate() - 7);
@@ -2100,6 +2107,7 @@ const ViewResponsesPage = () => {
                   >
                     <option value="all">All Time</option>
                     <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
                     <option value="week">Last 7 Days</option>
                     <option value="month">Last 30 Days</option>
                     <option value="custom">Custom Range</option>
