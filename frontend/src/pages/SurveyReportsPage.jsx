@@ -3088,6 +3088,14 @@ const SurveyReportsPage = () => {
                             case 'today':
                               startDate.setHours(0, 0, 0, 0);
                               break;
+                            case 'yesterday':
+                              startDate.setDate(now.getDate() - 1);
+                              startDate.setHours(0, 0, 0, 0);
+                              const yesterdayEnd = new Date(startDate);
+                              yesterdayEnd.setHours(23, 59, 59, 999);
+                              handleCatiFilterChange('startDate', startDate.toISOString().split('T')[0]);
+                              handleCatiFilterChange('endDate', yesterdayEnd.toISOString().split('T')[0]);
+                              return; // Exit early since we've set the dates
                             case 'week':
                               startDate.setDate(now.getDate() - 7);
                               break;
