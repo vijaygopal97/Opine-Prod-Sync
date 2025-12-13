@@ -528,21 +528,32 @@ const completeInterview = async (req, res) => {
         wasAutoRejected = true;
         // Refresh the response to get updated status
         await surveyResponse.populate('survey');
+        // Reload from database to ensure status is updated
+        await surveyResponse.constructor.findById(surveyResponse._id);
       }
     } catch (autoRejectError) {
       console.error('Error checking auto-rejection:', autoRejectError);
       // Continue even if auto-rejection check fails
     }
     
+    // CRITICAL: Double-check status before adding to batch
+    // Reload response to ensure we have the latest status
+    const latestResponse = await SurveyResponse.findById(surveyResponse._id);
+    const isAutoRejected = wasAutoRejected || 
+                          (latestResponse && latestResponse.status === 'Rejected') || 
+                          (latestResponse && latestResponse.verificationData?.autoRejected === true);
+    
     // Add response to QC batch only if NOT auto-rejected
     // Auto-rejected responses are already decided and don't need QC processing
-    if (!wasAutoRejected) {
+    if (!isAutoRejected) {
       try {
         await addResponseToBatch(surveyResponse._id, session.survey._id, session.interviewer.toString());
       } catch (batchError) {
         console.error('Error adding response to batch:', batchError);
         // Continue even if batch addition fails - response is still saved
       }
+    } else {
+      console.log(`⏭️  Skipping batch addition for auto-rejected response ${surveyResponse._id} (status: ${latestResponse.status})`);
     }
 
     // Mark session as abandoned (cleanup)

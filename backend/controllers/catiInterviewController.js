@@ -1294,11 +1294,16 @@ const completeCatiInterview = async (req, res) => {
         // Continue even if auto-rejection check fails
       }
       
+      // CRITICAL: Double-check status before adding to batch
+      // Reload response to ensure we have the latest status
+      const latestResponse = await SurveyResponse.findById(surveyResponse._id);
+      const isAutoRejected = latestResponse.status === 'Rejected' || 
+                            latestResponse.verificationData?.autoRejected === true;
+      const isAbandoned = latestResponse.status === 'abandoned' || latestResponse.metadata?.abandoned === true;
+      
       // Add response to QC batch only if NOT auto-rejected, NOT abandoned, and not already in one
       // Auto-rejected and abandoned responses are already decided and don't need QC processing
-      const isAutoRejected = surveyResponse.verificationData?.autoRejected || false;
-      const isAbandoned = surveyResponse.status === 'abandoned' || surveyResponse.metadata?.abandoned === true;
-      if (!surveyResponse.qcBatch && !isAutoRejected && !isAbandoned) {
+      if (!latestResponse.qcBatch && !isAutoRejected && !isAbandoned) {
         try {
           const { addResponseToBatch } = require('../utils/qcBatchHelper');
           await addResponseToBatch(surveyResponse._id, queueEntry.survey._id, interviewerId.toString());
@@ -1521,8 +1526,11 @@ const completeCatiInterview = async (req, res) => {
     
     // Add response to QC batch instead of queuing immediately
     try {
-      // Check if response was auto-rejected before adding to batch
-      const isAutoRejected = surveyResponse.verificationData?.autoRejected || false;
+      // CRITICAL: Double-check status before adding to batch
+      // Reload response to ensure we have the latest status
+      const latestResponse = await SurveyResponse.findById(surveyResponse._id);
+      const isAutoRejected = latestResponse.status === 'Rejected' || 
+                            latestResponse.verificationData?.autoRejected === true;
       
       // Only add to batch if NOT auto-rejected
       // Auto-rejected responses are already decided and don't need QC processing
