@@ -595,6 +595,9 @@ const SurveyReportsPage = () => {
   }, [surveyId, survey, catiFilters.startDate, catiFilters.endDate, catiFilters.interviewerIds, catiFilters.interviewerMode, catiFilters.ac]);
 
   // Helper function to calculate dates from dateRange
+  // IMPORTANT: This must match backend date filter logic exactly
+  // Backend expects: startDate = YYYY-MM-DD (interpreted as 00:00:00 UTC)
+  //                  endDate = YYYY-MM-DD (interpreted as 23:59:59.999 UTC)
   const calculateDatesFromRange = (dateRange, customStartDate, customEndDate) => {
     const now = new Date();
     let startDate = '';
@@ -602,33 +605,38 @@ const SurveyReportsPage = () => {
     
     switch (dateRange) {
       case 'today':
+        // For "today", use today's date for both start and end
+        // Backend will set endDate to 23:59:59.999
         const today = new Date(now);
-        today.setHours(0, 0, 0, 0);
+        today.setUTCHours(0, 0, 0, 0);
         startDate = today.toISOString().split('T')[0];
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        endDate = tomorrow.toISOString().split('T')[0];
+        endDate = today.toISOString().split('T')[0]; // Same date, backend adds 23:59:59.999
         break;
       case 'yesterday':
+        // For "yesterday", use yesterday's date for both start and end
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
-        yesterday.setHours(0, 0, 0, 0);
+        yesterday.setUTCHours(0, 0, 0, 0);
         startDate = yesterday.toISOString().split('T')[0];
-        const yesterdayEnd = new Date(yesterday);
-        yesterdayEnd.setHours(23, 59, 59, 999);
-        endDate = yesterdayEnd.toISOString().split('T')[0];
+        endDate = yesterday.toISOString().split('T')[0]; // Same date, backend adds 23:59:59.999
         break;
       case 'week':
         const weekAgo = new Date(now);
         weekAgo.setDate(weekAgo.getDate() - 7);
+        weekAgo.setUTCHours(0, 0, 0, 0);
         startDate = weekAgo.toISOString().split('T')[0];
-        endDate = now.toISOString().split('T')[0];
+        const todayForWeek = new Date(now);
+        todayForWeek.setUTCHours(0, 0, 0, 0);
+        endDate = todayForWeek.toISOString().split('T')[0]; // Today's date, backend adds 23:59:59.999
         break;
       case 'month':
         const monthAgo = new Date(now);
         monthAgo.setMonth(monthAgo.getMonth() - 1);
+        monthAgo.setUTCHours(0, 0, 0, 0);
         startDate = monthAgo.toISOString().split('T')[0];
-        endDate = now.toISOString().split('T')[0];
+        const todayForMonth = new Date(now);
+        todayForMonth.setUTCHours(0, 0, 0, 0);
+        endDate = todayForMonth.toISOString().split('T')[0]; // Today's date, backend adds 23:59:59.999
         break;
       case 'custom':
         startDate = customStartDate || '';
@@ -954,43 +962,33 @@ const SurveyReportsPage = () => {
     if (!responses || responses.length === 0) return [];
 
     return responses.filter(response => {
-      // Date range filter
+      // Date range filter - Use same calculation as backend to ensure consistency
       if (filters.dateRange !== 'all') {
         const responseDate = new Date(response.createdAt);
-        const now = new Date();
         
-        switch (filters.dateRange) {
-          case 'today':
-            const today = new Date(now);
-            today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            if (responseDate < today || responseDate >= tomorrow) return false;
-            break;
-          case 'yesterday':
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
-            yesterday.setHours(0, 0, 0, 0);
-            const yesterdayEnd = new Date(yesterday);
-            yesterdayEnd.setHours(23, 59, 59, 999);
-            if (responseDate < yesterday || responseDate > yesterdayEnd) return false;
-            break;
-          case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            if (responseDate < weekAgo) return false;
-            break;
-          case 'month':
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            if (responseDate < monthAgo) return false;
-            break;
+        // Calculate dates using the same logic as calculateDatesFromRange
+        // This ensures frontend filter matches exactly what backend receives
+        const { startDate: calculatedStartDate, endDate: calculatedEndDate } = calculateDatesFromRange(
+          filters.dateRange,
+          filters.startDate,
+          filters.endDate
+        );
+        
+        if (calculatedStartDate && calculatedEndDate) {
+          // Convert ISO date strings to Date objects in UTC (matching backend behavior)
+          const startDateUTC = new Date(calculatedStartDate + 'T00:00:00.000Z');
+          const endDateUTC = new Date(calculatedEndDate + 'T23:59:59.999Z');
+          
+          if (responseDate < startDateUTC || responseDate > endDateUTC) return false;
         }
       }
 
-      // Custom date range filter
+      // Custom date range filter - Use UTC to match backend
       if (filters.startDate && filters.endDate) {
         const responseDate = new Date(response.createdAt);
-        const startDate = new Date(filters.startDate);
-        const endDate = new Date(filters.endDate);
+        // Parse dates as UTC to match backend behavior
+        const startDate = new Date(filters.startDate + 'T00:00:00.000Z');
+        const endDate = new Date(filters.endDate + 'T23:59:59.999Z');
         if (responseDate < startDate || responseDate > endDate) return false;
       }
 

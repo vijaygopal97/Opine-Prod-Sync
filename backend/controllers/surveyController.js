@@ -2071,14 +2071,20 @@ exports.getCatiStats = async (req, res) => {
     console.log(`🔍 getCatiStats - Survey ID: ${id}, ObjectId: ${surveyObjectId}`);
 
     // Build date filter
+    // IMPORTANT: Use UTC to match frontend date calculations exactly
+    // Frontend sends dates as YYYY-MM-DD strings, which we interpret as UTC dates
     const dateFilter = {};
     if (startDate) {
-      dateFilter.createdAt = { $gte: new Date(startDate) };
+      // Parse YYYY-MM-DD as UTC midnight
+      const startDateUTC = new Date(startDate + 'T00:00:00.000Z');
+      dateFilter.createdAt = { $gte: startDateUTC };
     }
     if (endDate) {
+      // Parse YYYY-MM-DD as UTC end of day (23:59:59.999)
+      const endDateUTC = new Date(endDate + 'T23:59:59.999Z');
       dateFilter.createdAt = { 
         ...dateFilter.createdAt, 
-        $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) // Include entire end date
+        $lte: endDateUTC // Include entire end date in UTC
       };
     }
 
