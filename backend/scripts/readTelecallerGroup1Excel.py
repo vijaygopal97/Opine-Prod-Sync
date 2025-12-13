@@ -4,12 +4,14 @@ import json
 import sys
 from datetime import datetime
 
-excel_path = sys.argv[1] if len(sys.argv) > 1 else '/var/www/opine/frontend/src/data/QC Team Details (1).xlsx'
+excel_path = sys.argv[1] if len(sys.argv) > 1 else '/var/www/opine/frontend/src/data/Telecaller_Group 1.xlsx'
 
 df = pd.read_excel(excel_path)
-df = df[df['Name'].notna() & (df['Name'] != 'Total')]
 
-# Convert to dict first
+# Filter out any rows with missing data
+df = df[df['Caller ID'].notna() & df['Caller Name'].notna() & df['Caller Mobile No.'].notna()]
+
+# Convert to dict
 records = df.to_dict('records')
 
 # Process each record to handle datetime and NaN values
@@ -30,5 +32,3 @@ for record in records:
             record[key] = None
 
 print(json.dumps(records, default=str))
-
-

@@ -288,8 +288,13 @@ exports.getSurveys = async (req, res) => {
         assignedInterviewersCount = survey.assignedInterviewers.length;
       } else if (survey.capiInterviewers && survey.catiInterviewers) {
         // For multi-mode surveys, count unique interviewers from both arrays
-        const capiInterviewerIds = survey.capiInterviewers.map(a => a.interviewer._id.toString());
-        const catiInterviewerIds = survey.catiInterviewers.map(a => a.interviewer._id.toString());
+        // Filter out null interviewers (deleted users)
+        const capiInterviewerIds = survey.capiInterviewers
+          .filter(a => a.interviewer && a.interviewer._id)
+          .map(a => a.interviewer._id.toString());
+        const catiInterviewerIds = survey.catiInterviewers
+          .filter(a => a.interviewer && a.interviewer._id)
+          .map(a => a.interviewer._id.toString());
         const uniqueInterviewerIds = new Set([...capiInterviewerIds, ...catiInterviewerIds]);
         assignedInterviewersCount = uniqueInterviewerIds.size;
       }

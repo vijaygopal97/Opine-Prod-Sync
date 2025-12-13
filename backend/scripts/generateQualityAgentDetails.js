@@ -52,3 +52,4 @@ async function generateUserDetails() {
 
 generateUserDetails();
 
+

@@ -1,101 +1,76 @@
 /**
- * Script to bulk create approved CATI interviewer users from CSV
+ * Script to add approved CATI interviewers from Excel file
+ * Excel: /var/www/opine/frontend/src/data/New callers from office.xlsx
  * 
- * CSV Format:
- * - Column 1: teleform_user_id (memberId)
- * - Column 2: name (full name - split into firstName and lastName)
- * - Column 3: mobile_number (phone and password)
- * 
- * Creates users with:
- * - memberId from column 1
- * - firstName and lastName from column 2
- * - phone and password from column 3
- * - email: {memberId}@gmail.com
- * - userType: interviewer
- * - companyCode: TEST001
- * - interviewModes: CATI (Telephonic interview)
- * - Approved status
- * - Assigned to survey 68fd1915d41841da463f0d46
+ * Assign to survey: 68fd1915d41841da463f0d46
  */
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const fs = require('fs');
+const { execSync } = require('child_process');
 const path = require('path');
 const User = require('../models/User');
 const Survey = require('../models/Survey');
 require('dotenv').config();
 
-// Reference user ID to copy data from
 const REFERENCE_USER_ID = '68ebf124ab86ea29f3c0f1f8';
 const SURVEY_ID = '68fd1915d41841da463f0d46';
 const COMPANY_CODE = 'TEST001';
-const CSV_PATH = '/var/www/opine/frontend/src/data/CATI Caller list.csv';
+const EXCEL_PATH = '/var/www/opine/frontend/src/data/New callers from office.xlsx';
 
-// Parse CSV file
-const parseCSV = (filePath) => {
+// Read Excel file using Python script
+const readExcelFile = async () => {
   try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const lines = content.split('\n').filter(line => line.trim());
-    
-    // Skip header row
-    const dataLines = lines.slice(1);
-    
-    const users = [];
-    for (const line of dataLines) {
-      if (!line.trim()) continue;
-      
-      // Parse CSV line (handle commas in names)
-      const parts = [];
-      let currentPart = '';
-      let inQuotes = false;
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          parts.push(currentPart.trim());
-          currentPart = '';
-        } else {
-          currentPart += char;
-        }
-      }
-      parts.push(currentPart.trim());
-      
-      if (parts.length >= 3) {
-        const teleformUserId = parts[0].trim();
-        const name = parts[1].trim();
-        const mobileNumber = parts[2].trim();
-        
-        if (teleformUserId && name && mobileNumber) {
-          // Split name into firstName and lastName
-          const nameParts = name.split(/\s+/);
-          const firstName = nameParts[0] || 'CATI';
-          const lastName = nameParts.slice(1).join(' ') || 'Interviewer';
-          
-          users.push({
-            memberId: teleformUserId,
-            firstName: firstName,
-            lastName: lastName,
-            phone: mobileNumber,
-            password: mobileNumber,
-            email: `${teleformUserId}@gmail.com`
-          });
-        }
-      }
-    }
-    
-    return users;
+    const pythonScript = path.join(__dirname, 'readNewCallersExcel.py');
+    const output = execSync(`python3 "${pythonScript}" "${EXCEL_PATH}"`, { encoding: 'utf-8' });
+    return JSON.parse(output.trim());
   } catch (error) {
-    throw new Error(`Error parsing CSV: ${error.message}`);
+    console.error('Error reading Excel file:', error.message);
+    throw error;
   }
 };
 
-// Create interviewer user
-const createInterviewer = async (userData, referenceUser, assignedBy) => {
+// Test login
+const testLogin = async (email, password) => {
   try {
-    // Check if user already exists
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+    
+    const isValid = await user.comparePassword(password);
+    return { 
+      success: isValid, 
+      user: isValid ? { 
+        email: user.email, 
+        memberId: user.memberId,
+        firstName: user.firstName,
+        lastName: user.lastName
+      } : null,
+      error: isValid ? null : 'Invalid password'
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// [Rest of the code is identical to addCATIInterviewers4007-4008.js]
+// Copying the createInterviewer, assignToSurvey, and main functions from the reference script
+
+const createInterviewer = async (userData) => {
+  try {
+    const referenceUser = await User.findById(REFERENCE_USER_ID);
+    if (!referenceUser) {
+      throw new Error(`Reference user ${REFERENCE_USER_ID} not found`);
+    }
+
+    const companyAdmin = await User.findOne({
+      userType: 'company_admin',
+      companyCode: COMPANY_CODE,
+      status: 'active'
+    });
+    const assignedBy = companyAdmin ? companyAdmin._id : referenceUser._id;
+
     const existingUser = await User.findOne({ 
       $or: [
         { email: userData.email.toLowerCase() },
@@ -105,7 +80,8 @@ const createInterviewer = async (userData, referenceUser, assignedBy) => {
     }).select('+password');
 
     if (existingUser) {
-      // Update existing user
+      console.log(`⚠️  User already exists (${userData.memberId}). Updating...`);
+      
       const salt = await bcrypt.genSalt(12);
       const hashedPassword = await bcrypt.hash(userData.password, salt);
       
@@ -122,6 +98,7 @@ const createInterviewer = async (userData, referenceUser, assignedBy) => {
             interviewModes: 'CATI (Telephonic interview)',
             password: hashedPassword,
             companyCode: COMPANY_CODE,
+            company: referenceUser.company || new mongoose.Types.ObjectId('68d33a0cd5e4634e58c4e678'),
             status: 'active',
             isActive: true
           }
@@ -140,17 +117,15 @@ const createInterviewer = async (userData, referenceUser, assignedBy) => {
         );
       }
       
-      // Update interviewer profile
       if (!updatedUser.interviewerProfile) {
         updatedUser.interviewerProfile = {};
       }
       updatedUser.interviewerProfile.approvalStatus = 'approved';
-      updatedUser.interviewerProfile.approvalFeedback = 'Bulk import - Auto approved for CATI';
+      updatedUser.interviewerProfile.approvalFeedback = 'Approved for CATI';
       updatedUser.interviewerProfile.approvedBy = referenceUser.interviewerProfile?.approvedBy || assignedBy;
       updatedUser.interviewerProfile.approvedAt = new Date();
       updatedUser.interviewerProfile.lastSubmittedAt = new Date();
       
-      // Copy missing fields from reference user
       if (referenceUser.interviewerProfile) {
         const fieldsToCopy = [
           'age', 'gender', 'languagesSpoken', 'highestDegree',
@@ -196,10 +171,14 @@ const createInterviewer = async (userData, referenceUser, assignedBy) => {
       }
       
       await updatedUser.save({ runValidators: false });
-      return { success: true, user: updatedUser, isUpdate: true };
+      
+      console.log(`✅ User updated: ${updatedUser.firstName} ${updatedUser.lastName} (${updatedUser.email})`);
+      console.log(`   Member ID: ${updatedUser.memberId}`);
+      console.log(`   User ID: ${updatedUser._id}\n`);
+      
+      return { user: updatedUser, isNew: false };
     }
 
-    // Create new user
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(userData.password, salt);
     const companyId = referenceUser.company || new mongoose.Types.ObjectId('68d33a0cd5e4634e58c4e678');
@@ -325,7 +304,7 @@ const createInterviewer = async (userData, referenceUser, assignedBy) => {
           ? referenceUser.interviewerProfile.agreesToParticipateInSurvey 
           : true,
         approvalStatus: 'approved',
-        approvalFeedback: 'Bulk import - Auto approved for CATI',
+        approvalFeedback: 'Approved for CATI',
         approvedBy: referenceUser.interviewerProfile?.approvedBy || assignedBy,
         approvedAt: new Date(),
         lastSubmittedAt: new Date()
@@ -336,7 +315,6 @@ const createInterviewer = async (userData, referenceUser, assignedBy) => {
 
     await newUser.save({ runValidators: false });
     
-    // Verify password
     const savedUser = await User.findById(newUser._id).select('+password');
     const passwordValid = await savedUser.comparePassword(userData.password);
     
@@ -349,13 +327,17 @@ const createInterviewer = async (userData, referenceUser, assignedBy) => {
       );
     }
     
-    return { success: true, user: savedUser, isUpdate: false };
+    console.log(`✅ User created: ${savedUser.firstName} ${savedUser.lastName} (${savedUser.email})`);
+    console.log(`   Member ID: ${savedUser.memberId}`);
+    console.log(`   User ID: ${savedUser._id}\n`);
+    
+    return { user: savedUser, isNew: true };
   } catch (error) {
-    return { success: false, error: error.message };
+    console.error(`❌ Error creating user ${userData.memberId}:`, error.message);
+    throw error;
   }
 };
 
-// Assign interviewer to survey
 const assignToSurvey = async (interviewerId, assignedById) => {
   try {
     const survey = await Survey.findById(SURVEY_ID);
@@ -363,13 +345,13 @@ const assignToSurvey = async (interviewerId, assignedById) => {
       throw new Error(`Survey ${SURVEY_ID} not found`);
     }
     
-    // Check if already assigned
     const existingAssignment = survey.catiInterviewers?.find(
       assignment => assignment.interviewer.toString() === interviewerId.toString()
     );
     
     if (existingAssignment) {
-      return; // Already assigned
+      console.log(`✅ Interviewer already assigned to survey`);
+      return;
     }
     
     if (!survey.catiInterviewers) {
@@ -386,22 +368,20 @@ const assignToSurvey = async (interviewerId, assignedById) => {
     });
     
     await survey.save();
+    console.log(`✅ Interviewer assigned to survey ${SURVEY_ID}`);
   } catch (error) {
-    console.error(`Error assigning to survey: ${error.message}`);
+    console.error(`❌ Error assigning to survey: ${error.message}`);
     throw error;
   }
 };
 
-// Main execution
 const main = async () => {
   try {
-    // Connect to MongoDB
     const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/opine';
     console.log('🔌 Connecting to MongoDB...');
     await mongoose.connect(mongoUri);
     console.log('✅ Connected to MongoDB\n');
 
-    // Fetch reference user
     console.log(`📋 Fetching reference user: ${REFERENCE_USER_ID}...`);
     const referenceUser = await User.findById(REFERENCE_USER_ID);
     if (!referenceUser) {
@@ -409,7 +389,6 @@ const main = async () => {
     }
     console.log(`✅ Found reference user: ${referenceUser.firstName} ${referenceUser.lastName}\n`);
 
-    // Find company admin for assignment
     const companyAdmin = await User.findOne({
       userType: 'company_admin',
       companyCode: COMPANY_CODE,
@@ -417,73 +396,47 @@ const main = async () => {
     });
     const assignedBy = companyAdmin ? companyAdmin._id : referenceUser._id;
 
-    // Parse CSV
-    console.log(`📄 Reading CSV file: ${CSV_PATH}...`);
-    const usersData = parseCSV(CSV_PATH);
-    console.log(`✅ Found ${usersData.length} users in CSV\n`);
-
-    console.log(`🚀 Starting bulk creation...\n`);
+    console.log('🚀 Creating/Updating CATI Interviewer\n');
     console.log('='.repeat(80));
-
-    const results = [];
-    const createdUsers = [];
-
-    for (let i = 0; i < usersData.length; i++) {
-      const userData = usersData[i];
-      const progress = `[${i + 1}/${usersData.length}]`;
-      
-      try {
-        const result = await createInterviewer(userData, referenceUser, assignedBy);
-        
-        if (result.success) {
-          // Assign to survey
-          await assignToSurvey(result.user._id, assignedBy);
-          
-          const fullName = `${userData.firstName} ${userData.lastName}`;
-          results.push({
-            ...result,
-            userData,
-            fullName
-          });
-          
-          createdUsers.push({
-            interviewerID: userData.memberId,
-            Password: userData.password,
-            Name: fullName
-          });
-          
-          console.log(`${progress} ✅ ${fullName} (${userData.memberId}) - ${result.isUpdate ? 'Updated' : 'Created'}`);
-        } else {
-          console.log(`${progress} ❌ ${userData.firstName} ${userData.lastName} (${userData.memberId}): ${result.error}`);
-          results.push({ ...result, userData });
-        }
-      } catch (error) {
-        console.log(`${progress} ❌ ${userData.firstName} ${userData.lastName} (${userData.memberId}): ${error.message}`);
-        results.push({ success: false, error: error.message, userData });
-      }
-    }
-
-    console.log('\n' + '='.repeat(80));
-    console.log('\n📊 Summary:');
-    console.log('='.repeat(80));
-    const successful = results.filter(r => r.success);
-    const failed = results.filter(r => !r.success);
     
-    console.log(`✅ Successfully processed: ${successful.length}`);
-    console.log(`❌ Failed: ${failed.length}\n`);
-
-    // Output all created users in requested format
-    console.log('📋 All Created Users:');
+    const results = [];
+    
+    for (const interviewerData of interviewersData) {
+      console.log(`\n📝 Processing: ${interviewerData.firstName} ${interviewerData.lastName} (${interviewerData.memberId})`);
+      console.log(`   Email: ${interviewerData.email}`);
+      console.log(`   Phone: ${interviewerData.phone}`);
+      console.log(`   Password: ${interviewerData.password}`);
+      console.log('-'.repeat(80));
+      
+      const result = await createInterviewer(interviewerData);
+      await assignToSurvey(result.user._id, assignedBy);
+      
+      results.push({
+        ...result,
+        interviewerData
+      });
+      
+      console.log(`✅ Completed: ${result.user.firstName} ${result.user.lastName}\n`);
+    }
+    
     console.log('='.repeat(80));
-    createdUsers.forEach((user, index) => {
-      console.log(`${index + 1}. InterviewerID: ${user.interviewerID}`);
-      console.log(`   Password: ${user.Password}`);
-      console.log(`   Name: ${user.Name}`);
-      console.log('');
+    console.log('\n✅ Interviewer processed successfully!\n');
+    console.log('📋 Summary:');
+    console.log('='.repeat(80));
+    
+    results.forEach((result, index) => {
+      const { user, interviewerData } = result;
+      console.log(`\n${index + 1}. ${user.firstName} ${user.lastName}`);
+      console.log(`   InterviewerID: ${user.memberId}`);
+      console.log(`   Email: ${user.email}`);
+      console.log(`   Password: ${interviewerData.password}`);
+      console.log(`   Phone: ${user.phone}`);
+      console.log(`   Status: ${user.status}`);
+      console.log(`   Approval: ${user.interviewerProfile?.approvalStatus || 'N/A'}`);
+      console.log(`   Survey Assignment: Assigned to ${SURVEY_ID}`);
     });
-
-    console.log('='.repeat(80));
-    console.log('\n✅ Script completed!');
+    
+    console.log('\n' + '='.repeat(80));
     
     await mongoose.disconnect();
     process.exit(0);
@@ -496,19 +449,85 @@ const main = async () => {
   }
 };
 
-// Run script
 if (require.main === module) {
   main();
 }
 
-module.exports = { createInterviewer, assignToSurvey, parseCSV };
+module.exports = { createInterviewer, assignToSurvey, testLogin };
+gnToSurvey(result.user._id, assignedBy);
+        
+        // Test login
+        console.log(`🔐 Testing login for ${email}...`);
+        const loginTest = await testLogin(email, password);
+        if (loginTest.success) {
+          console.log(`✅ Login test PASSED for ${email}`);
+        } else {
+          console.log(`❌ Login test FAILED for ${email}: ${loginTest.error}`);
+        }
+        loginTests.push({ email, password, success: loginTest.success, error: loginTest.error });
+        
+        results.push({
+          ...result,
+          interviewerData
+        });
+        
+        console.log(`✅ Completed: ${result.user.firstName} ${result.user.lastName}\n`);
+      } catch (error) {
+        console.error(`❌ Error processing row:`, error.message);
+        results.push({ success: false, error: error.message, row });
+      }
+    }
+    
+    console.log('='.repeat(80));
+    console.log('\n✅ All interviewers processed!\n');
+    console.log('📊 Summary:');
+    console.log('='.repeat(80));
+    
+    const successful = results.filter(r => r.success !== false && r.user);
+    const failed = results.filter(r => r.success === false);
+    const loginFailed = loginTests.filter(t => !t.success);
+    
+    console.log(`✅ Successfully created/updated: ${successful.length}`);
+    console.log(`❌ Failed: ${failed.length}`);
+    console.log(`🔐 Login tests passed: ${loginTests.length - loginFailed.length}/${loginTests.length}`);
+    
+    if (loginFailed.length > 0) {
+      console.log(`\n⚠️  Login test failures:`);
+      loginFailed.forEach(test => {
+        console.log(`   - ${test.email}: ${test.error}`);
+      });
+    }
+    
+    console.log('\n📋 Created/Updated Interviewers:');
+    console.log('='.repeat(80));
+    
+    successful.forEach((result, index) => {
+      const { user, interviewerData } = result;
+      console.log(`\n${index + 1}. ${user.firstName} ${user.lastName}`);
+      console.log(`   InterviewerID: ${user.memberId}`);
+      console.log(`   Email: ${user.email}`);
+      console.log(`   Password: ${interviewerData.password}`);
+      console.log(`   Phone: ${user.phone}`);
+      console.log(`   Status: ${user.status}`);
+      console.log(`   Approval: ${user.interviewerProfile?.approvalStatus || 'N/A'}`);
+      console.log(`   Survey Assignment: Assigned to ${SURVEY_ID}`);
+    });
+    
+    console.log('\n' + '='.repeat(80));
+    
+    await mongoose.disconnect();
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Fatal error:', error);
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.disconnect();
+    }
+    process.exit(1);
+  }
+};
 
+if (require.main === module) {
+  main();
+}
 
-
-
-
-
-
-
-
-
+module.exports = { createInterviewer, assignToSurvey };
