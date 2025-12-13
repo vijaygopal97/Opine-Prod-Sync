@@ -595,9 +595,9 @@ const SurveyReportsPage = () => {
   }, [surveyId, survey, catiFilters.startDate, catiFilters.endDate, catiFilters.interviewerIds, catiFilters.interviewerMode, catiFilters.ac]);
 
   // Helper function to calculate dates from dateRange
-  // IMPORTANT: This must match backend date filter logic exactly
-  // Backend expects: startDate = YYYY-MM-DD (interpreted as 00:00:00 UTC)
-  //                  endDate = YYYY-MM-DD (interpreted as 23:59:59.999 UTC)
+  // IMPORTANT: Calculate dates in LOCAL timezone (IST for India)
+  // When sending to backend, we send the date string that represents the local date
+  // Backend will interpret it correctly by using the date's UTC equivalent
   const calculateDatesFromRange = (dateRange, customStartDate, customEndDate) => {
     const now = new Date();
     let startDate = '';
@@ -605,38 +605,49 @@ const SurveyReportsPage = () => {
     
     switch (dateRange) {
       case 'today':
-        // For "today", use today's date for both start and end
-        // Backend will set endDate to 23:59:59.999
+        // Get today's date in local timezone (IST)
         const today = new Date(now);
-        today.setUTCHours(0, 0, 0, 0);
-        startDate = today.toISOString().split('T')[0];
-        endDate = today.toISOString().split('T')[0]; // Same date, backend adds 23:59:59.999
+        const todayYear = today.getFullYear();
+        const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+        const todayDay = String(today.getDate()).padStart(2, '0');
+        startDate = `${todayYear}-${todayMonth}-${todayDay}`;
+        endDate = startDate; // Same date, backend adds 23:59:59.999
         break;
       case 'yesterday':
-        // For "yesterday", use yesterday's date for both start and end
+        // Get yesterday's date in local timezone (IST)
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
-        yesterday.setUTCHours(0, 0, 0, 0);
-        startDate = yesterday.toISOString().split('T')[0];
-        endDate = yesterday.toISOString().split('T')[0]; // Same date, backend adds 23:59:59.999
+        const yesterdayYear = yesterday.getFullYear();
+        const yesterdayMonth = String(yesterday.getMonth() + 1).padStart(2, '0');
+        const yesterdayDay = String(yesterday.getDate()).padStart(2, '0');
+        startDate = `${yesterdayYear}-${yesterdayMonth}-${yesterdayDay}`;
+        endDate = startDate; // Same date, backend adds 23:59:59.999
         break;
       case 'week':
         const weekAgo = new Date(now);
         weekAgo.setDate(weekAgo.getDate() - 7);
-        weekAgo.setUTCHours(0, 0, 0, 0);
-        startDate = weekAgo.toISOString().split('T')[0];
+        const weekAgoYear = weekAgo.getFullYear();
+        const weekAgoMonth = String(weekAgo.getMonth() + 1).padStart(2, '0');
+        const weekAgoDay = String(weekAgo.getDate()).padStart(2, '0');
+        startDate = `${weekAgoYear}-${weekAgoMonth}-${weekAgoDay}`;
         const todayForWeek = new Date(now);
-        todayForWeek.setUTCHours(0, 0, 0, 0);
-        endDate = todayForWeek.toISOString().split('T')[0]; // Today's date, backend adds 23:59:59.999
+        const todayWeekYear = todayForWeek.getFullYear();
+        const todayWeekMonth = String(todayForWeek.getMonth() + 1).padStart(2, '0');
+        const todayWeekDay = String(todayForWeek.getDate()).padStart(2, '0');
+        endDate = `${todayWeekYear}-${todayWeekMonth}-${todayWeekDay}`;
         break;
       case 'month':
         const monthAgo = new Date(now);
         monthAgo.setMonth(monthAgo.getMonth() - 1);
-        monthAgo.setUTCHours(0, 0, 0, 0);
-        startDate = monthAgo.toISOString().split('T')[0];
+        const monthAgoYear = monthAgo.getFullYear();
+        const monthAgoMonth = String(monthAgo.getMonth() + 1).padStart(2, '0');
+        const monthAgoDay = String(monthAgo.getDate()).padStart(2, '0');
+        startDate = `${monthAgoYear}-${monthAgoMonth}-${monthAgoDay}`;
         const todayForMonth = new Date(now);
-        todayForMonth.setUTCHours(0, 0, 0, 0);
-        endDate = todayForMonth.toISOString().split('T')[0]; // Today's date, backend adds 23:59:59.999
+        const todayMonthYear = todayForMonth.getFullYear();
+        const todayMonthMonth = String(todayForMonth.getMonth() + 1).padStart(2, '0');
+        const todayMonthDay = String(todayForMonth.getDate()).padStart(2, '0');
+        endDate = `${todayMonthYear}-${todayMonthMonth}-${todayMonthDay}`;
         break;
       case 'custom':
         startDate = customStartDate || '';
@@ -962,33 +973,50 @@ const SurveyReportsPage = () => {
     if (!responses || responses.length === 0) return [];
 
     return responses.filter(response => {
-      // Date range filter - Use same calculation as backend to ensure consistency
+      // Date range filter - Use LOCAL timezone (IST) for user's perspective
       if (filters.dateRange !== 'all') {
         const responseDate = new Date(response.createdAt);
+        const now = new Date();
         
-        // Calculate dates using the same logic as calculateDatesFromRange
-        // This ensures frontend filter matches exactly what backend receives
-        const { startDate: calculatedStartDate, endDate: calculatedEndDate } = calculateDatesFromRange(
-          filters.dateRange,
-          filters.startDate,
-          filters.endDate
-        );
-        
-        if (calculatedStartDate && calculatedEndDate) {
-          // Convert ISO date strings to Date objects in UTC (matching backend behavior)
-          const startDateUTC = new Date(calculatedStartDate + 'T00:00:00.000Z');
-          const endDateUTC = new Date(calculatedEndDate + 'T23:59:59.999Z');
-          
-          if (responseDate < startDateUTC || responseDate > endDateUTC) return false;
+        switch (filters.dateRange) {
+          case 'today':
+            // Today in local timezone (IST)
+            const today = new Date(now);
+            today.setHours(0, 0, 0, 0); // Local midnight
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            if (responseDate < today || responseDate >= tomorrow) return false;
+            break;
+          case 'yesterday':
+            // Yesterday in local timezone (IST)
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            yesterday.setHours(0, 0, 0, 0); // Local midnight
+            const yesterdayEnd = new Date(yesterday);
+            yesterdayEnd.setHours(23, 59, 59, 999); // Local end of day
+            if (responseDate < yesterday || responseDate > yesterdayEnd) return false;
+            break;
+          case 'week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            weekAgo.setHours(0, 0, 0, 0);
+            if (responseDate < weekAgo) return false;
+            break;
+          case 'month':
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            monthAgo.setHours(0, 0, 0, 0);
+            if (responseDate < monthAgo) return false;
+            break;
         }
       }
 
-      // Custom date range filter - Use UTC to match backend
+      // Custom date range filter - Use local timezone
       if (filters.startDate && filters.endDate) {
         const responseDate = new Date(response.createdAt);
-        // Parse dates as UTC to match backend behavior
-        const startDate = new Date(filters.startDate + 'T00:00:00.000Z');
-        const endDate = new Date(filters.endDate + 'T23:59:59.999Z');
+        // Parse dates in local timezone
+        const startDate = new Date(filters.startDate);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(filters.endDate);
+        endDate.setHours(23, 59, 59, 999);
         if (responseDate < startDate || responseDate > endDate) return false;
       }
 

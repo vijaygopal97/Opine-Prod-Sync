@@ -2071,20 +2071,29 @@ exports.getCatiStats = async (req, res) => {
     console.log(`🔍 getCatiStats - Survey ID: ${id}, ObjectId: ${surveyObjectId}`);
 
     // Build date filter
-    // IMPORTANT: Use UTC to match frontend date calculations exactly
-    // Frontend sends dates as YYYY-MM-DD strings, which we interpret as UTC dates
+    // IMPORTANT: Frontend sends dates as YYYY-MM-DD representing LOCAL dates in IST (UTC+5:30)
+    // We need to convert these IST dates to UTC date ranges that cover the entire IST day
+    // IST is UTC+5:30, so for IST date "2025-12-13":
+    //   IST 2025-12-13 00:00:00 = UTC 2025-12-12 18:30:00
+    //   IST 2025-12-13 23:59:59.999 = UTC 2025-12-13 18:29:59.999
     const dateFilter = {};
     if (startDate) {
-      // Parse YYYY-MM-DD as UTC midnight
-      const startDateUTC = new Date(startDate + 'T00:00:00.000Z');
+      // Parse YYYY-MM-DD as IST date
+      const [year, month, day] = startDate.split('-').map(Number);
+      // IST midnight (00:00:00) = UTC previous day 18:30:00
+      // Create UTC date for the day at 18:30:00, then subtract 1 day
+      const startDateUTC = new Date(Date.UTC(year, month - 1, day, 18, 30, 0, 0));
+      startDateUTC.setUTCDate(startDateUTC.getUTCDate() - 1);
       dateFilter.createdAt = { $gte: startDateUTC };
     }
     if (endDate) {
-      // Parse YYYY-MM-DD as UTC end of day (23:59:59.999)
-      const endDateUTC = new Date(endDate + 'T23:59:59.999Z');
+      // Parse YYYY-MM-DD as IST date
+      const [year, month, day] = endDate.split('-').map(Number);
+      // IST end of day (23:59:59.999) = UTC same day 18:29:59.999
+      const endDateUTC = new Date(Date.UTC(year, month - 1, day, 18, 29, 59, 999));
       dateFilter.createdAt = { 
         ...dateFilter.createdAt, 
-        $lte: endDateUTC // Include entire end date in UTC
+        $lte: endDateUTC
       };
     }
 
