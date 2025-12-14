@@ -2890,9 +2890,45 @@ exports.getCatiStats = async (req, res) => {
       if (!response.interviewer || !response.interviewer._id) return;
       
       const interviewerId = response.interviewer._id.toString();
-      if (!interviewerStatsMap.has(interviewerId)) return;
       
-        const stat = interviewerStatsMap.get(interviewerId);
+      // Ensure interviewer is in the map (add if missing, but check project manager filter)
+      if (!interviewerStatsMap.has(interviewerId)) {
+        // Check if should include (for project managers)
+        if (!shouldIncludeInterviewer(interviewerId)) return;
+        
+        // Add interviewer to map from response data
+        const interviewer = response.interviewer;
+        const interviewerName = interviewer.firstName && interviewer.lastName
+          ? `${interviewer.firstName} ${interviewer.lastName}`.trim()
+          : interviewer.name || 'Unknown';
+        const interviewerPhone = interviewer.phone || '';
+        const memberID = interviewer.memberId || interviewer.memberID || '';
+        
+        interviewerStatsMap.set(interviewerId, {
+          interviewerId: interviewerId,
+          interviewerName: interviewerName,
+          interviewerPhone: interviewerPhone,
+          memberID: memberID,
+          numberOfDials: 0,
+          callsConnected: 0,
+          completed: 0,
+          approved: 0,
+          underQCQueue: 0,
+          processingInBatch: 0,
+          rejected: 0,
+          incomplete: 0,
+          formDuration: 0,
+          callNotReceivedToTelecaller: 0,
+          ringing: 0,
+          notRinging: 0,
+          switchOff: 0,
+          numberNotReachable: 0,
+          numberDoesNotExist: 0,
+          noResponseByTelecaller: 0
+        });
+      }
+      
+      const stat = interviewerStatsMap.get(interviewerId);
         
       // Get call status from response - PRIORITY ORDER:
       // 1. knownCallStatus field (dedicated field for call status)
