@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { 
   ArrowLeft,
   Filter, 
@@ -61,6 +63,7 @@ const QCPerformancePage = () => {
   // Filter states
   const [filters, setFilters] = useState({
     search: '',
+    dateRange: 'all', // 'all', 'today', 'yesterday', 'week', 'month', 'custom'
     startDate: '',
     endDate: '',
     sortBy: 'totalReviews', // totalReviews, approvedResponses, rejectedResponses
@@ -97,6 +100,54 @@ const QCPerformancePage = () => {
     };
   }, []);
 
+  // Calculate date range based on dateRange filter
+  const getDateRange = useMemo(() => {
+    const now = new Date();
+    let startDate = '';
+    let endDate = '';
+
+    if (filters.dateRange === 'all') {
+      // No date filtering
+      return { startDate: '', endDate: '' };
+    } else if (filters.dateRange === 'custom') {
+      // Use custom dates
+      return { startDate: filters.startDate, endDate: filters.endDate };
+    } else {
+      // Calculate based on dateRange
+      const today = new Date(now);
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      switch (filters.dateRange) {
+        case 'today':
+          startDate = today.toISOString().split('T')[0];
+          endDate = tomorrow.toISOString().split('T')[0];
+          break;
+        case 'yesterday':
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          startDate = yesterday.toISOString().split('T')[0];
+          endDate = today.toISOString().split('T')[0];
+          break;
+        case 'week':
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          startDate = weekAgo.toISOString().split('T')[0];
+          endDate = tomorrow.toISOString().split('T')[0];
+          break;
+        case 'month':
+          const monthAgo = new Date(today);
+          monthAgo.setDate(monthAgo.getDate() - 30);
+          startDate = monthAgo.toISOString().split('T')[0];
+          endDate = tomorrow.toISOString().split('T')[0];
+          break;
+      }
+    }
+
+    return { startDate, endDate };
+  }, [filters.dateRange, filters.startDate, filters.endDate]);
+
   // Fetch survey and QC performance data
   const fetchData = async () => {
     try {
@@ -110,8 +161,8 @@ const QCPerformancePage = () => {
       
       // Fetch QC performance data
       const params = {
-        ...(filters.startDate && { startDate: filters.startDate }),
-        ...(filters.endDate && { endDate: filters.endDate }),
+        ...(getDateRange.startDate && { startDate: getDateRange.startDate }),
+        ...(getDateRange.endDate && { endDate: getDateRange.endDate }),
         ...(filters.search && { search: filters.search })
       };
       
@@ -119,8 +170,8 @@ const QCPerformancePage = () => {
       const [qcResponse, trendsResponse] = await Promise.all([
         performanceAPI.getQCPerformanceBySurvey(surveyId, params),
         performanceAPI.getQCPerformanceTrends(surveyId, {
-          ...(filters.startDate && { startDate: filters.startDate }),
-          ...(filters.endDate && { endDate: filters.endDate })
+          ...(getDateRange.startDate && { startDate: getDateRange.startDate }),
+          ...(getDateRange.endDate && { endDate: getDateRange.endDate })
         })
       ]);
       
@@ -143,7 +194,7 @@ const QCPerformancePage = () => {
     if (surveyId) {
       fetchData();
     }
-  }, [surveyId, filters.startDate, filters.endDate]);
+  }, [surveyId, filters.dateRange, filters.startDate, filters.endDate, filters.search]);
 
   // Apply search and sorting
   const filteredAndSortedData = useMemo(() => {
@@ -231,6 +282,7 @@ const QCPerformancePage = () => {
   const clearFilters = () => {
     setFilters({
       search: '',
+      dateRange: 'all',
       startDate: '',
       endDate: '',
       sortBy: 'totalReviews',
@@ -467,31 +519,120 @@ const QCPerformancePage = () => {
                 </div>
               </div>
 
-              {/* Start Date */}
+              {/* Date Range */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Date
+                  Date Range
                 </label>
-                <input
-                  type="date"
-                  value={filters.startDate}
-                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                <select
+                  value={filters.dateRange}
+                  onChange={(e) => {
+                    handleFilterChange('dateRange', e.target.value);
+                    // Clear custom dates when switching away from custom
+                    if (e.target.value !== 'custom') {
+                      handleFilterChange('startDate', '');
+                      handleFilterChange('endDate', '');
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="week">Last 7 Days</option>
+                  <option value="month">Last 30 Days</option>
+                  <option value="custom">Custom Range</option>
+                </select>
               </div>
 
-              {/* End Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  value={filters.endDate}
-                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
+              {/* Custom Date Range Picker */}
+              {filters.dateRange === 'custom' && (
+                <div className="sm:col-span-2 md:col-span-3 lg:col-span-4 mt-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="w-4 h-4 text-[#373177]" />
+                    <span className="text-sm font-semibold text-gray-700">Select Date Range</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Start Date */}
+                    <div className="relative">
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        From Date
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                        <DatePicker
+                          selected={filters.startDate ? new Date(filters.startDate) : null}
+                          onChange={(date) => {
+                            if (date) {
+                              const dateStr = date.toISOString().split('T')[0];
+                              handleFilterChange('startDate', dateStr);
+                            } else {
+                              handleFilterChange('startDate', '');
+                            }
+                          }}
+                          selectsStart
+                          startDate={filters.startDate ? new Date(filters.startDate) : null}
+                          endDate={filters.endDate ? new Date(filters.endDate) : null}
+                          maxDate={filters.endDate ? new Date(filters.endDate) : new Date()}
+                          dateFormat="MMM dd, yyyy"
+                          placeholderText="Select start date"
+                          className="w-full pl-8 pr-10 py-2.5 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-blue-400"
+                          showPopperArrow={false}
+                          popperClassName="react-datepicker-popper"
+                          calendarClassName="custom-calendar"
+                          isClearable
+                          clearButtonClassName="text-gray-400 hover:text-red-500 transition-colors"
+                        />
+                      </div>
+                      {filters.startDate && (
+                        <p className="mt-1.5 text-xs text-gray-500">
+                          {new Date(filters.startDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* End Date */}
+                    <div className="relative">
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        To Date
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                        <DatePicker
+                          selected={filters.endDate ? new Date(filters.endDate) : null}
+                          onChange={(date) => {
+                            if (date) {
+                              const dateStr = date.toISOString().split('T')[0];
+                              handleFilterChange('endDate', dateStr);
+                            } else {
+                              handleFilterChange('endDate', '');
+                            }
+                          }}
+                          selectsEnd
+                          startDate={filters.startDate ? new Date(filters.startDate) : null}
+                          endDate={filters.endDate ? new Date(filters.endDate) : null}
+                          minDate={filters.startDate ? new Date(filters.startDate) : null}
+                          maxDate={new Date()}
+                          dateFormat="MMM dd, yyyy"
+                          placeholderText="Select end date"
+                          className="w-full pl-8 pr-10 py-2.5 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-700 shadow-sm transition-all hover:border-blue-400"
+                          showPopperArrow={false}
+                          popperClassName="react-datepicker-popper"
+                          calendarClassName="custom-calendar"
+                          isClearable
+                          clearButtonClassName="text-gray-400 hover:text-red-500 transition-colors"
+                        />
+                      </div>
+                      {filters.endDate && (
+                        <p className="mt-1.5 text-xs text-gray-500">
+                          {new Date(filters.endDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
