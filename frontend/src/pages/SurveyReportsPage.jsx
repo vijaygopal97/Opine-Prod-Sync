@@ -3471,6 +3471,7 @@ const SurveyReportsPage = () => {
                       'Caller Mobile No.': stat.interviewerPhone || 'N/A',
                       'Number of Dials': stat.numberOfDials || 0,
                       'Calls Connected': stat.callsConnected || 0,
+                      'Incomplete': stat.incomplete || 0,
                       'Completed': stat.completed || 0,
                       'Approved': stat.approved || 0,
                       'Under QC Queue': stat.underQCQueue || 0,
@@ -3517,12 +3518,12 @@ const SurveyReportsPage = () => {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Caller Mobile No.</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Number of Dials</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Calls Connected</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Incomplete</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Completed</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Approved</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Under QC Queue</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Processing in Batch</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Rejected</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Incomplete</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Form Duration</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Call Not Received to Telecaller</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Interviewer Picked up</th>
@@ -3613,12 +3614,12 @@ const SurveyReportsPage = () => {
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">-</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.numberOfDials}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.callsConnected}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.incomplete}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.completed}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.approved}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.underQCQueue}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.processingInBatch}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.rejected}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.incomplete}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{formatDuration(totals.totalFormDurationSeconds)}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.callNotReceivedToTelecaller}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-[#373177] font-bold">{totals.ringing}</td>
@@ -3637,12 +3638,12 @@ const SurveyReportsPage = () => {
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.interviewerPhone || 'N/A'}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.numberOfDials || 0}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.callsConnected || 0}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.incomplete || 0}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.completed || 0}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.approved || 0}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.underQCQueue || 0}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.processingInBatch || 0}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.rejected || 0}</td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.incomplete || 0}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.formDuration || '0:00:00'}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.callNotReceivedToTelecaller || 0}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{stat.ringing || 0}</td>

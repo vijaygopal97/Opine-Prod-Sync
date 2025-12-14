@@ -2927,6 +2927,13 @@ exports.getCatiStats = async (req, res) => {
       // Even if call status is 'unknown', count it as a dial attempt
       // IMPORTANT: Number of Dials = Ringing + Not Ringing + Call Not Received to Telecaller
       stat.numberOfDials += 1;
+      
+      // Count Calls Connected: From ALL dials, count those with knownCallStatus = 'call_connected' or 'success'
+      // This must be counted from the same set of responses as Number of Dials
+      const isCallConnected = normalizedCallStatus === 'call_connected' || normalizedCallStatus === 'success';
+      if (isCallConnected) {
+        stat.callsConnected += 1;
+      }
     });
     
     // Step 3: Fetch batch information for all responses to determine QC status
@@ -3082,14 +3089,9 @@ exports.getCatiStats = async (req, res) => {
       
       const normalizedCallStatus = callStatus.toLowerCase().trim();
       
-      // Count Calls Connected: Responses with knownCallStatus = 'call_connected' or 'success'
-      // The callStatus variable already comes from knownCallStatus (priority 1), metadata.callStatus (priority 2), or responses array (priority 3)
-      // So we just need to check the normalized call status
-      const isCallConnected = normalizedCallStatus === 'call_connected' || normalizedCallStatus === 'success';
-      
-      if (isCallConnected) {
-        stat.callsConnected += 1;
-      }
+      // NOTE: Calls Connected is now counted in Step 2 (where Number of Dials is counted)
+      // This ensures it counts from the exact same set of responses as Number of Dials
+      // No need to count it again here
       
       // Link response to call record (for duration calculation)
       const callRecordId = response.metadata?.callRecordId;
