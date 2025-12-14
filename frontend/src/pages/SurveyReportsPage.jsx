@@ -4352,6 +4352,8 @@ const SurveyReportsPage = () => {
                         gpsPending: 0, // Not calculated in frontend
                         gpsFail: 0, // Not calculated in frontend
                         underQC: stat.pending || 0, // Use pending (Pending_Approval status)
+                        approved: stat.approved || 0,
+                        rejected: stat.manualRejected || 0, // Override: Use manualRejected (exclude auto-rejected)
                         capi: stat.capi || 0, // Use CAPI count from analytics
                         cati: stat.cati || 0, // Use CATI count from analytics
                         // Use demographic percentages from stat (already calculated from filtered responses)
