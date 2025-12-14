@@ -4283,7 +4283,7 @@ const SurveyReportsPage = () => {
                           psCovered: stat.psCovered || 0,
                           completedInterviews: stat.count,
                           systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
-                          countsAfterRejection: stat.count,
+                          countsAfterRejection: Math.max(0, (stat.count || 0) - (stat.autoRejected || 0)), // Completed Interviews minus System Rejections
                           gpsPending: 0,
                           gpsFail: 0,
                         underQC: (stat.underQC || stat.pending || 0), // Use underQC or pending (Pending_Approval status - includes all in batches)
@@ -4381,7 +4381,7 @@ const SurveyReportsPage = () => {
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.psCovered || stat.psCovered || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.completedInterviews || stat.count}</td>
                           <td className="py-3 px-4 text-right font-semibold text-red-600">{displayStat.systemRejections || 0}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.countsAfterRejection || stat.count}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.countsAfterRejection ?? 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.gpsPending || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.gpsFail || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-green-600">{displayStat.approved || stat.approved || 0}</td>
