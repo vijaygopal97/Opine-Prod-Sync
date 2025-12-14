@@ -56,7 +56,7 @@ const ViewResponsesPage = () => {
   // Filter states
   const [filters, setFilters] = useState({
     search: '',
-    status: 'all', // 'all', 'approved_rejected_pending', 'approved_pending', 'pending', 'Approved', 'Rejected'
+    status: 'approved_rejected_pending', // 'all', 'approved_rejected_pending', 'approved_pending', 'pending', 'Approved', 'Rejected'
     dateRange: 'all', // 'today', 'week', 'month', 'all', 'custom'
     startDate: '',
     endDate: '',

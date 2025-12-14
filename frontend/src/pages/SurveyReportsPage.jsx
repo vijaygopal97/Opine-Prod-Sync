@@ -107,7 +107,7 @@ const SurveyReportsPage = () => {
     dateRange: 'all', // 'today', 'week', 'month', 'all'
     startDate: '',
     endDate: '',
-    status: 'all', // 'all', 'approved_rejected_pending', 'approved_pending', 'pending', 'Approved', 'Rejected'
+    status: 'approved_rejected_pending', // 'all', 'approved_rejected_pending', 'approved_pending', 'pending', 'Approved', 'Rejected'
     interviewMode: '', // 'CAPI', 'CATI', ''
     ac: '',
     district: '',
@@ -3906,7 +3906,7 @@ const SurveyReportsPage = () => {
                           psCovered: stat.psCovered || 0,
                           completedInterviews: stat.count,
                           systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
-                          countsAfterRejection: stat.count,
+                          countsAfterRejection: Math.max(0, (stat.count || 0) - (stat.autoRejected || 0)), // Completed Interviews minus System Rejections
                           gpsPending: 0, // Not calculated in frontend
                           gpsFail: 0, // Not calculated in frontend
                           // Use demographic percentages from stat (already calculated from filtered responses)
@@ -4021,7 +4021,7 @@ const SurveyReportsPage = () => {
                           psCovered: stat.psCovered || 0,
                           completedInterviews: stat.count,
                           systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
-                          countsAfterRejection: stat.count,
+                          countsAfterRejection: Math.max(0, (stat.count || 0) - (stat.autoRejected || 0)), // Completed Interviews minus System Rejections
                           gpsPending: 0,
                           gpsFail: 0,
                           interviewersCount: stat.interviewersCount || 0,
@@ -4103,7 +4103,7 @@ const SurveyReportsPage = () => {
                         psCovered: stat.psCovered || 0, // PS Covered from analytics
                         completedInterviews: stat.count,
                         systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
-                        countsAfterRejection: stat.count,
+                        countsAfterRejection: Math.max(0, (stat.count || 0) - (stat.autoRejected || 0)), // Completed Interviews minus System Rejections
                         gpsPending: 0, // Not calculated in frontend
                         gpsFail: 0, // Not calculated in frontend
                         rejected: stat.manualRejected || 0, // Override: Use manualRejected (exclude auto-rejected, exclude pending)
@@ -4177,7 +4177,7 @@ const SurveyReportsPage = () => {
                           psCovered: stat.psCovered || 0,
                           completedInterviews: stat.count,
                           systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
-                          countsAfterRejection: stat.count,
+                          countsAfterRejection: Math.max(0, (stat.count || 0) - (stat.autoRejected || 0)), // Completed Interviews minus System Rejections
                           gpsPending: 0, // Not calculated in frontend
                           gpsFail: 0, // Not calculated in frontend
                           underQC: stat.pending || 0, // Use pending (Pending_Approval status)
@@ -4353,7 +4353,7 @@ const SurveyReportsPage = () => {
                         psCovered: stat.psCovered || 0, // PS Covered from analytics
                         completedInterviews: stat.count,
                         systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
-                        countsAfterRejection: stat.count,
+                        countsAfterRejection: Math.max(0, (stat.count || 0) - (stat.autoRejected || 0)), // Completed Interviews minus System Rejections
                         gpsPending: 0, // Not calculated in frontend
                         gpsFail: 0, // Not calculated in frontend
                         underQC: (stat.underQC || stat.pending || 0), // Use underQC or pending (Pending_Approval status - includes all in batches)
