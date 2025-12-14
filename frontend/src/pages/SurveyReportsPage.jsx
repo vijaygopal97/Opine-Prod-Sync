@@ -3945,6 +3945,88 @@ const SurveyReportsPage = () => {
                     </tr>
                   </thead>
                   <tbody>
+                    {/* Total Row */}
+                    {(() => {
+                      // Calculate totals for all numeric columns
+                      const totals = allACStatsForModal.reduce((acc, stat) => {
+                        const acPCData = getACPCDataForModal(stat.ac);
+                        const displayStat = {
+                          ...stat,
+                          acCode: stat.acCode || acPCData.acCode,
+                          pcCode: stat.pcCode || acPCData.pcCode,
+                          pcName: stat.pcName || acPCData.pcName,
+                          psCovered: stat.psCovered || 0,
+                          completedInterviews: stat.count,
+                          systemRejections: 0,
+                          countsAfterRejection: stat.count,
+                          gpsPending: 0,
+                          gpsFail: 0,
+                          interviewersCount: stat.interviewersCount || 0,
+                          approved: stat.approved || 0,
+                          rejected: stat.rejected || 0,
+                          underQC: stat.underQC || 0,
+                          capi: stat.capi || 0,
+                          cati: stat.cati || 0
+                        };
+                        
+                        acc.psCovered += displayStat.psCovered || 0;
+                        acc.completedInterviews += displayStat.completedInterviews || 0;
+                        acc.systemRejections += displayStat.systemRejections || 0;
+                        acc.countsAfterRejection += displayStat.countsAfterRejection || 0;
+                        acc.gpsPending += displayStat.gpsPending || 0;
+                        acc.gpsFail += displayStat.gpsFail || 0;
+                        acc.interviewersCount += displayStat.interviewersCount || 0;
+                        acc.approved += displayStat.approved || 0;
+                        acc.rejected += displayStat.rejected || 0;
+                        acc.underQC += displayStat.underQC || 0;
+                        acc.capi += displayStat.capi || 0;
+                        acc.cati += displayStat.cati || 0;
+                        return acc;
+                      }, {
+                        psCovered: 0,
+                        completedInterviews: 0,
+                        systemRejections: 0,
+                        countsAfterRejection: 0,
+                        gpsPending: 0,
+                        gpsFail: 0,
+                        interviewersCount: 0,
+                        approved: 0,
+                        rejected: 0,
+                        underQC: 0,
+                        capi: 0,
+                        cati: 0
+                      });
+                      
+                      return (
+                        <tr key="total" className="bg-[#E6F0F8] border-b-2 border-[#373177] font-semibold">
+                          <td className="py-3 px-4 text-[#373177] font-bold">Total</td>
+                          <td className="py-3 px-4 text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.psCovered}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.completedInterviews}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.systemRejections}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.countsAfterRejection}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.gpsPending}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.gpsFail}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.interviewersCount}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.approved}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.rejected}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.underQC}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.capi}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.cati}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          {surveyId === '68fd1915d41841da463f0d46' && (
+                            <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          )}
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                        </tr>
+                      );
+                    })()}
                     {allACStatsForModal.map((stat, index) => {
                       // Get AC/PC data
                       const acPCData = getACPCDataForModal(stat.ac);
@@ -4126,6 +4208,77 @@ const SurveyReportsPage = () => {
                     </tr>
                   </thead>
                   <tbody>
+                    {/* Total Row */}
+                    {(() => {
+                      // Calculate totals for all numeric columns
+                      const totals = (analytics.interviewerStats || []).reduce((acc, stat) => {
+                        const displayStat = {
+                          ...stat,
+                          psCovered: stat.psCovered || 0,
+                          completedInterviews: stat.count,
+                          systemRejections: 0,
+                          countsAfterRejection: stat.count,
+                          gpsPending: 0,
+                          gpsFail: 0,
+                          underQC: stat.pending || 0,
+                          approved: stat.approved || 0,
+                          rejected: stat.rejected || 0,
+                          capi: 0,
+                          cati: 0
+                        };
+                        
+                        acc.psCovered += displayStat.psCovered || 0;
+                        acc.completedInterviews += displayStat.completedInterviews || 0;
+                        acc.systemRejections += displayStat.systemRejections || 0;
+                        acc.countsAfterRejection += displayStat.countsAfterRejection || 0;
+                        acc.gpsPending += displayStat.gpsPending || 0;
+                        acc.gpsFail += displayStat.gpsFail || 0;
+                        acc.approved += displayStat.approved || 0;
+                        acc.rejected += displayStat.rejected || 0;
+                        acc.underQC += displayStat.underQC || 0;
+                        acc.capi += displayStat.capi || 0;
+                        acc.cati += displayStat.cati || 0;
+                        return acc;
+                      }, {
+                        psCovered: 0,
+                        completedInterviews: 0,
+                        systemRejections: 0,
+                        countsAfterRejection: 0,
+                        gpsPending: 0,
+                        gpsFail: 0,
+                        approved: 0,
+                        rejected: 0,
+                        underQC: 0,
+                        capi: 0,
+                        cati: 0
+                      });
+                      
+                      return (
+                        <tr key="total" className="bg-[#E6F0F8] border-b-2 border-[#373177] font-semibold">
+                          <td className="py-3 px-4 text-[#373177] font-bold">Total</td>
+                          <td className="py-3 px-4 text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.psCovered}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.completedInterviews}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.systemRejections}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.countsAfterRejection}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.gpsPending}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.gpsFail}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.approved}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.rejected}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.underQC}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.capi}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.cati}</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          {surveyId === '68fd1915d41841da463f0d46' && (
+                            <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          )}
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-right text-[#373177] font-bold">-</td>
+                        </tr>
+                      );
+                    })()}
                     {/* Always use filtered frontend stats (analytics.interviewerStats) which respect all filters */}
                     {(analytics.interviewerStats || []).map((stat, index) => {
                       // Use frontend calculated data (filtered) - it respects current filters and has all stats
