@@ -1452,6 +1452,8 @@ const SurveyReportsPage = () => {
           interviewers: new Set(),
           approved: 0,
           rejected: 0,
+          autoRejected: 0, // Track auto-rejected responses
+          manualRejected: 0, // Track manually rejected responses
           underQC: 0,
           femaleCount: 0,
           withoutPhoneCount: 0,
@@ -1496,10 +1498,27 @@ const SurveyReportsPage = () => {
           currentCount.interviewers.add(response.interviewer._id.toString());
         }
         
-        // Track status counts
+        // Track status counts with auto-rejection detection
         if (response.status === 'Approved') {
           currentCount.approved += 1;
         } else if (response.status === 'Rejected') {
+          // Check if it's auto-rejected
+          const isAutoRejected = response.verificationData?.autoRejected === true || 
+                                 (response.verificationData?.autoRejectionReasons && 
+                                  response.verificationData.autoRejectionReasons.length > 0) ||
+                                 (response.verificationData?.feedback && (
+                                   response.verificationData.feedback.includes('Interview Too Short') ||
+                                   response.verificationData.feedback.includes('Not Voter') ||
+                                   response.verificationData.feedback.includes('Not a Registered Voter') ||
+                                   response.verificationData.feedback.includes('Duplicate Response')
+                                 ));
+          
+          if (isAutoRejected) {
+            currentCount.autoRejected = (currentCount.autoRejected || 0) + 1;
+          } else {
+            currentCount.manualRejected = (currentCount.manualRejected || 0) + 1;
+          }
+          // Keep rejected for backward compatibility (total rejected = auto + manual)
           currentCount.rejected += 1;
         } else if (response.status === 'Pending_Approval') {
           currentCount.underQC += 1;
@@ -1595,8 +1614,12 @@ const SurveyReportsPage = () => {
         
         const currentCount = interviewerMap.get(interviewerName) || { 
           total: 0, 
+          capi: 0,
+          cati: 0,
           approved: 0, 
-          rejected: 0, 
+          rejected: 0,
+          autoRejected: 0, // Track auto-rejected responses
+          manualRejected: 0, // Track manually rejected responses
           pending: 0,
           pollingStations: new Set(), // Track unique polling stations for PS Covered
           femaleCount: 0,
@@ -1614,10 +1637,35 @@ const SurveyReportsPage = () => {
           currentCount.pollingStations.add(psKey);
         }
         
-        // Track status counts
+        // Check interview mode
+        const interviewMode = response.interviewMode?.toUpperCase();
+        if (interviewMode === 'CAPI') {
+          currentCount.capi += 1;
+        } else if (interviewMode === 'CATI') {
+          currentCount.cati += 1;
+        }
+        
+        // Track status counts with auto-rejection detection
         if (response.status === 'Approved') {
           currentCount.approved += 1;
         } else if (response.status === 'Rejected') {
+          // Check if it's auto-rejected
+          const isAutoRejected = response.verificationData?.autoRejected === true || 
+                                 (response.verificationData?.autoRejectionReasons && 
+                                  response.verificationData.autoRejectionReasons.length > 0) ||
+                                 (response.verificationData?.feedback && (
+                                   response.verificationData.feedback.includes('Interview Too Short') ||
+                                   response.verificationData.feedback.includes('Not Voter') ||
+                                   response.verificationData.feedback.includes('Not a Registered Voter') ||
+                                   response.verificationData.feedback.includes('Duplicate Response')
+                                 ));
+          
+          if (isAutoRejected) {
+            currentCount.autoRejected += 1;
+          } else {
+            currentCount.manualRejected += 1;
+          }
+          // Keep rejected for backward compatibility (total rejected = auto + manual)
           currentCount.rejected += 1;
         } else if (response.status === 'Pending_Approval') {
           currentCount.pending += 1;
@@ -1790,6 +1838,8 @@ const SurveyReportsPage = () => {
           interviewersCount: data.interviewers ? data.interviewers.size : 0,
           approved: data.approved || 0,
           rejected: data.rejected || 0,
+          autoRejected: data.autoRejected || 0,
+          manualRejected: data.manualRejected || 0,
           underQC: data.underQC || 0,
           psCovered: data.pollingStations ? data.pollingStations.size : 0, // PS Covered = unique polling stations
           // Demographic percentages (calculated from filtered responses)
@@ -1882,14 +1932,22 @@ const SurveyReportsPage = () => {
         const total = isObject ? (data.total || 0) : (data || 0);
         const approved = isObject ? (data.approved || 0) : 0;
         const rejected = isObject ? (data.rejected || 0) : 0;
+        const autoRejected = isObject ? (data.autoRejected || 0) : 0;
+        const manualRejected = isObject ? (data.manualRejected || 0) : 0;
         const pending = isObject ? (data.pending || 0) : 0;
+        const capi = isObject ? (data.capi || 0) : 0;
+        const cati = isObject ? (data.cati || 0) : 0;
         
         return {
           interviewer,
           count: total,
           approved: approved,
           rejected: rejected,
+          autoRejected: autoRejected,
+          manualRejected: manualRejected,
           pending: pending,
+          capi: capi,
+          cati: cati,
           percentage: totalResponses > 0 ? (total / totalResponses) * 100 : 0,
           psCovered: isObject && data.pollingStations ? data.pollingStations.size : 0,
           // Demographic percentages
@@ -3842,7 +3900,7 @@ const SurveyReportsPage = () => {
                           pcName: stat.pcName || acPCData.pcName || '',
                           psCovered: stat.psCovered || 0,
                           completedInterviews: stat.count,
-                          systemRejections: 0, // Not calculated in frontend
+                          systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
                           countsAfterRejection: stat.count,
                           gpsPending: 0, // Not calculated in frontend
                           gpsFail: 0, // Not calculated in frontend
@@ -3957,13 +4015,13 @@ const SurveyReportsPage = () => {
                           pcName: stat.pcName || acPCData.pcName,
                           psCovered: stat.psCovered || 0,
                           completedInterviews: stat.count,
-                          systemRejections: 0,
+                          systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
                           countsAfterRejection: stat.count,
                           gpsPending: 0,
                           gpsFail: 0,
                           interviewersCount: stat.interviewersCount || 0,
                           approved: stat.approved || 0,
-                          rejected: stat.rejected || 0,
+                          rejected: stat.manualRejected || 0, // Use manualRejected for Rejected column
                           underQC: stat.underQC || 0,
                           capi: stat.capi || 0,
                           cati: stat.cati || 0
@@ -4039,7 +4097,7 @@ const SurveyReportsPage = () => {
                         pcName: stat.pcName || acPCData.pcName,
                         psCovered: stat.psCovered || 0, // PS Covered from analytics
                         completedInterviews: stat.count,
-                        systemRejections: 0, // Not calculated in frontend
+                        systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
                         countsAfterRejection: stat.count,
                         gpsPending: 0, // Not calculated in frontend
                         gpsFail: 0, // Not calculated in frontend
@@ -4071,7 +4129,7 @@ const SurveyReportsPage = () => {
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.gpsFail || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.interviewersCount || stat.interviewersCount || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-green-600">{displayStat.approved || stat.approved || 0}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-red-600">{displayStat.rejected || stat.rejected || 0}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-red-600">{displayStat.rejected || stat.manualRejected || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-yellow-600">{displayStat.underQC || stat.underQC || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-green-600">{displayStat.capi || stat.capi || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-orange-600">{displayStat.cati || stat.cati || 0}</td>
@@ -4109,21 +4167,22 @@ const SurveyReportsPage = () => {
                         // Use frontend calculated data (filtered) - it respects current filters
                         const displayStat = {
                           ...stat,
-                          psCovered: 0, // Not calculated in frontend
+                          psCovered: stat.psCovered || 0,
                           completedInterviews: stat.count,
-                          systemRejections: 0, // Not calculated in frontend
+                          systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
                           countsAfterRejection: stat.count,
                           gpsPending: 0, // Not calculated in frontend
                           gpsFail: 0, // Not calculated in frontend
-                          underQC: stat.pending || 0,
-                          capi: 0, // Not calculated per interviewer in frontend
-                          cati: 0, // Not calculated per interviewer in frontend
-                          femalePercentage: 0, // Not calculated per interviewer in frontend
-                          withoutPhonePercentage: 0, // Not calculated per interviewer in frontend
-                          scPercentage: 0, // Not calculated per interviewer in frontend
-                          muslimPercentage: 0, // Not calculated per interviewer in frontend
-                          age18to24Percentage: 0, // Not calculated per interviewer in frontend
-                          age50PlusPercentage: 0 // Not calculated per interviewer in frontend
+                          underQC: stat.pending || 0, // Use pending (Pending_Approval status)
+                          capi: stat.capi || 0, // Use CAPI count from analytics
+                          cati: stat.cati || 0, // Use CATI count from analytics
+                          // Use demographic percentages from stat (already calculated from filtered responses)
+                          femalePercentage: stat.femalePercentage || 0,
+                          withoutPhonePercentage: stat.withoutPhonePercentage || 0,
+                          scPercentage: stat.scPercentage || 0,
+                          muslimPercentage: stat.muslimPercentage || 0,
+                          age18to24Percentage: stat.age18to24Percentage || 0,
+                          age50PlusPercentage: stat.age50PlusPercentage || 0
                         };
                         
                         const csvRow = {
@@ -4135,8 +4194,8 @@ const SurveyReportsPage = () => {
                           'GPS Pending': displayStat.gpsPending || 0,
                           'GPS Fail': displayStat.gpsFail || 0,
                           'Approved': displayStat.approved || stat.approved || 0,
-                          'Rejected': displayStat.rejected || stat.rejected || 0,
-                          'Under QC': displayStat.underQC || stat.underQC || 0,
+                          'Rejected': displayStat.rejected || stat.manualRejected || 0, // Use manualRejected for Rejected column
+                          'Under QC': displayStat.underQC || stat.pending || 0, // Use pending (Pending_Approval status)
                           'CAPI': displayStat.capi || stat.capi || 0,
                           'CATI': displayStat.cati || stat.cati || 0,
                           '% Of Female Interviews': `${displayStat.femalePercentage?.toFixed(2) || '0.00'}%`,
@@ -4216,15 +4275,15 @@ const SurveyReportsPage = () => {
                           ...stat,
                           psCovered: stat.psCovered || 0,
                           completedInterviews: stat.count,
-                          systemRejections: 0,
+                          systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
                           countsAfterRejection: stat.count,
                           gpsPending: 0,
                           gpsFail: 0,
-                          underQC: stat.pending || 0,
+                          underQC: stat.pending || 0, // Use pending (Pending_Approval status)
                           approved: stat.approved || 0,
-                          rejected: stat.rejected || 0,
-                          capi: 0,
-                          cati: 0
+                          rejected: stat.manualRejected || 0, // Use manualRejected for Rejected column
+                          capi: stat.capi || 0, // Use CAPI count from analytics
+                          cati: stat.cati || 0 // Use CATI count from analytics
                         };
                         
                         acc.psCovered += displayStat.psCovered || 0;
@@ -4286,13 +4345,13 @@ const SurveyReportsPage = () => {
                         ...stat,
                         psCovered: stat.psCovered || 0, // PS Covered from analytics
                         completedInterviews: stat.count,
-                        systemRejections: 0, // Not calculated in frontend
+                        systemRejections: stat.autoRejected || 0, // Use autoRejected for System Rejections
                         countsAfterRejection: stat.count,
                         gpsPending: 0, // Not calculated in frontend
                         gpsFail: 0, // Not calculated in frontend
-                        underQC: stat.pending || 0,
-                        capi: 0, // Not calculated per interviewer in frontend
-                        cati: 0, // Not calculated per interviewer in frontend
+                        underQC: stat.pending || 0, // Use pending (Pending_Approval status)
+                        capi: stat.capi || 0, // Use CAPI count from analytics
+                        cati: stat.cati || 0, // Use CATI count from analytics
                         // Use demographic percentages from stat (already calculated from filtered responses)
                         femalePercentage: stat.femalePercentage || 0,
                         withoutPhonePercentage: stat.withoutPhonePercentage || 0,
@@ -4317,8 +4376,8 @@ const SurveyReportsPage = () => {
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.gpsPending || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.gpsFail || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-green-600">{displayStat.approved || stat.approved || 0}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-red-600">{displayStat.rejected || stat.rejected || 0}</td>
-                          <td className="py-3 px-4 text-right font-semibold text-yellow-600">{displayStat.underQC || stat.underQC || 0}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-red-600">{displayStat.rejected || stat.manualRejected || 0}</td>
+                          <td className="py-3 px-4 text-right font-semibold text-yellow-600">{displayStat.underQC || stat.pending || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-green-600">{displayStat.capi || stat.capi || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-orange-600">{displayStat.cati || stat.cati || 0}</td>
                           <td className="py-3 px-4 text-right text-gray-600">{displayStat.femalePercentage?.toFixed(2) || stat.femalePercentage?.toFixed(2) || '0.00'}%</td>
