@@ -2898,9 +2898,11 @@ exports.getCatiStats = async (req, res) => {
         
         // Add interviewer to map from response data
         const interviewer = response.interviewer;
-        const interviewerName = interviewer.firstName && interviewer.lastName
+        if (!interviewer) return; // Safety check - should not happen due to earlier check
+        
+        const interviewerName = (interviewer.firstName && interviewer.lastName)
           ? `${interviewer.firstName} ${interviewer.lastName}`.trim()
-          : interviewer.name || 'Unknown';
+          : (interviewer.name || 'Unknown');
         const interviewerPhone = interviewer.phone || '';
         const memberID = interviewer.memberId || interviewer.memberID || '';
         
@@ -3229,19 +3231,21 @@ exports.getCatiStats = async (req, res) => {
           }
         }
       } else {
-        // Incomplete: All responses that are NOT Approved, Rejected, or Pending_Approval
-        // This includes:
-        // - Responses with status 'abandoned' or 'Terminated' (regardless of call status)
-        // - Responses with any other status (null, unknown, etc.)
-        // - Even if call status is 'call_connected', if status is abandoned/terminated, it's incomplete
-        // EXCLUDE:
-        // - Rejected (already counted in "Completed" and "Rejected")
-        // - Approved (already counted in "Completed" and "Approved")
-        // - Pending_Approval (already counted in "Completed")
+        // Incomplete: Only count responses that are NOT Approved, Rejected, or Pending_Approval
+        // AND have knownCallStatus = 'call_connected' or 'success'
+        // This means: Among connected calls only, count those that were not completed
+        // 
+        // Check if call was connected
+        const isCallConnected = normalizedCallStatus === 'call_connected' || normalizedCallStatus === 'success';
         
-        // Count ALL non-completed responses as incomplete
-        // This includes abandoned, terminated, and any other status
-        stat.incomplete += 1;
+        // Only count as incomplete if:
+        // 1. Call was connected (knownCallStatus = 'call_connected' or 'success')
+        // 2. Response status is NOT Approved, Rejected, or Pending_Approval
+        if (isCallConnected) {
+          // This response had a connected call but was not completed (abandoned, terminated, etc.)
+          stat.incomplete += 1;
+        }
+        // If call was not connected, don't count in incomplete (it's already counted in other statuses)
       }
         
       // Call Status Breakdown
@@ -3461,6 +3465,7 @@ exports.getCatiStats = async (req, res) => {
         interviewerPhone: stat.interviewerPhone,
         memberID: stat.memberID || stat.interviewerId?.toString() || 'N/A', // Use memberID, fallback to interviewerId
         numberOfDials: stat.numberOfDials,
+        callsConnected: stat.callsConnected || 0,
         completed: stat.completed,
         approved: stat.approved || 0,
         underQCQueue: stat.underQCQueue || 0,
