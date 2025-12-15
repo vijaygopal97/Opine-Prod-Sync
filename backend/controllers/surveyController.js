@@ -385,6 +385,63 @@ exports.getSurvey = async (req, res) => {
       });
     }
 
+    // Special handling for survey 68fd1915d41841da463f0d46: Reorder question 13 for CATI mode
+    // Question 13 should appear after "Please note the respondent's gender" question
+    const TARGET_SURVEY_ID = '68fd1915d41841da463f0d46';
+    if (survey._id.toString() === TARGET_SURVEY_ID && survey.sections && Array.isArray(survey.sections)) {
+      // Check if request is for CATI mode (from query parameter or user's interview mode)
+      const isCatiMode = req.query.mode === 'cati' || req.query.mode === 'CATI' || 
+                        (currentUser.interviewModes && currentUser.interviewModes.includes('CATI'));
+      
+      // Find the section containing the questions (sectionIndex 1 based on database query)
+      const targetSection = survey.sections.find((section, idx) => {
+        if (!section.questions || !Array.isArray(section.questions)) return false;
+        // Look for section that has both gender question and question 13
+        const hasGenderQ = section.questions.some(q => 
+          q.id && q.id.includes('fixed_respondent_gender') || 
+          (q.text && q.text.toLowerCase().includes('gender') && q.text.toLowerCase().includes('respondent'))
+        );
+        const hasQ13 = section.questions.some(q => 
+          q.questionNumber === '13' || 
+          (q.text && (q.text.includes('three most pressing') || q.text.includes('পশ্চিমবঙ্গের সবচেয়ে জরুরি')))
+        );
+        return hasGenderQ && hasQ13;
+      });
+
+      if (targetSection && targetSection.questions && Array.isArray(targetSection.questions)) {
+        // Find gender question and question 13
+        let genderQIndex = -1;
+        let q13Index = -1;
+        let genderQuestion = null;
+        let q13Question = null;
+
+        targetSection.questions.forEach((q, idx) => {
+          if (q.id && q.id.includes('fixed_respondent_gender') || 
+              (q.text && q.text.toLowerCase().includes('gender') && q.text.toLowerCase().includes('respondent'))) {
+            genderQIndex = idx;
+            genderQuestion = q;
+          }
+          if (q.questionNumber === '13' || 
+              (q.text && (q.text.includes('three most pressing') || q.text.includes('পশ্চিমবঙ্গের সবচেয়ে জরুরি')))) {
+            q13Index = idx;
+            q13Question = q;
+          }
+        });
+
+        // Reorder: Move question 13 to appear right after gender question
+        if (genderQIndex >= 0 && q13Index >= 0 && genderQuestion && q13Question && q13Index > genderQIndex) {
+          // Remove question 13 from its current position
+          targetSection.questions.splice(q13Index, 1);
+          
+          // Insert question 13 right after gender question
+          const newQ13Index = genderQIndex + 1;
+          targetSection.questions.splice(newQ13Index, 0, q13Question);
+          
+          console.log(`✅ Reordered question 13 to appear after gender question for survey ${TARGET_SURVEY_ID}`);
+        }
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: 'Survey retrieved successfully',

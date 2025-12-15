@@ -1122,7 +1122,8 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     const isTargetSurvey = survey && (survey._id === '68fd1915d41841da463f0d46' || survey.id === '68fd1915d41841da463f0d46');
     
     // Add "Enter Interviewer ID" question before Consent Form (only for target survey)
-    if (isTargetSurvey) {
+    // SKIP for CATI interviews - these questions are not needed in CATI mode
+    if (isTargetSurvey && !isCatiMode) {
       const interviewerIdQuestion = {
         id: 'interviewer-id',
         type: 'numeric',
@@ -1280,6 +1281,40 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         }
       });
     });
+    
+    // Special handling for survey 68fd1915d41841da463f0d46: Reorder question 13 for CATI mode
+    // Question 13 should appear after "Please note the respondent's gender" question
+    const TARGET_SURVEY_ID = '68fd1915d41841da463f0d46';
+    if (isCatiMode && survey && (survey._id === TARGET_SURVEY_ID || survey.id === TARGET_SURVEY_ID)) {
+      // Find gender question and question 13
+      let genderQIndex = -1;
+      let q13Index = -1;
+      
+      allQuestions.forEach((q, idx) => {
+        // Find gender question (fixed_respondent_gender or contains "gender" and "respondent")
+        if ((q.id && q.id.includes('fixed_respondent_gender')) || 
+            (q.text && q.text.toLowerCase().includes('gender') && q.text.toLowerCase().includes('respondent'))) {
+          genderQIndex = idx;
+        }
+        // Find question 13 (questionNumber === '13' or contains "three most pressing")
+        if (q.questionNumber === '13' || 
+            (q.text && (q.text.includes('three most pressing') || q.text.includes('পশ্চিমবঙ্গের সবচেয়ে জরুরি')))) {
+          q13Index = idx;
+        }
+      });
+      
+      // Reorder: Move question 13 to appear right after gender question
+      if (genderQIndex >= 0 && q13Index >= 0 && q13Index > genderQIndex) {
+        const q13Question = allQuestions[q13Index];
+        // Remove question 13 from its current position
+        allQuestions.splice(q13Index, 1);
+        // Insert question 13 right after gender question
+        const newQ13Index = genderQIndex + 1;
+        allQuestions.splice(newQ13Index, 0, q13Question);
+        console.log('✅ Reordered question 13 to appear after gender question for CATI interview');
+      }
+    }
+    
     return allQuestions;
   };
 
