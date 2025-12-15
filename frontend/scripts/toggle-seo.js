@@ -25,12 +25,44 @@ const ROBOTS_FILE = path.join(__dirname, '..', 'public', 'robots.txt');
 const ROBOTS_PROD_FILE = path.join(__dirname, '..', 'public', 'robots.production.txt');
 
 function updateEnvFile(filePath, enableIndexing) {
-  const content = `VITE_API_BASE_URL=http://40.81.243.10:5000
+  // Read existing .env file to preserve VITE_API_BASE_URL if it exists
+  let existingApiUrl = '';
+  try {
+    const existingContent = fs.readFileSync(filePath, 'utf8');
+    const apiUrlMatch = existingContent.match(/VITE_API_BASE_URL=(.+)/);
+    if (apiUrlMatch) {
+      existingApiUrl = apiUrlMatch[1].trim();
+    }
+  } catch (error) {
+    // File doesn't exist, that's okay - will use defaults
+  }
+  
+  // Determine API URL based on mode:
+  // - Production (enableIndexing=true): Use empty string for relative paths (HTTPS through nginx)
+  // - Development (enableIndexing=false): Use localhost or preserve existing value
+  let apiBaseUrl;
+  if (enableIndexing) {
+    // Production mode: Use empty string for relative paths (HTTPS)
+    apiBaseUrl = '';
+  } else {
+    // Development mode: Use existing value or default to localhost
+    apiBaseUrl = existingApiUrl || 'http://localhost:5000';
+  }
+  
+  const content = `# API Base URL
+# Production (HTTPS): Leave empty to use relative paths through nginx proxy
+# Development: Set to http://localhost:5000 or your dev server URL
+${apiBaseUrl ? `VITE_API_BASE_URL=${apiBaseUrl}` : '# VITE_API_BASE_URL='}
 # SEO Control - Set to 'true' to enable search engine indexing, 'false' to disable
 VITE_ENABLE_SEO_INDEXING=${enableIndexing}`;
   
   fs.writeFileSync(filePath, content);
   console.log(`✅ Updated ${path.basename(filePath)} with VITE_ENABLE_SEO_INDEXING=${enableIndexing}`);
+  if (enableIndexing) {
+    console.log(`   Production mode: Using relative paths (empty VITE_API_BASE_URL) for HTTPS`);
+  } else {
+    console.log(`   Development mode: VITE_API_BASE_URL=${apiBaseUrl}`);
+  }
 }
 
 function updateRobotsFile(enableIndexing) {

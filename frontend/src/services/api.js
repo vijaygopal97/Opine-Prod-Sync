@@ -5,7 +5,15 @@ import axios from 'axios';
 // In production (HTTPS), use empty string so relative paths work through nginx
 // In development, use localhost:5000 directly
 const isProduction = window.location.protocol === 'https:' || window.location.hostname !== 'localhost';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (isProduction ? '' : 'http://localhost:5000');
+const isHTTPS = window.location.protocol === 'https:';
+
+// Check if VITE_API_BASE_URL is explicitly set (including empty string)
+// If on HTTPS, always use empty string (relative paths) to avoid mixed content errors
+// This ensures requests go through nginx proxy which handles HTTPS
+const envApiUrl = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = isHTTPS 
+  ? ''  // Always use relative paths on HTTPS (production) - ignore env var to prevent mixed content
+  : (envApiUrl !== undefined ? envApiUrl : (isProduction ? '' : 'http://localhost:5000'));
 
 // Create axios instance with default configuration
 const api = axios.create({

@@ -4,8 +4,20 @@
  */
 
 // Get API base URL from environment variables
+// CRITICAL: When page is served over HTTPS, ALWAYS use empty string (relative paths)
+// to avoid mixed content errors. This ensures requests go through nginx proxy.
 export const getApiBaseUrl = () => {
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const isHTTPS = window.location.protocol === 'https:';
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  // Always use relative paths on HTTPS (production) - ignore env var to prevent mixed content
+  if (isHTTPS) {
+    return '';
+  }
+  
+  // For HTTP/localhost, use environment variable or default
+  const envApiUrl = import.meta.env.VITE_API_BASE_URL;
+  return envApiUrl !== undefined ? envApiUrl : (isLocalhost ? 'http://localhost:5000' : '');
 };
 
 // Get the base URL for file uploads and document previews
