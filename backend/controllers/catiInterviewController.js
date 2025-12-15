@@ -2118,14 +2118,3 @@ module.exports = {
   completeCatiInterview
 };
 
-;
-  }
-};
-
-module.exports = {
-  startCatiInterview,
-  makeCallToRespondent,
-  abandonInterview,
-  completeCatiInterview
-};
-
