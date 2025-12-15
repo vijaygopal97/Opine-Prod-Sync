@@ -67,6 +67,16 @@ const loadACPriorityMap = async () => {
 };
 
 /**
+ * Normalize AC name for comparison (trim, lowercase)
+ * @param {String} acName - Assembly Constituency name
+ * @returns {String} Normalized AC name
+ */
+const normalizeACName = (acName) => {
+  if (!acName) return '';
+  return String(acName).trim().toLowerCase();
+};
+
+/**
  * Get AC priority for a given AC name
  * @param {String} acName - Assembly Constituency name
  * @returns {Number|null} Priority number, or null if not in priority list
@@ -75,7 +85,21 @@ const getACPriority = async (acName) => {
   if (!acName) return null;
   
   const priorityMap = await loadACPriorityMap();
-  return priorityMap[acName] !== undefined ? priorityMap[acName] : null;
+  const normalizedAC = normalizeACName(acName);
+  
+  // Try exact match first, then normalized match
+  if (priorityMap[acName] !== undefined) {
+    return priorityMap[acName];
+  }
+  
+  // Try normalized match
+  for (const [mapAC, priority] of Object.entries(priorityMap)) {
+    if (normalizeACName(mapAC) === normalizedAC) {
+      return priority;
+    }
+  }
+  
+  return null;
 };
 
 // DeepCall API Configuration
@@ -2084,6 +2108,17 @@ const initializeRespondentQueue = async (surveyId, respondentContacts) => {
   } catch (error) {
     console.error('Error initializing respondent queue:', error);
     throw error;
+  }
+};
+
+module.exports = {
+  startCatiInterview,
+  makeCallToRespondent,
+  abandonInterview,
+  completeCatiInterview
+};
+
+;
   }
 };
 
