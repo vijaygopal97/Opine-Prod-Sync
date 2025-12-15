@@ -636,6 +636,19 @@ const SurveyApprovals = () => {
       }
     }
     
+    // For gender question, only show if audioStatus is valid (1 or 7)
+    // Audio Status must be either:
+    // - "1" (Survey Conversation can be heard)
+    // - "7" (Cannot hear the response clearly)
+    // If any other option is selected, the response will be rejected anyway, so don't show gender question
+    if (questionType === 'gender') {
+      const audioStatus = verificationForm.audioStatus;
+      // Only show gender question if audioStatus is '1' or '7'
+      if (audioStatus !== '1' && audioStatus !== '7') {
+        return false;
+      }
+    }
+    
     // Get verification responses to check if related response is skipped
     const verificationResponses = getVerificationResponses(interview);
     
@@ -3778,54 +3791,56 @@ const SurveyApprovals = () => {
                     </div>
                   </div>
 
-                  {/* Question 2: Gender Matching */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">
-                      2. Gender of the Respondent Matching? (উত্তরদাতার লিঙ্গ কি মেলানো হয়েছে?)
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    {selectedInterview && (
-                      <div className="mb-3 p-2 bg-[#E6F0F8] border-l-4 border-blue-500 rounded">
-                        <span className="text-sm font-medium text-blue-700">Response: </span>
-                        <span className="text-sm text-[#373177]">{getVerificationResponses(selectedInterview).gender}</span>
-                      </div>
-                    )}
+                  {/* Question 2: Gender Matching - Only show if Audio Status is '1' or '7' */}
+                  {shouldShowVerificationQuestion('gender', selectedInterview) && (
                     <div className="space-y-2">
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="genderMatching"
-                          value="1"
-                          checked={verificationForm.genderMatching === '1'}
-                          onChange={(e) => handleVerificationFormChange('genderMatching', e.target.value)}
-                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">1 - Matched (মিলে গেছে)</span>
+                      <label className="block text-sm font-medium text-gray-700">
+                        2. Gender of the Respondent Matching? (উত্তরদাতার লিঙ্গ কি মেলানো হয়েছে?)
+                        <span className="text-red-500 ml-1">*</span>
                       </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="genderMatching"
-                          value="2"
-                          checked={verificationForm.genderMatching === '2'}
-                          onChange={(e) => handleVerificationFormChange('genderMatching', e.target.value)}
-                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">2 - Not Matched (মেলেনি)</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="genderMatching"
-                          value="3"
-                          checked={verificationForm.genderMatching === '3'}
-                          onChange={(e) => handleVerificationFormChange('genderMatching', e.target.value)}
-                          className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">3 - Male answering on behalf of female (মহিলার পক্ষ থেকে পুরুষ উত্তর দিচ্ছেন।)</span>
-                      </label>
+                      {selectedInterview && (
+                        <div className="mb-3 p-2 bg-[#E6F0F8] border-l-4 border-blue-500 rounded">
+                          <span className="text-sm font-medium text-blue-700">Response: </span>
+                          <span className="text-sm text-[#373177]">{getVerificationResponses(selectedInterview).gender}</span>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="genderMatching"
+                            value="1"
+                            checked={verificationForm.genderMatching === '1'}
+                            onChange={(e) => handleVerificationFormChange('genderMatching', e.target.value)}
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">1 - Matched (মিলে গেছে)</span>
+                        </label>
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="genderMatching"
+                            value="2"
+                            checked={verificationForm.genderMatching === '2'}
+                            onChange={(e) => handleVerificationFormChange('genderMatching', e.target.value)}
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">2 - Not Matched (মেলেনি)</span>
+                        </label>
+                        <label className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="genderMatching"
+                            value="3"
+                            checked={verificationForm.genderMatching === '3'}
+                            onChange={(e) => handleVerificationFormChange('genderMatching', e.target.value)}
+                            className="w-4 h-4 text-[#373177] border-gray-300 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">3 - Male answering on behalf of female (মহিলার পক্ষ থেকে পুরুষ উত্তর দিচ্ছেন।)</span>
+                        </label>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Question 3: Upcoming Elections Matching */}
                   {shouldShowVerificationQuestion('upcomingElection', selectedInterview) && (
