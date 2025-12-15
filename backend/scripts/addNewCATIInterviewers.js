@@ -19,7 +19,9 @@ const usersToAdd = [
   { name: 'Sarmistha das', phone: '9674208124', memberId: '3806' },
   { name: 'Karima Khatun', phone: '6290975137', memberId: '3812' },
   { name: 'Ujjwal Mandal', phone: '8910083693', memberId: '3810' },
-  { name: 'SNEHA KAR', phone: '7363027402', memberId: '528929' }
+  { name: 'SNEHA KAR', phone: '7363027402', memberId: '528929' },
+  { name: 'Sanjay Biswas', phone: '9038353445', memberId: '3814' },
+  { name: 'Rimpa', phone: '7864995573', memberId: '3900' }
 ];
 
 // Test login
