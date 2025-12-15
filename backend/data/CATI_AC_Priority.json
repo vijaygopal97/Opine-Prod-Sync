@@ -1,0 +1,18 @@
+[
+  {
+    "Type": "CATI",
+    "AC_Name": "Darjeeling",
+    "Priority": 1
+  },
+  {
+    "Type": "CATI",
+    "AC_Name": "Mekliganj",
+    "Priority": 2
+  },
+  {
+    "Type": "CATI",
+    "AC_Name": "Mathabhanga",
+    "Priority": "0"
+  }
+]
+

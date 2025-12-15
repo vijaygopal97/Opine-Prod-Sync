@@ -10,6 +10,74 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs').promises;
 const path = require('path');
 
+// AC Priority Map (cached, reloaded on each request to ensure freshness)
+let acPriorityMap = null;
+let acPriorityMapLastLoad = null;
+const AC_PRIORITY_CACHE_TTL = 60000; // 1 minute cache
+
+/**
+ * Load AC priority mapping from JSON file
+ * @returns {Object} Map of AC name to priority (number), or null if file not found
+ */
+const loadACPriorityMap = async () => {
+  try {
+    // Check if cache is still valid
+    const now = Date.now();
+    if (acPriorityMap && acPriorityMapLastLoad && (now - acPriorityMapLastLoad) < AC_PRIORITY_CACHE_TTL) {
+      return acPriorityMap;
+    }
+
+    const priorityFilePath = path.join(__dirname, '..', 'data', 'CATI_AC_Priority.json');
+    
+    try {
+      await fs.access(priorityFilePath);
+      const fileContent = await fs.readFile(priorityFilePath, 'utf8');
+      const priorityData = JSON.parse(fileContent);
+      
+      // Build map: AC_Name -> Priority (as number)
+      const map = {};
+      if (Array.isArray(priorityData)) {
+        priorityData.forEach(item => {
+          if (item.AC_Name && item.Priority !== undefined) {
+            // Convert Priority to number (handle string "0", "1", etc.)
+            const priority = typeof item.Priority === 'string' ? parseInt(item.Priority, 10) : item.Priority;
+            if (!isNaN(priority)) {
+              map[item.AC_Name] = priority;
+            }
+          }
+        });
+      }
+      
+      acPriorityMap = map;
+      acPriorityMapLastLoad = now;
+      console.log('✅ Loaded AC priority map:', Object.keys(map).length, 'ACs');
+      console.log('📋 AC Priority Map:', map);
+      return map;
+    } catch (fileError) {
+      console.log('⚠️  AC Priority file not found or error reading:', fileError.message);
+      // Return empty map (no priorities) instead of null
+      acPriorityMap = {};
+      acPriorityMapLastLoad = now;
+      return {};
+    }
+  } catch (error) {
+    console.error('❌ Error loading AC priority map:', error);
+    return {};
+  }
+};
+
+/**
+ * Get AC priority for a given AC name
+ * @param {String} acName - Assembly Constituency name
+ * @returns {Number|null} Priority number, or null if not in priority list
+ */
+const getACPriority = async (acName) => {
+  if (!acName) return null;
+  
+  const priorityMap = await loadACPriorityMap();
+  return priorityMap[acName] !== undefined ? priorityMap[acName] : null;
+};
+
 // DeepCall API Configuration
 const DEEPCALL_API_BASE_URL = 'https://s-ct3.sarv.com/v2/clickToCall/para';
 const DEEPCALL_USER_ID = process.env.DEEPCALL_USER_ID || '89130240';
@@ -279,15 +347,22 @@ const startCatiInterview = async (req, res) => {
     await initializeRespondentQueue(surveyId, respondentContacts);
     console.log('🔍 Queue initialized');
 
-    // Get next available respondent from queue
-    console.log('🔍 Finding next respondent in queue...');
-    const nextRespondent = await CatiRespondentQueue.findOne({
+    // Get next available respondent from queue with AC priority-based selection
+    console.log('🔍 Finding next respondent in queue with AC priority logic...');
+    
+    // Load AC priority map
+    const acPriorityMap = await loadACPriorityMap();
+    console.log('📋 AC Priority Map loaded:', Object.keys(acPriorityMap).length, 'ACs');
+    
+    // Get all pending respondents
+    const allPendingRespondents = await CatiRespondentQueue.find({
       survey: surveyId,
       status: 'pending'
-    }).sort({ priority: -1, createdAt: 1 });
-
-    console.log('🔍 Next respondent found:', nextRespondent ? 'Yes' : 'No');
-    if (!nextRespondent) {
+    }).lean(); // Use lean() for better performance
+    
+    console.log('🔍 Total pending respondents:', allPendingRespondents.length);
+    
+    if (allPendingRespondents.length === 0) {
       console.log('⚠️  No pending respondents available');
       return res.status(200).json({
         success: false,
@@ -296,6 +371,106 @@ const startCatiInterview = async (req, res) => {
           message: 'All respondents have been processed or are currently assigned. Please check back later or contact your administrator.',
           hasPendingRespondents: false
         }
+      });
+    }
+    
+    // Group respondents by AC priority
+    const respondentsByPriority = {};
+    const excludedACs = []; // Priority 0 ACs
+    const nonPrioritizedRespondents = [];
+    
+    allPendingRespondents.forEach(respondent => {
+      const acName = respondent.respondentContact?.ac;
+      if (!acName) {
+        // No AC specified, treat as non-prioritized
+        nonPrioritizedRespondents.push(respondent);
+        return;
+      }
+      
+      const priority = acPriorityMap[acName];
+      
+      if (priority === undefined || priority === null) {
+        // AC not in priority list, treat as non-prioritized
+        nonPrioritizedRespondents.push(respondent);
+      } else if (priority === 0) {
+        // Priority 0 = excluded from assignment
+        excludedACs.push(acName);
+        console.log(`🚫 Excluding respondent from Priority 0 AC: ${acName}`);
+      } else {
+        // AC has a priority (1, 2, 3, etc.)
+        if (!respondentsByPriority[priority]) {
+          respondentsByPriority[priority] = [];
+        }
+        respondentsByPriority[priority].push(respondent);
+      }
+    });
+    
+    console.log('📊 Respondents grouped by priority:', Object.keys(respondentsByPriority).map(p => `${p}: ${respondentsByPriority[p].length}`).join(', '));
+    console.log('📊 Non-prioritized respondents:', nonPrioritizedRespondents.length);
+    console.log('🚫 Excluded ACs (Priority 0):', excludedACs.length > 0 ? excludedACs.join(', ') : 'None');
+    
+    // Find the highest priority that has pending respondents
+    let selectedRespondent = null;
+    const sortedPriorities = Object.keys(respondentsByPriority)
+      .map(p => parseInt(p, 10))
+      .filter(p => !isNaN(p) && p > 0)
+      .sort((a, b) => a - b); // Sort ascending (1, 2, 3...)
+    
+    console.log('🔍 Sorted priorities with pending respondents:', sortedPriorities);
+    
+    // Select from highest priority (lowest number = highest priority)
+    for (const priority of sortedPriorities) {
+      const priorityRespondents = respondentsByPriority[priority];
+      if (priorityRespondents && priorityRespondents.length > 0) {
+        // Randomly select from this priority group to get a mix of ACs
+        const randomIndex = Math.floor(Math.random() * priorityRespondents.length);
+        selectedRespondent = priorityRespondents[randomIndex];
+        console.log(`✅ Selected respondent from Priority ${priority} AC (random selection from ${priorityRespondents.length} respondents)`);
+        console.log(`📍 Selected AC: ${selectedRespondent.respondentContact?.ac}`);
+        break;
+      }
+    }
+    
+    // If no prioritized ACs have pending respondents, select from non-prioritized
+    if (!selectedRespondent && nonPrioritizedRespondents.length > 0) {
+      // Randomly select from non-prioritized respondents
+      const randomIndex = Math.floor(Math.random() * nonPrioritizedRespondents.length);
+      selectedRespondent = nonPrioritizedRespondents[randomIndex];
+      console.log(`✅ Selected respondent from non-prioritized ACs (random selection from ${nonPrioritizedRespondents.length} respondents)`);
+      console.log(`📍 Selected AC: ${selectedRespondent.respondentContact?.ac || 'No AC specified'}`);
+    }
+    
+    // If still no respondent found, fall back to original logic (shouldn't happen, but safety check)
+    if (!selectedRespondent) {
+      console.log('⚠️  No respondent found with priority logic, falling back to original query...');
+      const fallbackRespondent = await CatiRespondentQueue.findOne({
+        survey: surveyId,
+        status: 'pending'
+      }).sort({ priority: -1, createdAt: 1 });
+      
+      if (!fallbackRespondent) {
+        console.log('⚠️  No pending respondents available');
+        return res.status(200).json({
+          success: false,
+          message: 'No Pending Respondents',
+          data: {
+            message: 'All respondents have been processed or are currently assigned. Please check back later or contact your administrator.',
+            hasPendingRespondents: false
+          }
+        });
+      }
+      selectedRespondent = fallbackRespondent;
+    }
+    
+    // Convert lean document back to Mongoose document for saving
+    const nextRespondent = await CatiRespondentQueue.findById(selectedRespondent._id);
+    
+    console.log('🔍 Next respondent found:', nextRespondent ? 'Yes' : 'No');
+    if (!nextRespondent) {
+      console.log('⚠️  Could not load respondent document');
+      return res.status(500).json({
+        success: false,
+        message: 'Error loading respondent from queue'
       });
     }
 
