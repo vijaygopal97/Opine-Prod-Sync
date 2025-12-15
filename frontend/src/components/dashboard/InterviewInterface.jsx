@@ -141,6 +141,10 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
   const [locationPermission, setLocationPermission] = useState(null);
   const [locationError, setLocationError] = useState(null);
   
+  // Geo-fencing state
+  const [locationControlBooster, setLocationControlBooster] = useState(false);
+  const [geofencingError, setGeofencingError] = useState(null);
+  
   // Permission modal state
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [permissionType, setPermissionType] = useState(null); // 'location' or 'audio'
@@ -2086,6 +2090,76 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
     fetchPollingStations();
   }, [selectedPollingStation.groupName, selectedPollingStation.acName, selectedPollingStation.state, survey?.acAssignmentState]);
 
+  // Check locationControlBooster on mount
+  useEffect(() => {
+    const checkLocationControl = async () => {
+      try {
+        const response = await authAPI.getMe();
+        if (response.success && response.data) {
+          // Ensure proper boolean conversion (handle string "true"/"false" or boolean)
+          const boosterValue = response.data.preferences?.locationControlBooster;
+          const boosterEnabled = boosterValue === true || boosterValue === 'true' || boosterValue === 1;
+          console.log('🔍 Location Control Booster check:', {
+            rawValue: boosterValue,
+            type: typeof boosterValue,
+            converted: boosterEnabled
+          });
+          setLocationControlBooster(boosterEnabled);
+        } else {
+          console.log('⚠️ Could not fetch user data, defaulting locationControlBooster to false');
+          setLocationControlBooster(false);
+        }
+      } catch (error) {
+        console.error('Error checking location control booster:', error);
+        // Default to false (geo-fencing enabled) if error
+        setLocationControlBooster(false);
+      }
+    };
+    
+    checkLocationControl();
+  }, []);
+
+  // Geo-fencing check function (5KM radius)
+  const checkGeofencing = useCallback((stationLat, stationLng) => {
+    if (!gpsLocation || !gpsLocation.latitude || !gpsLocation.longitude) {
+      setGeofencingError('GPS location not available. Please enable location services.');
+      return false;
+    }
+    
+    // Calculate distance using Haversine formula
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (gpsLocation.latitude - stationLat) * Math.PI / 180;
+    const dLng = (gpsLocation.longitude - stationLng) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(stationLat * Math.PI / 180) * Math.cos(gpsLocation.latitude * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance in kilometers
+    
+    // Add a small buffer (0.1km) to account for GPS accuracy issues
+    const buffer = 0.1;
+    if (distance > (5 + buffer)) {
+      setGeofencingError(`You are not within the 5KM radius of the Polling station's location. Distance: ${distance.toFixed(2)} KM`);
+      console.log('🔒 Geofencing check failed:', {
+        currentLocation: { lat: gpsLocation.latitude, lng: gpsLocation.longitude },
+        stationLocation: { lat: stationLat, lng: stationLng },
+        distance: distance.toFixed(2) + ' km',
+        threshold: '5.1 km (5km + 0.1km buffer)'
+      });
+      return false;
+    } else {
+      setGeofencingError(null);
+      console.log('✅ Geofencing check passed:', {
+        currentLocation: { lat: gpsLocation.latitude, lng: gpsLocation.longitude },
+        stationLocation: { lat: stationLat, lng: stationLng },
+        distance: distance.toFixed(2) + ' km',
+        threshold: '5.1 km (5km + 0.1km buffer)'
+      });
+      return true;
+    }
+  }, [gpsLocation]);
+
   // Update polling station GPS when station is selected
   useEffect(() => {
     const updateStationGPS = async () => {
@@ -2103,6 +2177,9 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
         );
         
         if (response.success) {
+          const stationLat = response.data.latitude;
+          const stationLng = response.data.longitude;
+          
           setSelectedPollingStation(prev => {
             // Only update if values have actually changed to prevent infinite loops
             if (prev.gpsLocation === response.data.gps_location &&
@@ -2117,14 +2194,46 @@ const InterviewInterface = ({ survey, onClose, onComplete }) => {
               longitude: response.data.longitude
             };
           });
+          
+          // Check geofencing if in CAPI mode and locationControlBooster is DISABLED (OFF)
+          // When locationControlBooster is ON (true), geofencing is BYPASSED (not enforced)
+          const isCapiMode = survey.mode === 'capi' || (survey.mode === 'multi_mode' && survey.assignedMode === 'capi');
+          const shouldCheckGeofencing = isCapiMode && !locationControlBooster && gpsLocation;
+          
+          console.log('🔍 Geo-fencing check decision:', {
+            isCapiMode,
+            locationControlBooster,
+            hasLocationData: !!gpsLocation,
+            shouldCheckGeofencing
+          });
+          
+          if (shouldCheckGeofencing && stationLat != null && stationLng != null && !isNaN(stationLat) && !isNaN(stationLng)) {
+            console.log('🔒 Checking geofencing (booster is OFF) - Current:', gpsLocation.latitude, gpsLocation.longitude, 'Station:', stationLat, stationLng);
+            checkGeofencing(stationLat, stationLng);
+          } else {
+            // Clear geofencing error if booster is enabled (geofencing bypassed) OR if not in CAPI mode
+            if (locationControlBooster) {
+              console.log('✅ Geofencing BYPASSED - locationControlBooster is enabled (true)');
+            } else if (!isCapiMode) {
+              console.log('ℹ️ Geo-fencing not applicable - not in CAPI mode');
+            }
+            setGeofencingError(null);
+          }
         }
       } catch (error) {
         console.error('Error fetching polling station GPS:', error);
+        // If booster is DISABLED and we can't get GPS, show a warning (geofencing is enforced when booster is OFF)
+        const isCapiMode = survey.mode === 'capi' || (survey.mode === 'multi_mode' && survey.assignedMode === 'capi');
+        if (isCapiMode && !locationControlBooster) {
+          setGeofencingError('GPS coordinates for polling station not available. Please sync survey details or connect to internet.');
+        } else {
+          setGeofencingError(null);
+        }
       }
     };
     
     updateStationGPS();
-  }, [selectedPollingStation.stationName, selectedPollingStation.groupName, selectedPollingStation.acName, selectedPollingStation.state, survey?.acAssignmentState]);
+  }, [selectedPollingStation.stationName, selectedPollingStation.groupName, selectedPollingStation.acName, selectedPollingStation.state, survey?.acAssignmentState, survey?.mode, survey?.assignedMode, locationControlBooster, gpsLocation, checkGeofencing]);
 
   // Navigate to next question - EXACTLY like working commit
   // Phone number validation function
