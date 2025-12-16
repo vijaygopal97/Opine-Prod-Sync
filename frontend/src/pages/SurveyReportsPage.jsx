@@ -1612,6 +1612,7 @@ const SurveyReportsPage = () => {
       // Interviewer stats with polling stations and demographics
       if (response.interviewer) {
         const interviewerName = `${response.interviewer.firstName} ${response.interviewer.lastName}`;
+        const interviewerMemberId = response.interviewer.memberId || response.interviewer.memberID || '';
         const psInfo = getPollingStationInfo(response);
         
         const currentCount = interviewerMap.get(interviewerName) || { 
@@ -1629,8 +1630,14 @@ const SurveyReportsPage = () => {
           scCount: 0,
           muslimCount: 0,
           age18to24Count: 0,
-          age50PlusCount: 0
+          age50PlusCount: 0,
+          memberId: interviewerMemberId // Store memberId for display
         };
+        
+        // Update memberId if not set (in case it was missing in first response)
+        if (!currentCount.memberId && interviewerMemberId) {
+          currentCount.memberId = interviewerMemberId;
+        }
         currentCount.total += 1;
         
         // Track unique polling stations (PS Covered)
@@ -1944,6 +1951,7 @@ const SurveyReportsPage = () => {
         
         return {
           interviewer,
+          memberId: isObject ? (data.memberId || '') : '', // Include memberId in stats
           count: total,
           approved: approved,
           rejected: rejected,
@@ -4193,6 +4201,7 @@ const SurveyReportsPage = () => {
                         };
                         
                         const csvRow = {
+                          'Interviewer ID': stat.memberId || 'N/A',
                           'Interviewer': stat.interviewer,
                           'PS Covered': displayStat.psCovered || 0,
                           'Completed Interviews': displayStat.completedInterviews || displayStat.totalResponses || stat.count,
@@ -4251,6 +4260,7 @@ const SurveyReportsPage = () => {
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Rank</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Interviewer ID</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-900">Interviewer</th>
                       <th className="text-right py-3 px-4 font-medium text-gray-900">PS Covered</th>
                       <th className="text-right py-3 px-4 font-medium text-gray-900">Completed Interviews</th>
@@ -4323,6 +4333,7 @@ const SurveyReportsPage = () => {
                         <tr key="total" className="bg-[#E6F0F8] border-b-2 border-[#373177] font-semibold">
                           <td className="py-3 px-4 text-[#373177] font-bold">Total</td>
                           <td className="py-3 px-4 text-[#373177] font-bold">-</td>
+                          <td className="py-3 px-4 text-[#373177] font-bold">-</td>
                           <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.psCovered}</td>
                           <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.completedInterviews}</td>
                           <td className="py-3 px-4 text-right text-[#373177] font-bold">{totals.systemRejections}</td>
@@ -4377,6 +4388,7 @@ const SurveyReportsPage = () => {
                               {index + 1}
                             </span>
                           </td>
+                          <td className="py-3 px-4 font-medium text-gray-900">{stat.memberId || 'N/A'}</td>
                           <td className="py-3 px-4 font-medium text-gray-900">{stat.interviewer}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.psCovered || stat.psCovered || 0}</td>
                           <td className="py-3 px-4 text-right font-semibold text-gray-900">{displayStat.completedInterviews || stat.count}</td>
