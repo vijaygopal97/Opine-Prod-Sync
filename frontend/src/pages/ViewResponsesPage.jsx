@@ -1418,6 +1418,15 @@ const ViewResponsesPage = () => {
   const filteredResponses = useMemo(() => {
     if (!originalResponses || originalResponses.length === 0) return [];
 
+    // Debug logging (remove in production if needed)
+    if (filters.interviewerIds && filters.interviewerIds.length > 0 && filters.status === 'Approved') {
+      console.log('🔍 Filtering with:', {
+        interviewerIds: filters.interviewerIds,
+        status: filters.status,
+        totalResponses: originalResponses.length
+      });
+    }
+
     return originalResponses.filter(response => {
       const respondentInfo = getRespondentInfo(response.responses, response);
       const state = getStateFromGPS(response.location);
@@ -1568,7 +1577,10 @@ const ViewResponsesPage = () => {
           }
         } else {
           // Filter by specific status (Approved, Rejected, etc.)
-          if (response.status !== filters.status) {
+          // Normalize both to strings and compare (handles case sensitivity)
+          const responseStatus = String(response.status || '').trim();
+          const filterStatus = String(filters.status || '').trim();
+          if (responseStatus !== filterStatus) {
             return false;
           }
         }
