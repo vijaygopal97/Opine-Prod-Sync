@@ -2094,8 +2094,13 @@ const SurveyReportsPage = () => {
     // For project managers: Add assigned interviewers with 0 responses
     let interviewerStats = [...interviewerStatsFromResponses];
     
+    console.log('🔍 Analytics calculation - isProjectManagerRoute:', isProjectManagerRoute);
+    console.log('🔍 Analytics calculation - assignedInterviewers:', assignedInterviewers?.length || 0);
+    console.log('🔍 Analytics calculation - interviewerStatsFromResponses:', interviewerStatsFromResponses.length);
+    
     if (isProjectManagerRoute && assignedInterviewers && assignedInterviewers.length > 0) {
       console.log('🔍 PM Route - assignedInterviewers:', assignedInterviewers.length);
+      console.log('🔍 PM Route - assignedInterviewers names:', assignedInterviewers.map(i => i.name));
       console.log('🔍 PM Route - interviewerStatsFromResponses:', interviewerStatsFromResponses.length);
       
       // Create a map of existing interviewer stats by memberId and name for easier lookup
