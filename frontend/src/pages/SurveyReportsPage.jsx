@@ -3196,20 +3196,36 @@ const SurveyReportsPage = () => {
               <Award className="w-5 h-5 text-gray-400" />
             </div>
             <div className="space-y-3">
-              {(analytics?.interviewerStats || []).slice(0, 5).map((stat, index) => (
-                <div key={stat.interviewer} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <span className="w-6 h-6 bg-green-100 text-green-600 text-xs font-semibold rounded-full flex items-center justify-center">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900 truncate">{stat.interviewer}</span>
+              {(() => {
+                const statsToShow = analytics?.interviewerStats || [];
+                // For project managers, ensure we show at least some assigned interviewers even if they have 0 responses
+                const displayStats = isProjectManagerRoute && statsToShow.length > 0 
+                  ? statsToShow.slice(0, 5) // Show top 5 (which includes those with 0 responses if needed)
+                  : statsToShow.slice(0, 5);
+                
+                if (displayStats.length === 0 && isProjectManagerRoute) {
+                  return (
+                    <div className="text-sm text-gray-500 text-center py-4">
+                      No interviewers found. Please check assigned team members.
+                    </div>
+                  );
+                }
+                
+                return displayStats.map((stat, index) => (
+                  <div key={stat.interviewer || index} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <span className={`w-6 h-6 ${stat.count > 0 ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'} text-xs font-semibold rounded-full flex items-center justify-center`}>
+                        {index + 1}
+                      </span>
+                      <span className="text-sm font-medium text-gray-900 truncate">{stat.interviewer}</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-semibold text-gray-900">{stat.count}</div>
+                      <div className="text-xs text-gray-500">{stat.count > 0 ? stat.percentage.toFixed(1) + '%' : '0%'}</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-gray-900">{stat.count}</div>
-                    <div className="text-xs text-gray-500">{stat.percentage.toFixed(1)}%</div>
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
             <div className="mt-4 pt-4 border-t border-gray-200">
               <button
