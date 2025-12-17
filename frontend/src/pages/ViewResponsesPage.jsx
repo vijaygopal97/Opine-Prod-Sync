@@ -3441,7 +3441,7 @@ const ViewResponsesPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">All Genders</option>
-                    {getFilterOptions.gender.map(gender => (
+                    {(getFilterOptions?.gender || []).map(gender => (
                       <option key={gender} value={gender}>{gender}</option>
                     ))}
                   </select>
@@ -3482,7 +3482,7 @@ const ViewResponsesPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">All Cities</option>
-                    {getFilterOptions.city.map(city => (
+                    {(getFilterOptions?.city || []).map(city => (
                       <option key={city} value={city}>{city}</option>
                     ))}
                   </select>
@@ -3499,7 +3499,7 @@ const ViewResponsesPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">All Districts</option>
-                    {getFilterOptions.district.map(district => (
+                    {(getFilterOptions?.district || []).map(district => (
                       <option key={district} value={district}>{district}</option>
                     ))}
                   </select>
@@ -3516,7 +3516,7 @@ const ViewResponsesPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">All Lok Sabha</option>
-                    {getFilterOptions.lokSabha.map(lokSabha => (
+                    {(getFilterOptions?.lokSabha || []).map(lokSabha => (
                       <option key={lokSabha} value={lokSabha}>{lokSabha}</option>
                     ))}
                   </select>
@@ -3533,7 +3533,7 @@ const ViewResponsesPage = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">All States</option>
-                        {getFilterOptions.state.map(state => (
+                        {(getFilterOptions?.state || []).map(state => (
                           <option key={state} value={state}>{state}</option>
                         ))}
                       </select>
@@ -3550,7 +3550,7 @@ const ViewResponsesPage = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="">All Modes</option>
-                        {getFilterOptions.interviewMode.map(mode => (
+                        {(getFilterOptions?.interviewMode || []).map(mode => (
                           <option key={mode} value={mode}>{mode}</option>
                         ))}
                       </select>

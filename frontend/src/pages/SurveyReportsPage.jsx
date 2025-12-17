@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { surveyResponseAPI, surveyAPI, pollingStationAPI } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { findGenderResponse, normalizeGenderResponse } from '../utils/genderUtils';
 import { getMainText } from '../utils/translations';
 import { getACByName } from '../utils/assemblyConstituencies';
@@ -64,6 +65,7 @@ const SurveyReportsPage = () => {
   const { surveyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   
   // Determine if we're in project manager route
   const isProjectManagerRoute = location.pathname.includes('/project-manager/');
@@ -71,6 +73,7 @@ const SurveyReportsPage = () => {
   const [survey, setSurvey] = useState(null);
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [assignedInterviewers, setAssignedInterviewers] = useState([]); // Store assigned interviewers for project managers
   const [showFilters, setShowFilters] = useState(true);
   const [showACModal, setShowACModal] = useState(false);
   const [showInterviewerModal, setShowInterviewerModal] = useState(false);
