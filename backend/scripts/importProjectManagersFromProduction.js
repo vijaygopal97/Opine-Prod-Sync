@@ -3,6 +3,7 @@
  */
 
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
@@ -59,11 +60,13 @@ const importProjectManagers = async () => {
         const existingUser = await DevUser.findOne({ $or: [{ email: email }, { _id: prodUser._id }] }).select('+password');
         if (existingUser) {
           console.log(`⚠️  User exists. Updating...`);
-          const updateData = { ...prodUser, _id: existingUser._id, password: prodUser.password, email: email, updatedAt: new Date() };
+          const password = prodUser.email.includes('testpm1') ? 'TestPM1@123' : prodUser.email.includes('testpm2') ? 'TestPM2@123' : prodUser.email.includes('testpm3') ? 'TestPM3@123' : prodUser.email.includes('testpm4') ? 'TestPM4@123' : prodUser.email.includes('testpm5') ? 'TestPM5@123' : null;
+          const salt = await bcrypt.genSalt(12);
+          const hashedPassword = password ? await bcrypt.hash(password, salt) : prodUser.password;
+          const updateData = { ...prodUser, _id: existingUser._id, password: hashedPassword, email: email, updatedAt: new Date() };
           delete updateData.__v;
           await DevUser.updateOne({ _id: existingUser._id }, { $set: updateData });
           const updatedUser = await DevUser.findById(existingUser._id).select('+password');
-          const password = prodUser.email.includes('testpm1') ? 'TestPM1@123' : prodUser.email.includes('testpm2') ? 'TestPM2@123' : prodUser.email.includes('testpm3') ? 'TestPM3@123' : prodUser.email.includes('testpm4') ? 'TestPM4@123' : prodUser.email.includes('testpm5') ? 'TestPM5@123' : null;
           if (password) {
             console.log(`🔐 Testing login...`);
             const loginTest = await testLogin(email, password, devConnection);
@@ -74,12 +77,14 @@ const importProjectManagers = async () => {
           console.log(`✅ User updated: ${updatedUser.firstName} ${updatedUser.lastName}\n`);
           results.push({ user: updatedUser, isNew: false, success: true });
         } else {
-          const newUserData = { ...prodUser, email: email, createdAt: prodUser.createdAt || new Date(), updatedAt: new Date() };
+          const password = prodUser.email.includes('testpm1') ? 'TestPM1@123' : prodUser.email.includes('testpm2') ? 'TestPM2@123' : prodUser.email.includes('testpm3') ? 'TestPM3@123' : prodUser.email.includes('testpm4') ? 'TestPM4@123' : prodUser.email.includes('testpm5') ? 'TestPM5@123' : null;
+          const salt = await bcrypt.genSalt(12);
+          const hashedPassword = password ? await bcrypt.hash(password, salt) : prodUser.password;
+          const newUserData = { ...prodUser, email: email, password: hashedPassword, createdAt: prodUser.createdAt || new Date(), updatedAt: new Date() };
           delete newUserData.__v;
           const newUser = new DevUser(newUserData);
           await newUser.save({ runValidators: false });
           const savedUser = await DevUser.findById(newUser._id).select('+password');
-          const password = prodUser.email.includes('testpm1') ? 'TestPM1@123' : prodUser.email.includes('testpm2') ? 'TestPM2@123' : prodUser.email.includes('testpm3') ? 'TestPM3@123' : prodUser.email.includes('testpm4') ? 'TestPM4@123' : prodUser.email.includes('testpm5') ? 'TestPM5@123' : null;
           if (password) {
             console.log(`🔐 Testing login...`);
             const loginTest = await testLogin(email, password, devConnection);
