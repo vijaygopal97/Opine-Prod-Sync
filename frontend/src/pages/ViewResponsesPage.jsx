@@ -3966,6 +3966,8 @@ const ViewResponsesPage = () => {
         <ResponseDetailsModal
           response={selectedResponse}
           survey={survey}
+          hideSurveyResponses={isProjectManagerRoute}
+          hideStatusChange={isProjectManagerRoute}
           onClose={() => {
             setShowResponseDetails(false);
             setSelectedResponse(null);

@@ -7,7 +7,7 @@ import assemblyConstituencies from '../../data/assemblyConstituencies.json';
 import { renderWithTranslationProfessional, parseTranslation, getMainText } from '../../utils/translations';
 import { findGenderResponse, normalizeGenderResponse } from '../../utils/genderUtils';
 
-const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false, onStatusChange }) => {
+const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false, onStatusChange, hideSurveyResponses = false, hideStatusChange = false }) => {
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1550,7 +1550,8 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false, 
               </div>
             )}
 
-            {/* Survey Responses */}
+            {/* Survey Responses - Hide for project managers */}
+            {!hideSurveyResponses && (
             <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Survey Responses</h3>
               <div className="space-y-4">
@@ -1679,6 +1680,7 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false, 
                 })()}
               </div>
             </div>
+            )}
 
             {/* Response Status */}
             <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
@@ -1757,7 +1759,7 @@ const ResponseDetailsModal = ({ response, survey, onClose, hideActions = false, 
             </div>
 
             {/* Status Change Buttons - Show for Approved/Rejected/Pending_Approval responses */}
-            {!hideActions && (currentResponse.status === 'Approved' || currentResponse.status === 'Rejected' || currentResponse.status === 'Pending_Approval') && (
+            {!hideActions && !hideStatusChange && (currentResponse.status === 'Approved' || currentResponse.status === 'Rejected' || currentResponse.status === 'Pending_Approval') && (
               <div className="bg-gray-50 border-t border-gray-200 p-4 mt-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Change Response Status</h3>
                 <div className="flex items-center justify-end space-x-3 flex-wrap gap-2">

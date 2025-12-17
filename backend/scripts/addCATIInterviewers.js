@@ -31,10 +31,28 @@ const COMPANY_CODE = 'TEST001';
 // ============================================================================
 const interviewersToAdd = [
   {
-    name: 'Anannya Mondal',
-    phone: '8101578259',
-    memberId: '3580',
-    email: 'cati3580@gmail.com' // Optional - will auto-generate if not provided
+    name: 'Jahanara khatun',
+    phone: '8509141476',
+    memberId: '3581',
+    email: 'cati3581@gmail.com' // Optional - will auto-generate if not provided
+  },
+  {
+    name: 'Anish Dey',
+    phone: '8509515203',
+    memberId: '3582',
+    email: 'cati3582@gmail.com' // Optional - will auto-generate if not provided
+  },
+  {
+    name: 'Avishek chandra Saw',
+    phone: '8101747197',
+    memberId: '3583',
+    email: 'cati3583@gmail.com' // Optional - will auto-generate if not provided
+  },
+  {
+    name: 'Sonia Mondal',
+    phone: '6297927591',
+    memberId: '3584',
+    email: 'cati3584@gmail.com' // Optional - will auto-generate if not provided
   },
   // Add more interviewers here...
 ];
