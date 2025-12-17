@@ -3172,7 +3172,7 @@ const SurveyReportsPage = () => {
               <Award className="w-5 h-5 text-gray-400" />
             </div>
             <div className="space-y-3">
-              {analytics.interviewerStats.slice(0, 5).map((stat, index) => (
+              {(analytics?.interviewerStats || []).slice(0, 5).map((stat, index) => (
                 <div key={stat.interviewer} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <span className="w-6 h-6 bg-green-100 text-green-600 text-xs font-semibold rounded-full flex items-center justify-center">

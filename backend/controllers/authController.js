@@ -457,6 +457,7 @@ exports.getMe = async (req, res) => {
     const user = await User.findById(req.user.id)
       .populate('company', 'companyName companyCode status industry')
       .populate('referredBy', 'firstName lastName email')
+      .populate('assignedTeamMembers.user', 'firstName lastName email memberId userType')
       .select('-password -emailVerificationToken -phoneVerificationOTP');
 
     if (!user) {
