@@ -2280,7 +2280,11 @@ const ViewResponsesPage = () => {
       // Check if this is a multi-select question
       // ONLY multi-select questions should have option columns (Yes/No for each option)
       // Single-select questions should show the response/response code in the main column only
-      const isMultiSelect = (question.type === 'multiple_choice' || question.type === 'multi_select') && question.options && question.options.length > 0;
+      // Must check both: question type AND settings.allowMultiple flag
+      const isMultiSelect = (question.type === 'multiple_choice' || question.type === 'multi_select') 
+        && question.settings?.allowMultiple === true 
+        && question.options 
+        && question.options.length > 0;
       // Check for "Others" option - be more thorough in detection
       const hasOthersOption = question.options && question.options.some(opt => {
         const optText = typeof opt === 'object' ? (opt.text || opt.label || opt.value) : opt;
