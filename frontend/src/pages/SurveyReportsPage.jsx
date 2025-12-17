@@ -74,7 +74,7 @@ const SurveyReportsPage = () => {
   const [survey, setSurvey] = useState(null);
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [assignedInterviewers, setAssignedInterviewers] = useState([]); // Store assigned interviewers for project managers
+  const [assignedInterviewers, setAssignedInterviewers] = useState(null); // Store assigned interviewers for project managers (null = not loaded yet, [] = loaded but empty)
   const [showFilters, setShowFilters] = useState(true);
   const [showACModal, setShowACModal] = useState(false);
   const [showInterviewerModal, setShowInterviewerModal] = useState(false);
@@ -2095,10 +2095,14 @@ const SurveyReportsPage = () => {
     let interviewerStats = [...interviewerStatsFromResponses];
     
     console.log('🔍 Analytics calculation - isProjectManagerRoute:', isProjectManagerRoute);
-    console.log('🔍 Analytics calculation - assignedInterviewers:', assignedInterviewers?.length || 0);
+    console.log('🔍 Analytics calculation - assignedInterviewers:', assignedInterviewers);
+    console.log('🔍 Analytics calculation - assignedInterviewers type:', typeof assignedInterviewers);
+    console.log('🔍 Analytics calculation - assignedInterviewers length:', assignedInterviewers?.length || 0);
+    console.log('🔍 Analytics calculation - assignedInterviewers isArray:', Array.isArray(assignedInterviewers));
     console.log('🔍 Analytics calculation - interviewerStatsFromResponses:', interviewerStatsFromResponses.length);
     
-    if (isProjectManagerRoute && assignedInterviewers && assignedInterviewers.length > 0) {
+    if (isProjectManagerRoute && assignedInterviewers && Array.isArray(assignedInterviewers) && assignedInterviewers.length > 0) {
+      console.log('🔍 Analytics calculation - ENTERING PM ROUTE LOGIC');
       console.log('🔍 PM Route - assignedInterviewers:', assignedInterviewers.length);
       console.log('🔍 PM Route - assignedInterviewers names:', assignedInterviewers.map(i => i.name));
       console.log('🔍 PM Route - interviewerStatsFromResponses:', interviewerStatsFromResponses.length);
@@ -3257,20 +3261,20 @@ const SurveyReportsPage = () => {
                 
                 console.log('🔍 Top Interviewers Display - displayStats:', displayStats.length, displayStats.map(s => ({ name: s.interviewer, count: s.count })));
                 
-                // Only show "No interviewers found" if we're a PM, have checked for assigned interviewers, and still have none
-                if (displayStats.length === 0 && isProjectManagerRoute && assignedInterviewers && assignedInterviewers.length === 0) {
+                // Show loading state if we're a PM but haven't loaded assigned interviewers yet
+                if (displayStats.length === 0 && isProjectManagerRoute && assignedInterviewers === null) {
                   return (
                     <div className="text-sm text-gray-500 text-center py-4">
-                      No interviewers found. Please check assigned team members.
+                      Loading interviewers...
                     </div>
                   );
                 }
                 
-                // Show loading state if we're a PM but haven't loaded assigned interviewers yet
-                if (displayStats.length === 0 && isProjectManagerRoute && assignedInterviewers === undefined) {
+                // Only show "No interviewers found" if we're a PM, have checked for assigned interviewers, and still have none
+                if (displayStats.length === 0 && isProjectManagerRoute && Array.isArray(assignedInterviewers) && assignedInterviewers.length === 0) {
                   return (
                     <div className="text-sm text-gray-500 text-center py-4">
-                      Loading interviewers...
+                      No interviewers found. Please check assigned team members.
                     </div>
                   );
                 }
