@@ -1942,7 +1942,8 @@ const SurveyReportsPage = () => {
       .map(([lokSabha, count]) => ({ lokSabha, count, percentage: (count / totalResponses) * 100 }))
       .sort((a, b) => b.count - a.count);
 
-    const interviewerStats = Array.from(interviewerMap.entries())
+    // Calculate interviewer stats from responses
+    const interviewerStatsFromResponses = Array.from(interviewerMap.entries())
       .map(([interviewer, data]) => {
         // Handle both object format (new) and number format (old/backward compatibility)
         const isObject = typeof data === 'object' && data !== null;
@@ -1979,6 +1980,61 @@ const SurveyReportsPage = () => {
         };
       })
       .sort((a, b) => b.count - a.count);
+    
+    // For project managers: Add assigned interviewers with 0 responses
+    let interviewerStats = [...interviewerStatsFromResponses];
+    
+    if (isProjectManagerRoute && assignedInterviewers && assignedInterviewers.length > 0) {
+      // Create a set of interviewer names/IDs that already have responses
+      const interviewerNamesWithResponses = new Set(
+        interviewerStatsFromResponses.map(stat => {
+          // Match by name or memberId
+          return stat.interviewer?.toLowerCase() || stat.memberId?.toString();
+        })
+      );
+      
+      // Add assigned interviewers with 0 responses
+      const interviewersWithZeroResponses = assignedInterviewers
+        .filter(interviewer => {
+          const interviewerKey = interviewer.name?.toLowerCase() || interviewer.memberId?.toString();
+          return !interviewerNamesWithResponses.has(interviewerKey) && 
+                 !interviewerStatsFromResponses.some(stat => 
+                   stat.memberId === interviewer.memberId || 
+                   stat.interviewer?.toLowerCase() === interviewer.name?.toLowerCase()
+                 );
+        })
+        .map(interviewer => ({
+          interviewer: interviewer.name || `${interviewer.firstName} ${interviewer.lastName}`.trim() || 'Unknown',
+          memberId: interviewer.memberId || '',
+          count: 0,
+          approved: 0,
+          rejected: 0,
+          autoRejected: 0,
+          manualRejected: 0,
+          pending: 0,
+          underQC: 0,
+          capi: 0,
+          cati: 0,
+          percentage: 0,
+          psCovered: 0,
+          femalePercentage: 0,
+          withoutPhonePercentage: 0,
+          scPercentage: 0,
+          muslimPercentage: 0,
+          age18to24Percentage: 0,
+          age50PlusPercentage: 0
+        }));
+      
+      // Combine: interviewers with responses first (sorted by count), then interviewers with 0 responses (sorted by name)
+      interviewerStats = [
+        ...interviewerStatsFromResponses,
+        ...interviewersWithZeroResponses.sort((a, b) => a.interviewer.localeCompare(b.interviewer))
+      ];
+      
+      console.log('✅ Added assigned interviewers with 0 responses:', interviewersWithZeroResponses.length);
+    } else {
+      interviewerStats = interviewerStatsFromResponses;
+    }
 
     const genderStats = Object.fromEntries(genderMap);
     const ageStats = Object.fromEntries(ageMap);
