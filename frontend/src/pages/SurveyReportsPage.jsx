@@ -553,37 +553,67 @@ const SurveyReportsPage = () => {
   // Fetch assigned team members for project managers
   useEffect(() => {
     const fetchAssignedInterviewers = async () => {
+      console.log('🔍 fetchAssignedInterviewers - isProjectManagerRoute:', isProjectManagerRoute);
+      console.log('🔍 fetchAssignedInterviewers - user:', user ? { id: user.id, userType: user.userType, hasAssignedTeamMembers: !!user.assignedTeamMembers } : 'null');
+      
       if (isProjectManagerRoute && user && user.userType === 'project_manager') {
         try {
+          console.log('🔍 Fetching assigned interviewers from API...');
           // Fetch current user with populated assignedTeamMembers
           const userResponse = await api.get('/api/auth/me');
           
+          console.log('🔍 API Response:', {
+            success: userResponse.data?.success,
+            hasData: !!userResponse.data?.data,
+            hasAssignedTeamMembers: !!userResponse.data?.data?.assignedTeamMembers,
+            assignedTeamMembersCount: userResponse.data?.data?.assignedTeamMembers?.length || 0
+          });
+          
           if (userResponse.data?.success && userResponse.data?.data?.assignedTeamMembers) {
             const assignedTeamMembers = userResponse.data.data.assignedTeamMembers;
+            console.log('🔍 Raw assignedTeamMembers:', assignedTeamMembers);
             
             // Extract interviewer details from assignedTeamMembers
             const interviewerDetails = assignedTeamMembers
-              .filter(tm => tm.userType === 'interviewer' && tm.user)
+              .filter(tm => {
+                const isInterviewer = tm.userType === 'interviewer' && tm.user;
+                if (!isInterviewer) {
+                  console.log('🔍 Filtered out team member:', { userType: tm.userType, hasUser: !!tm.user });
+                }
+                return isInterviewer;
+              })
               .map(tm => {
                 const interviewerUser = tm.user;
+                const name = `${interviewerUser.firstName || ''} ${interviewerUser.lastName || ''}`.trim() || 'Unknown';
+                console.log('🔍 Processing interviewer:', { name, memberId: interviewerUser.memberId, _id: interviewerUser._id });
                 return {
                   _id: interviewerUser._id || interviewerUser,
                   firstName: interviewerUser.firstName || '',
                   lastName: interviewerUser.lastName || '',
                   email: interviewerUser.email || '',
                   memberId: interviewerUser.memberId || '',
-                  name: `${interviewerUser.firstName || ''} ${interviewerUser.lastName || ''}`.trim() || 'Unknown'
+                  name: name
                 };
               })
-              .filter(int => int._id); // Filter out any invalid entries
+              .filter(int => {
+                const isValid = !!int._id;
+                if (!isValid) {
+                  console.log('🔍 Filtered out invalid interviewer:', int);
+                }
+                return isValid;
+              });
+            
+            console.log('🔍 Extracted interviewerDetails:', interviewerDetails.length, interviewerDetails);
             
             if (interviewerDetails.length > 0) {
               setAssignedInterviewers(interviewerDetails);
-              console.log('✅ Fetched assigned interviewers for PM:', interviewerDetails.length);
+              console.log('✅ Fetched assigned interviewers for PM:', interviewerDetails.length, interviewerDetails.map(i => i.name));
             } else {
-              console.log('⚠️ No assigned interviewers found for project manager');
+              console.log('⚠️ No assigned interviewers found for project manager after filtering');
+              setAssignedInterviewers([]);
             }
           } else if (user?.assignedTeamMembers) {
+            console.log('🔍 Using fallback - user.assignedTeamMembers:', user.assignedTeamMembers.length);
             // Fallback: use user object if it already has assignedTeamMembers
             const interviewerDetails = user.assignedTeamMembers
               .filter(tm => tm.userType === 'interviewer' && tm.user)
@@ -603,11 +633,26 @@ const SurveyReportsPage = () => {
             if (interviewerDetails.length > 0) {
               setAssignedInterviewers(interviewerDetails);
               console.log('✅ Using assigned interviewers from user object:', interviewerDetails.length);
+            } else {
+              console.log('⚠️ No valid interviewers in user.assignedTeamMembers');
+              setAssignedInterviewers([]);
             }
+          } else {
+            console.log('⚠️ No assignedTeamMembers found in API response or user object');
+            setAssignedInterviewers([]);
           }
         } catch (error) {
-          console.error('Error fetching assigned interviewers:', error);
+          console.error('❌ Error fetching assigned interviewers:', error);
+          console.error('❌ Error details:', error.response?.data || error.message);
+          setAssignedInterviewers([]);
         }
+      } else {
+        console.log('🔍 Not fetching assigned interviewers - conditions not met:', {
+          isProjectManagerRoute,
+          hasUser: !!user,
+          userType: user?.userType
+        });
+        setAssignedInterviewers([]);
       }
     };
     
@@ -3220,8 +3265,12 @@ const SurveyReportsPage = () => {
                       <span className="text-sm font-medium text-gray-900 truncate">{stat.interviewer}</span>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-semibold text-gray-900">{stat.count}</div>
-                      <div className="text-xs text-gray-500">{stat.count > 0 ? stat.percentage.toFixed(1) + '%' : '0%'}</div>
+                      <div className="text-sm font-semibold text-gray-900">{stat.count || 0}</div>
+                      <div className="text-xs text-gray-500">
+                        {stat.count > 0 && stat.percentage !== undefined && !isNaN(stat.percentage) 
+                          ? stat.percentage.toFixed(1) + '%' 
+                          : '0%'}
+                      </div>
                     </div>
                   </div>
                 ));
