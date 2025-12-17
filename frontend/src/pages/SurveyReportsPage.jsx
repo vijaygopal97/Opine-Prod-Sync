@@ -3192,7 +3192,7 @@ const SurveyReportsPage = () => {
                 onClick={() => setShowInterviewerModal(true)}
                 className="w-full text-sm text-[#373177] hover:text-blue-800 font-medium text-center"
               >
-                View All ({analytics.interviewerStats.length} Interviewers)
+                View All ({(analytics?.interviewerStats || []).length} Interviewers)
               </button>
             </div>
           </div>
