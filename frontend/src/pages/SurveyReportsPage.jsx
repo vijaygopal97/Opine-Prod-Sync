@@ -28,6 +28,7 @@ import {
   Phone
 } from 'lucide-react';
 import { surveyResponseAPI, surveyAPI, pollingStationAPI } from '../services/api';
+import api from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
 import { findGenderResponse, normalizeGenderResponse } from '../utils/genderUtils';
