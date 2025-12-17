@@ -550,6 +550,70 @@ const SurveyReportsPage = () => {
     }
   };
 
+  // Fetch assigned team members for project managers
+  useEffect(() => {
+    const fetchAssignedInterviewers = async () => {
+      if (isProjectManagerRoute && user && user.userType === 'project_manager') {
+        try {
+          // Fetch current user with populated assignedTeamMembers
+          const userResponse = await api.get('/api/auth/me');
+          
+          if (userResponse.data?.success && userResponse.data?.data?.assignedTeamMembers) {
+            const assignedTeamMembers = userResponse.data.data.assignedTeamMembers;
+            
+            // Extract interviewer details from assignedTeamMembers
+            const interviewerDetails = assignedTeamMembers
+              .filter(tm => tm.userType === 'interviewer' && tm.user)
+              .map(tm => {
+                const interviewerUser = tm.user;
+                return {
+                  _id: interviewerUser._id || interviewerUser,
+                  firstName: interviewerUser.firstName || '',
+                  lastName: interviewerUser.lastName || '',
+                  email: interviewerUser.email || '',
+                  memberId: interviewerUser.memberId || '',
+                  name: `${interviewerUser.firstName || ''} ${interviewerUser.lastName || ''}`.trim() || 'Unknown'
+                };
+              })
+              .filter(int => int._id); // Filter out any invalid entries
+            
+            if (interviewerDetails.length > 0) {
+              setAssignedInterviewers(interviewerDetails);
+              console.log('✅ Fetched assigned interviewers for PM:', interviewerDetails.length);
+            } else {
+              console.log('⚠️ No assigned interviewers found for project manager');
+            }
+          } else if (user?.assignedTeamMembers) {
+            // Fallback: use user object if it already has assignedTeamMembers
+            const interviewerDetails = user.assignedTeamMembers
+              .filter(tm => tm.userType === 'interviewer' && tm.user)
+              .map(tm => {
+                const interviewerUser = tm.user._id ? tm.user : tm.user;
+                return {
+                  _id: typeof interviewerUser === 'object' && interviewerUser._id ? interviewerUser._id : interviewerUser,
+                  firstName: interviewerUser.firstName || '',
+                  lastName: interviewerUser.lastName || '',
+                  email: interviewerUser.email || '',
+                  memberId: interviewerUser.memberId || '',
+                  name: `${interviewerUser.firstName || ''} ${interviewerUser.lastName || ''}`.trim() || 'Unknown'
+                };
+              })
+              .filter(int => int._id);
+            
+            if (interviewerDetails.length > 0) {
+              setAssignedInterviewers(interviewerDetails);
+              console.log('✅ Using assigned interviewers from user object:', interviewerDetails.length);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching assigned interviewers:', error);
+        }
+      }
+    };
+    
+    fetchAssignedInterviewers();
+  }, [isProjectManagerRoute, user]);
+  
   useEffect(() => {
     if (surveyId) {
       fetchSurveyData();
