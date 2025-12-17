@@ -606,8 +606,11 @@ const SurveyReportsPage = () => {
             console.log('🔍 Extracted interviewerDetails:', interviewerDetails.length, interviewerDetails);
             
             if (interviewerDetails.length > 0) {
+              console.log('✅ Setting assignedInterviewers state with', interviewerDetails.length, 'interviewers');
+              console.log('✅ Interviewer details sample:', interviewerDetails.slice(0, 3));
               setAssignedInterviewers(interviewerDetails);
               console.log('✅ Fetched assigned interviewers for PM:', interviewerDetails.length, interviewerDetails.map(i => i.name));
+              console.log('✅ State set - analytics useMemo should recalculate now');
             } else {
               console.log('⚠️ No assigned interviewers found for project manager after filtering');
               setAssignedInterviewers([]);
