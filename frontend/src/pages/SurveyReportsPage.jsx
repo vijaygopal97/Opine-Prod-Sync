@@ -2094,7 +2094,7 @@ const SurveyReportsPage = () => {
       },
       catiPerformance: catiPerformanceData
     };
-  }, [filteredResponses, survey, catiStats]);
+  }, [filteredResponses, survey, catiStats, isProjectManagerRoute, assignedInterviewers]);
 
   // Fetch PC data for ACs that don't have it cached (after analytics is defined)
   // Use AC code for matching - more reliable than AC name
