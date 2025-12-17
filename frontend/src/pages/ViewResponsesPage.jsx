@@ -2278,8 +2278,8 @@ const ViewResponsesPage = () => {
       questionCodeRow.push(questionCode);
       
       // Check if this is a multi-select question
-      // Note: Some questions might have type 'single_choice' but still need Yes/No columns
-      // We'll check both multiple_choice and if it has multiple options that need Yes/No treatment
+      // ONLY multi-select questions should have option columns (Yes/No for each option)
+      // Single-select questions should show the response/response code in the main column only
       const isMultiSelect = (question.type === 'multiple_choice' || question.type === 'multi_select') && question.options && question.options.length > 0;
       // Check for "Others" option - be more thorough in detection
       const hasOthersOption = question.options && question.options.some(opt => {
@@ -2483,48 +2483,60 @@ const ViewResponsesPage = () => {
       // Extract AC and polling station from responses
       const { ac: acFromResponse, pollingStation: pollingStationFromResponse } = getACAndPollingStationFromResponses(response.responses);
       
+      // Helper function to replace N/A with empty string
+      const cleanValue = (value) => {
+        if (value === 'N/A' || value === null || value === undefined) return '';
+        return value;
+      };
+      
       // Get AC, PC, and District
-      const displayAC = acFromResponse || response.selectedPollingStation?.acName || response.selectedAC || 'N/A';
+      const displayACRaw = acFromResponse || response.selectedPollingStation?.acName || response.selectedAC || '';
+      const displayAC = displayACRaw || '';
       
       // Get PC
-      let displayPC = response.selectedPollingStation?.pcName || 'N/A';
-      if (displayPC === 'N/A' && displayAC !== 'N/A') {
-        displayPC = getLokSabhaFromAC(displayAC);
+      let displayPC = response.selectedPollingStation?.pcName || '';
+      if (!displayPC && displayAC) {
+        const pcFromAC = getLokSabhaFromAC(displayAC);
+        displayPC = cleanValue(pcFromAC) || '';
       }
       
       // Get District
-      let displayDistrict = response.selectedPollingStation?.district || 'N/A';
-      if (displayDistrict === 'N/A' && displayAC !== 'N/A') {
-        displayDistrict = getDistrictFromAC(displayAC);
+      let displayDistrict = response.selectedPollingStation?.district || '';
+      if (!displayDistrict && displayAC) {
+        const districtFromAC = getDistrictFromAC(displayAC);
+        displayDistrict = cleanValue(districtFromAC) || '';
       }
       
       // Get AC code (numeric only, remove alphabets and leading zeros)
-      const acCode = getACCodeFromAC(displayAC);
+      const acCodeRaw = getACCodeFromAC(displayAC);
+      const acCode = cleanValue(acCodeRaw) || '';
       
       // Get PC code from polling_stations.json using the polling station
-      // Extract polling station code and name first
+      // Extract polling station code and name first (will be cleaned later)
       const pollingStationValue = pollingStationFromResponse || response.selectedPollingStation?.stationName;
-      const { stationCode, stationName } = extractPollingStationCodeAndName(pollingStationValue);
       
       // Get PC code, district code, and region from polling_stations.json using AC code
-      let pcCode = 'N/A';
-      let districtCode = 'N/A';
-      let regionCode = 'N/A';
-      let regionName = 'N/A';
+      let pcCode = '';
+      let districtCode = '';
+      let regionCode = '';
+      let regionName = '';
       
-      if (acCode !== 'N/A') {
+      if (acCode && acCode !== '') {
         // Get data from cached polling station data (from AC code)
         const pollingData = pollingDataMap.get(acCode);
         if (pollingData) {
           // PC code comes from the AC's pc_no in polling_stations.json
-          pcCode = pollingData.pcCode;
-          districtCode = pollingData.districtCode;
-          regionCode = pollingData.regionCode;
-          regionName = pollingData.regionName;
+          pcCode = cleanValue(pollingData.pcCode) || '';
+          districtCode = cleanValue(pollingData.districtCode) || '';
+          regionCode = cleanValue(pollingData.regionCode) || '';
+          regionName = cleanValue(pollingData.regionName) || '';
         }
       }
       
       // Polling station code and name already extracted above
+      const { stationCode: stationCodeRaw, stationName: stationNameRaw } = extractPollingStationCodeAndName(pollingStationValue);
+      const stationCode = cleanValue(stationCodeRaw) || '';
+      const stationName = cleanValue(stationNameRaw) || '';
       
       // Format response date
       const responseDate = new Date(response.createdAt || response.endTime || response.createdAt);
@@ -2536,29 +2548,29 @@ const ViewResponsesPage = () => {
         minute: '2-digit'
       });
       
-      // Build metadata row (matching the header order)
+      // Build metadata row (matching the header order) - all N/A values replaced with empty strings
       const metadata = [
         rowIndex + 1, // Serial Number
-        response.responseId || response._id?.slice(-8) || 'N/A', // Response ID
-        response.interviewMode?.toUpperCase() || 'N/A', // Interview Mode
-        response.interviewer ? `${response.interviewer.firstName || ''} ${response.interviewer.lastName || ''}`.trim() : 'N/A', // Interviewer Name
+        cleanValue(response.responseId || response._id?.slice(-8)), // Response ID
+        cleanValue(response.interviewMode?.toUpperCase()), // Interview Mode
+        cleanValue(response.interviewer ? `${response.interviewer.firstName || ''} ${response.interviewer.lastName || ''}`.trim() : null), // Interviewer Name
         response.interviewer?.memberId || response.interviewer?.memberID || '', // Interviewer ID
-        response.interviewer?.email || 'N/A', // Interviewer Email
+        cleanValue(response.interviewer?.email), // Interviewer Email
         '', // Supervisor Name (can be empty)
         '', // Supervisor ID (can be empty)
         formattedDate, // Response Date
-        response.status || 'N/A', // Status
-        acCode, // Assembly Constituency code
-        displayAC, // Assembly Constituency (AC)
-        pcCode, // Parliamentary Constituency Code
-        displayPC, // Parliamentary Constituency (PC)
-        districtCode, // District Code
-        displayDistrict, // District
-        regionCode, // Region Code
-        regionName, // Region Name
-        stationCode, // Polling Station Code
-        stationName, // Polling Station Name
-        response.location ? `(${response.location.latitude?.toFixed(4)}, ${response.location.longitude?.toFixed(4)})` : 'N/A', // GPS Coordinates
+        cleanValue(response.status), // Status
+        cleanValue(acCode), // Assembly Constituency code
+        cleanValue(displayAC), // Assembly Constituency (AC)
+        cleanValue(pcCode), // Parliamentary Constituency Code
+        cleanValue(displayPC), // Parliamentary Constituency (PC)
+        cleanValue(districtCode), // District Code
+        cleanValue(displayDistrict), // District
+        cleanValue(regionCode), // Region Code
+        cleanValue(regionName), // Region Name
+        cleanValue(stationCode), // Polling Station Code
+        cleanValue(stationName), // Polling Station Name
+        response.location ? `(${response.location.latitude?.toFixed(4)}, ${response.location.longitude?.toFixed(4)})` : '', // GPS Coordinates
         response.call_id || '' // Call ID
       ];
 
@@ -2697,10 +2709,10 @@ const ViewResponsesPage = () => {
               }
               return optionMatches(option, val);
             });
-            // In codes mode: use "1" for Yes, "2" for No
+            // In codes mode: use "1" for Yes, "0" for No
             // In text mode: use "Yes" for Yes, "No" for No
             if (downloadMode === 'codes') {
-              answers.push(isSelected ? '1' : '2');
+              answers.push(isSelected ? '1' : '0');
             } else {
               answers.push(isSelected ? 'Yes' : 'No');
             }
