@@ -1432,7 +1432,38 @@ const SurveyReportsPage = () => {
 
   // Analytics calculations
   const analytics = useMemo(() => {
+    // Handle empty responses case - but still include assigned interviewers for PMs
     if (!filteredResponses || filteredResponses.length === 0) {
+      // For project managers: Add assigned interviewers with 0 responses even when there are no responses
+      let interviewerStats = [];
+      if (isProjectManagerRoute && assignedInterviewers !== null && Array.isArray(assignedInterviewers) && assignedInterviewers.length > 0) {
+        console.log('🔍 Analytics (empty responses) - Adding', assignedInterviewers.length, 'assigned interviewers');
+        interviewerStats = assignedInterviewers
+          .map(interviewer => ({
+            interviewer: interviewer.name || `${interviewer.firstName} ${interviewer.lastName}`.trim() || 'Unknown',
+            memberId: interviewer.memberId || '',
+            count: 0,
+            approved: 0,
+            rejected: 0,
+            autoRejected: 0,
+            manualRejected: 0,
+            pending: 0,
+            underQC: 0,
+            capi: 0,
+            cati: 0,
+            percentage: 0,
+            psCovered: 0,
+            femalePercentage: 0,
+            withoutPhonePercentage: 0,
+            scPercentage: 0,
+            muslimPercentage: 0,
+            age18to24Percentage: 0,
+            age50PlusPercentage: 0
+          }))
+          .sort((a, b) => a.interviewer.localeCompare(b.interviewer)); // Sort by name
+        console.log('✅ Analytics (empty responses) - Created interviewerStats with', interviewerStats.length, 'interviewers');
+      }
+      
       return {
         totalResponses: 0,
         capiResponses: 0,
@@ -1442,7 +1473,7 @@ const SurveyReportsPage = () => {
         acStats: [],
         districtStats: [],
         lokSabhaStats: [],
-        interviewerStats: [],
+        interviewerStats: interviewerStats,
         genderStats: {},
         ageStats: {},
         dailyStats: [],
