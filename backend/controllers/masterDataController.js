@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const MASTER_DATA_JSON = path.join(__dirname, '../data/acMasterData.json');
+const ASSEMBLY_CONSTITUENCIES_JSON = path.join(__dirname, '../data/assemblyConstituencies.json');
 
 // Cache for master data to avoid reading file multiple times
 let masterDataCache = null;
@@ -120,6 +121,84 @@ exports.getACData = async (req, res) => {
       success: false,
       message: 'Failed to fetch AC data',
       error: error.message
+    });
+  }
+};
+
+/**
+ * Get all Assembly Constituencies for a state
+ * @route GET /api/master-data/acs/:state
+ * @access Private
+ */
+exports.getAllACsForState = async (req, res) => {
+  try {
+    const { state } = req.params;
+    
+    if (!state) {
+      return res.status(400).json({
+        success: false,
+        message: 'State name is required'
+      });
+    }
+    
+    // Load assembly constituencies data
+    let assemblyConstituenciesData;
+    try {
+      if (!fs.existsSync(ASSEMBLY_CONSTITUENCIES_JSON)) {
+        return res.status(404).json({
+          success: false,
+          message: 'Assembly constituencies data file not found'
+        });
+      }
+      
+      const jsonData = fs.readFileSync(ASSEMBLY_CONSTITUENCIES_JSON, 'utf8');
+      assemblyConstituenciesData = JSON.parse(jsonData);
+    } catch (error) {
+      console.error('Error loading assembly constituencies data:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error loading assembly constituencies data',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+    
+    // Find the state (case-insensitive)
+    const stateKey = Object.keys(assemblyConstituenciesData.states || {}).find(
+      s => s.toLowerCase() === state.toLowerCase()
+    );
+    
+    if (!stateKey || !assemblyConstituenciesData.states[stateKey]) {
+      return res.status(404).json({
+        success: false,
+        message: `State "${state}" not found`
+      });
+    }
+    
+    const stateData = assemblyConstituenciesData.states[stateKey];
+    const acs = stateData.assemblyConstituencies || [];
+    
+    // Format ACs with code and name for easy searching
+    const formattedACs = acs.map((ac) => ({
+      acCode: ac.acCode || '',
+      acName: ac.acName || '',
+      displayText: `${ac.acCode || ''} - ${ac.acName || ''}`.trim(),
+      searchText: `${ac.acCode || ''} ${ac.acName || ''}`.toLowerCase()
+    }));
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        state: stateKey,
+        acs: formattedACs,
+        count: formattedACs.length
+      }
+    });
+  } catch (error) {
+    console.error('Get all ACs for state error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
