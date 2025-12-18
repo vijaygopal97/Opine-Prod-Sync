@@ -18,7 +18,7 @@ const API_BASE_URL = isHTTPS
 // Create axios instance with default configuration
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // Increased timeout to 30 seconds
+  timeout: 600000, // 10 minutes timeout for all API requests (increased from 30 seconds)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -490,7 +490,10 @@ export const surveyAPI = {
         params.interviewerMode = interviewerMode;
       }
       if (ac) params.ac = ac;
-      const response = await api.get(`/api/surveys/${surveyId}/cati-stats`, { params });
+      const response = await api.get(`/api/surveys/${surveyId}/cati-stats`, { 
+        params,
+        timeout: 600000 // 10 minutes timeout for complex CATI stats queries
+      });
       return response.data;
     } catch (error) {
       throw error;

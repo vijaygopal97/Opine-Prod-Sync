@@ -2111,6 +2111,18 @@ exports.saveRespondentContacts = async (req, res) => {
 // @route   GET /api/surveys/:id/cati-stats
 // @access  Private (Company Admin, Project Manager)
 exports.getCatiStats = async (req, res) => {
+  // Set a timeout for this operation (5 minutes)
+  const timeout = setTimeout(() => {
+    if (!res.headersSent) {
+      console.error('❌ getCatiStats - TIMEOUT after 5 minutes');
+      res.status(504).json({
+        success: false,
+        message: 'Request timeout - The operation is taking too long. Please try with more specific filters.',
+        error: 'Timeout'
+      });
+    }
+  }, 300000); // 5 minutes
+
   try {
     const { id } = req.params;
     const { startDate, endDate, interviewerIds, interviewerMode, ac } = req.query; // Get filters from query params
@@ -3594,19 +3606,26 @@ exports.getCatiStats = async (req, res) => {
     });
     console.log(`🔍🔍🔍 getCatiStats - Response data structure (first 1000 chars):`, JSON.stringify(responseData, null, 2).substring(0, 1000));
 
-    res.status(200).json({
-      success: true,
-      data: responseData
-    });
-    console.log(`🔍🔍🔍 getCatiStats - END - Response sent successfully`);
+    clearTimeout(timeout);
+    if (!res.headersSent) {
+      res.status(200).json({
+        success: true,
+        data: responseData
+      });
+      console.log(`🔍🔍🔍 getCatiStats - END - Response sent successfully`);
+    }
 
   } catch (error) {
-    console.error('Get CATI stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
-    });
+    clearTimeout(timeout);
+    console.error('❌ Get CATI stats error:', error);
+    console.error('❌ Error stack:', error.stack);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Server error while fetching CATI stats',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
   }
 };
 

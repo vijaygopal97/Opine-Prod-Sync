@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const SurveyResponse = require('../models/SurveyResponse');
 const InterviewSession = require('../models/InterviewSession');
 const Survey = require('../models/Survey');

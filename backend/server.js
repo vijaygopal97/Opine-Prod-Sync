@@ -7,6 +7,35 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+// ============================================
+// GLOBAL ERROR HANDLERS - PREVENT CRASHES
+// ============================================
+// Handle unhandled promise rejections (prevent crashes)
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ UNHANDLED PROMISE REJECTION - Preventing crash:', reason);
+  console.error('❌ Promise:', promise);
+  console.error('❌ Stack:', reason?.stack || 'No stack trace');
+  // Log to error file but don't crash
+  // The error is already logged, we just prevent the crash
+});
+
+// Handle uncaught exceptions (prevent crashes)
+process.on('uncaughtException', (error) => {
+  console.error('❌ UNCAUGHT EXCEPTION - Preventing crash:', error);
+  console.error('❌ Error name:', error.name);
+  console.error('❌ Error message:', error.message);
+  console.error('❌ Stack:', error.stack);
+  // Log to error file but don't crash
+  // The error is already logged, we just prevent the crash
+});
+
+// Handle warnings (log but don't crash)
+process.on('warning', (warning) => {
+  console.warn('⚠️ PROCESS WARNING:', warning.name);
+  console.warn('⚠️ Message:', warning.message);
+  console.warn('⚠️ Stack:', warning.stack);
+});
+
 // Import routes
 const contactRoutes = require('./routes/contactRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -30,9 +59,30 @@ const SERVER_IP = process.env.SERVER_IP || 'localhost';
 const MONGODB_URI = process.env.MONGODB_URI;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3001';
 
-// Middleware
+// Middleware - Support multiple origins
+const allowedOrigins = CORS_ORIGIN.includes(',') 
+  ? CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : [CORS_ORIGIN, 'https://convo.convergentview.com', 'https://opine.exypnossolutions.com'];
+
 app.use(cors({
-  origin: CORS_ORIGIN,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.some(allowed => origin === allowed)) {
+      callback(null, true);
+    } else {
+      // Check if origin matches any allowed origin pattern
+      const isAllowed = allowedOrigins.some(allowed => {
+        if (allowed.includes('*')) {
+          const pattern = allowed.replace('*', '.*');
+          return new RegExp(pattern).test(origin);
+        }
+        return origin === allowed;
+      });
+      callback(isAllowed ? null : new Error('Not allowed by CORS'), isAllowed);
+    }
+  },
   credentials: true
 }));
 
@@ -134,11 +184,57 @@ app.use('/api/master-data', masterDataRoutes);
 
 // Note: Opines API routes removed - using Contact API instead
 
+// ============================================
+// GLOBAL ERROR HANDLING MIDDLEWARE
+// ============================================
+// Catch-all error handler for Express routes (prevents crashes)
+app.use((err, req, res, next) => {
+  console.error('❌ EXPRESS ERROR HANDLER:', err);
+  console.error('❌ Error name:', err.name);
+  console.error('❌ Error message:', err.message);
+  console.error('❌ Stack:', err.stack);
+  console.error('❌ Request URL:', req.url);
+  console.error('❌ Request method:', req.method);
+  
+  // Send error response but don't crash
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message || 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
+// Handle 404 errors
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
+  });
+});
+
 // Create HTTP server with increased timeout for large file uploads
 const server = require('http').createServer(app);
 server.timeout = 7200000; // 2 hours timeout for very large file uploads and report generation
 server.keepAliveTimeout = 7200000; // 2 hours keep-alive timeout
 server.headersTimeout = 7200000; // 2 hours headers timeout
+
+// Handle server errors gracefully
+server.on('error', (error) => {
+  console.error('❌ SERVER ERROR:', error);
+  console.error('❌ Error details:', {
+    code: error.code,
+    message: error.message,
+    stack: error.stack
+  });
+  // Don't exit - let PM2 handle restarts if needed
+});
+
+// Handle client errors (prevent crashes from bad requests)
+server.on('clientError', (error, socket) => {
+  console.error('❌ CLIENT ERROR:', error.message);
+  socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+});
 
 // Start HTTP server (reverted for compatibility)
 server.listen(PORT, '0.0.0.0', () => {
@@ -148,4 +244,5 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`📡 CORS Origin: ${CORS_ORIGIN}`);
   console.log(`⚠️  Note: Audio recording requires HTTPS. Use localhost for development.`);
   console.log(`⏱️  Server timeout set to 2 hours for very large file processing (up to 800MB)`);
+  console.log(`🛡️  Global error handlers installed to prevent crashes`);
 });

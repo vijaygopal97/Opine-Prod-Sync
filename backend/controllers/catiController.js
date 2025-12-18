@@ -1138,7 +1138,7 @@ const getCalls = async (req, res) => {
 
 // @desc    Get single CATI call by ID (MongoDB _id) or callId (DeepCall callId)
 // @route   GET /api/cati/calls/:id
-// @access  Private (Company Admin only)
+// @access  Private (Company Admin, Project Manager, Quality Agent, or Interviewer with ownership)
 const getCallById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1207,8 +1207,8 @@ const getCallById = async (req, res) => {
       });
     }
 
-    // If user is an interviewer (not company_admin or quality_agent), verify they own a response linked to this call
-    if (userRole !== 'company_admin' && userRole !== 'quality_agent') {
+    // If user is an interviewer (not company_admin, project_manager, or quality_agent), verify they own a response linked to this call
+    if (userRole !== 'company_admin' && userRole !== 'project_manager' && userRole !== 'quality_agent') {
       // Check if this call is linked to one of the interviewer's survey responses
       const callIdToCheck = call.callId || call._id.toString();
       const responseWithCall = await SurveyResponse.findOne({
@@ -1393,7 +1393,7 @@ const getCallStats = async (req, res) => {
 
 // @desc    Proxy recording download (with authentication)
 // @route   GET /api/cati/recording/:callId
-// @access  Private (Company Admin only)
+// @access  Private (Company Admin, Project Manager, Quality Agent, or Interviewer with ownership)
 const getRecording = async (req, res) => {
   try {
     const { callId } = req.params;
@@ -1437,8 +1437,8 @@ const getRecording = async (req, res) => {
       });
     }
 
-    // If user is an interviewer (not company_admin or quality_agent), verify they own a response linked to this call
-    if (userRole !== 'company_admin' && userRole !== 'quality_agent') {
+    // If user is an interviewer (not company_admin, project_manager, or quality_agent), verify they own a response linked to this call
+    if (userRole !== 'company_admin' && userRole !== 'project_manager' && userRole !== 'quality_agent') {
       // Check if this call is linked to one of the interviewer's survey responses
       const callIdToCheck = call.callId || call._id.toString();
       const responseWithCall = await SurveyResponse.findOne({

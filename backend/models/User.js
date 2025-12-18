@@ -455,23 +455,11 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 // Instance method to increment login attempts
+// DISABLED: Account locking has been removed - users can attempt login unlimited times
 userSchema.methods.incLoginAttempts = function() {
-  // If we have a previous lock that has expired, restart at 1
-  if (this.lockUntil && this.lockUntil < Date.now()) {
-    return this.updateOne({
-      $unset: { lockUntil: 1 },
-      $set: { loginAttempts: 1 }
-    });
-  }
-  
-  const updates = { $inc: { loginAttempts: 1 } };
-  
-  // Lock account after 5 failed attempts for 2 hours
-  if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
-    updates.$set = { lockUntil: Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
-  }
-  
-  return this.updateOne(updates);
+  // Account locking disabled - this method now does nothing
+  // Keeping method for backward compatibility but it won't lock accounts
+  return Promise.resolve();
 };
 
 // Instance method to reset login attempts

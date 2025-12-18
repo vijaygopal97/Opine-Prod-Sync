@@ -335,19 +335,14 @@ exports.login = async (req, res) => {
       companyStatus: user.company?.status 
     });
 
-    // Check if account is locked
-    if (user.isLocked) {
-      return res.status(423).json({
-        success: false,
-        message: 'Account is temporarily locked due to too many failed login attempts. Please try again later.'
-      });
-    }
+    // Account locking has been disabled - users can attempt login unlimited times
+    // Removed: Account lock check and login attempt tracking
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       console.log('❌ Login failed: Invalid password', { userId: user._id });
-      await user.incLoginAttempts();
+      // Removed: await user.incLoginAttempts(); - Account locking disabled
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
