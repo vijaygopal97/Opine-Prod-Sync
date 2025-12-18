@@ -315,9 +315,18 @@ exports.login = async (req, res) => {
     // If it contains @, it's an email; otherwise, if it's alphanumeric, it's a memberId
     const isEmail = loginIdentifier.includes('@');
     const isMemberId = !isEmail && /^[A-Za-z0-9]+$/.test(loginIdentifier);
-    const query = isMemberId 
-      ? { memberId: loginIdentifier }
-      : { email: loginIdentifier.toLowerCase() };
+    
+    // For memberID, use case-insensitive regex to allow login with any case (CAPI299, capi299, Capi299, etc.)
+    // Escape special regex characters to prevent regex injection
+    // For email, use lowercase as emails are stored in lowercase
+    let query;
+    if (isMemberId) {
+      // Escape special regex characters and create case-insensitive regex
+      const escapedMemberId = loginIdentifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query = { memberId: { $regex: new RegExp(`^${escapedMemberId}$`, 'i') } };
+    } else {
+      query = { email: loginIdentifier.toLowerCase() };
+    }
     
     const user = await User.findOne(query).select('+password').populate('company', 'companyName companyCode status');
 
