@@ -234,7 +234,10 @@ exports.getSurveys = async (req, res) => {
     console.log('getSurveys - Pagination:', { skip, limit: parseInt(limit) });
 
     // Get surveys with pagination
+    // Exclude respondentContacts field to avoid loading large arrays (50K+ contacts)
+    // respondentContactsFile field is kept (just the file path, not the data)
     const surveys = await Survey.find(query)
+      .select('-respondentContacts') // Exclude large respondentContacts array
       .populate('createdBy', 'firstName lastName email')
       .populate('assignedInterviewers.interviewer', 'firstName lastName email userType')
       .populate('capiInterviewers.interviewer', 'firstName lastName email userType')
