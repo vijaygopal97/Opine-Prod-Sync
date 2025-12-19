@@ -421,6 +421,30 @@ export const surveyAPI = {
     }
   },
 
+  // Get survey analytics (optimized endpoint using aggregation)
+  getSurveyAnalytics: async (surveyId, filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.dateRange) params.append('dateRange', filters.dateRange);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.interviewMode) params.append('interviewMode', filters.interviewMode);
+      if (filters.ac) params.append('ac', filters.ac);
+      if (filters.district) params.append('district', filters.district);
+      if (filters.lokSabha) params.append('lokSabha', filters.lokSabha);
+      if (filters.interviewerIds && Array.isArray(filters.interviewerIds) && filters.interviewerIds.length > 0) {
+        filters.interviewerIds.forEach(id => params.append('interviewerIds', id));
+      }
+      if (filters.interviewerMode) params.append('interviewerMode', filters.interviewerMode);
+
+      const response = await api.get(`/api/surveys/${surveyId}/analytics?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   // Update an existing survey
   updateSurvey: async (id, surveyData) => {
     try {

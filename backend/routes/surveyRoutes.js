@@ -12,6 +12,7 @@ const {
   getSurveyStats,
   getOverallStats,
   getCatiStats,
+  getSurveyAnalytics,
   getAvailableSurveys,
   rejectInterview,
   debugSurveyResponses,
@@ -63,6 +64,10 @@ router.route('/:id/reject-interview')
 // Debug route
 router.route('/:surveyId/debug-responses')
   .get(protect, authorize('company_admin', 'project_manager'), debugSurveyResponses);
+
+// Analytics route (must come before /:id route)
+router.route('/:id/analytics')
+  .get(protect, authorize('company_admin', 'project_manager'), getSurveyAnalytics);
 
 // CATI stats route (must come before /:id route)
 router.route('/:id/cati-stats')

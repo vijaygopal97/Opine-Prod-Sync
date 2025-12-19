@@ -73,6 +73,7 @@ const SurveyReportsPage = () => {
   const backPath = isProjectManagerRoute ? '/project-manager/survey-reports' : '/company/surveys';
   const [survey, setSurvey] = useState(null);
   const [responses, setResponses] = useState([]);
+  const [analyticsFromBackend, setAnalyticsFromBackend] = useState(null); // Store analytics from backend aggregation
   const [loading, setLoading] = useState(true);
   const [assignedInterviewers, setAssignedInterviewers] = useState(null); // Store assigned interviewers for project managers (null = not loaded yet, [] = loaded but empty)
   const [showFilters, setShowFilters] = useState(true);
@@ -411,7 +412,7 @@ const SurveyReportsPage = () => {
     };
   }, []);
 
-  // Fetch survey and responses data
+  // Fetch survey and analytics data
   const fetchSurveyData = async () => {
     try {
       setLoading(true);
@@ -445,19 +446,21 @@ const SurveyReportsPage = () => {
         console.log('🔍 SurveyReportsPage - Responses count:', response.data?.responses?.length);
         console.log('🔍 SurveyReportsPage - Response statuses:', response.data?.responses?.map(r => r.status));
         
+        let hasCatiResponses = false;
         if (response.success) {
           setResponses(response.data.responses);
+          // Check if there are CATI responses
+          hasCatiResponses = response.data?.responses?.some(r => 
+            r.interviewMode?.toUpperCase() === 'CATI'
+          );
         }
+        setAnalyticsFromBackend(null); // Ensure old analytics path is taken by useMemo
 
         // Fetch CATI stats if survey has CATI mode
         // Check both nested and direct structure
         const surveyMode = surveyData?.mode || surveyResponse.data?.mode;
         const surveyModes = surveyData?.modes || surveyResponse.data?.modes;
         
-        // Also check if there are any CATI responses (fallback if mode field is missing)
-        const hasCatiResponses = response.success && response.data?.responses?.some(r => 
-          r.interviewMode?.toUpperCase() === 'CATI'
-        );
         
         const isCatiSurvey = surveyMode === 'cati' || 
                             surveyMode === 'multi_mode' ||
@@ -666,7 +669,7 @@ const SurveyReportsPage = () => {
     if (surveyId) {
       fetchSurveyData();
     }
-  }, [surveyId, filters.status]);
+  }, [surveyId, filters.status, filters.dateRange, filters.startDate, filters.endDate, filters.interviewMode, filters.ac, filters.district, filters.lokSabha, filters.interviewerIds, filters.interviewerMode]);
 
   // Refetch CATI stats when CATI filters change
   useEffect(() => {
@@ -1433,6 +1436,55 @@ const SurveyReportsPage = () => {
 
   // Analytics calculations
   const analytics = useMemo(() => {
+    // If we have analytics from backend (optimized aggregation), use it directly
+    if (analyticsFromBackend) {
+      // Add assigned interviewers with 0 responses for project managers if needed
+      let interviewerStats = analyticsFromBackend.interviewerStats || [];
+      
+      if (isProjectManagerRoute && assignedInterviewers !== null && Array.isArray(assignedInterviewers) && assignedInterviewers.length > 0) {
+        const existingInterviewerIds = new Set(interviewerStats.map(stat => stat.interviewerId?.toString()));
+        const interviewersWithZeroResponses = assignedInterviewers
+          .filter(interviewer => {
+            const interviewerId = interviewer._id?.toString() || interviewer.id?.toString();
+            return !existingInterviewerIds.has(interviewerId);
+          })
+          .map(interviewer => ({
+            interviewer: interviewer.name || `${interviewer.firstName} ${interviewer.lastName}`.trim() || 'Unknown',
+            interviewerId: interviewer._id || interviewer.id,
+            memberId: interviewer.memberId || '',
+            count: 0,
+            approved: 0,
+            rejected: 0,
+            autoRejected: 0,
+            manualRejected: 0,
+            pending: 0,
+            underQC: 0,
+            capi: 0,
+            cati: 0,
+            percentage: 0,
+            psCovered: 0,
+            femalePercentage: 0,
+            withoutPhonePercentage: 0,
+            scPercentage: 0,
+            muslimPercentage: 0,
+            age18to24Percentage: 0,
+            age50PlusPercentage: 0
+          }))
+          .sort((a, b) => a.interviewer.localeCompare(b.interviewer));
+        
+        interviewerStats = [
+          ...interviewerStats.sort((a, b) => b.count - a.count),
+          ...interviewersWithZeroResponses
+        ];
+      }
+      
+      return {
+        ...analyticsFromBackend,
+        interviewerStats
+      };
+    }
+    
+    // Fallback: Calculate from filteredResponses (old method - for backward compatibility)
     // Handle empty responses case - but still include assigned interviewers for PMs
     if (!filteredResponses || filteredResponses.length === 0) {
       // For project managers: Add assigned interviewers with 0 responses even when there are no responses
@@ -2281,7 +2333,7 @@ const SurveyReportsPage = () => {
       },
       catiPerformance: catiPerformanceData
     };
-  }, [filteredResponses, survey, catiStats, isProjectManagerRoute, assignedInterviewers]);
+  }, [analyticsFromBackend, filteredResponses, survey, catiStats, isProjectManagerRoute, assignedInterviewers]);
 
   // Fetch PC data for ACs that don't have it cached (after analytics is defined)
   // Use AC code for matching - more reliable than AC name

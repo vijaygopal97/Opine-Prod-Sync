@@ -3736,5 +3736,951 @@ exports.getCatiStats = async (req, res) => {
   }
 };
 
+// @desc    Get survey analytics (optimized with aggregation)
+// @route   GET /api/surveys/:surveyId/analytics
+// @access  Private (Company Admin, Project Manager)
+exports.getSurveyAnalytics = async (req, res) => {
+  try {
+    const surveyId = req.params.id || req.params.surveyId; // Support both :id and :surveyId routes
+    const {
+      dateRange,
+      startDate,
+      endDate,
+      status,
+      interviewMode,
+      ac,
+      district,
+      lokSabha,
+      interviewerIds,
+      interviewerMode = 'include'
+    } = req.query;
+
+    // Verify survey exists
+    const survey = await Survey.findById(surveyId);
+    if (!survey) {
+      return res.status(404).json({
+        success: false,
+        message: 'Survey not found'
+      });
+    }
+
+    // Build match filter
+    const matchFilter = { survey: mongoose.Types.ObjectId(surveyId) };
+
+    // Status filter
+    if (status && status !== 'all') {
+      if (status === 'approved_rejected_pending') {
+        matchFilter.status = { $in: ['Approved', 'Rejected', 'Pending_Approval'] };
+      } else if (status === 'approved_pending') {
+        matchFilter.status = { $in: ['Approved', 'Pending_Approval'] };
+      } else if (status === 'pending') {
+        matchFilter.status = 'Pending_Approval';
+      } else {
+        matchFilter.status = status;
+      }
+    } else {
+      // Default: Approved, Rejected, and Pending_Approval (matching frontend default)
+      matchFilter.status = { $in: ['Approved', 'Rejected', 'Pending_Approval'] };
+    }
+
+    // Interview mode filter
+    if (interviewMode) {
+      matchFilter.interviewMode = interviewMode.toLowerCase();
+    }
+
+    // Date range filter
+    if (dateRange && dateRange !== 'all') {
+      const now = new Date();
+      let dateStart, dateEnd;
+
+      switch (dateRange) {
+        case 'today':
+          dateStart = new Date(now);
+          dateStart.setHours(0, 0, 0, 0);
+          dateEnd = new Date(now);
+          dateEnd.setHours(23, 59, 59, 999);
+          break;
+        case 'yesterday':
+          dateStart = new Date(now);
+          dateStart.setDate(dateStart.getDate() - 1);
+          dateStart.setHours(0, 0, 0, 0);
+          dateEnd = new Date(dateStart);
+          dateEnd.setHours(23, 59, 59, 999);
+          break;
+        case 'week':
+          dateStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          dateStart.setHours(0, 0, 0, 0);
+          dateEnd = new Date(now);
+          dateEnd.setHours(23, 59, 59, 999);
+          break;
+        case 'month':
+          dateStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          dateStart.setHours(0, 0, 0, 0);
+          dateEnd = new Date(now);
+          dateEnd.setHours(23, 59, 59, 999);
+          break;
+      }
+
+      if (dateStart && dateEnd) {
+        matchFilter.createdAt = { $gte: dateStart, $lte: dateEnd };
+      }
+    } else if (startDate && endDate) {
+      const dateStart = new Date(startDate);
+      dateStart.setHours(0, 0, 0, 0);
+      const dateEnd = new Date(endDate);
+      dateEnd.setHours(23, 59, 59, 999);
+      matchFilter.createdAt = { $gte: dateStart, $lte: dateEnd };
+    }
+
+    // Interviewer filter
+    if (interviewerIds && Array.isArray(interviewerIds) && interviewerIds.length > 0) {
+      const interviewerObjectIds = interviewerIds
+        .filter(id => id)
+        .map(id => mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id);
+
+      if (interviewerMode === 'exclude') {
+        matchFilter.interviewer = { $nin: interviewerObjectIds };
+      } else {
+        matchFilter.interviewer = { $in: interviewerObjectIds };
+      }
+    }
+
+    // For project managers: filter by assigned interviewers
+    if (req.user.userType === 'project_manager') {
+      const currentUser = await User.findById(req.user.id);
+      if (currentUser && currentUser.assignedTeamMembers && currentUser.assignedTeamMembers.length > 0) {
+        const assignedIds = currentUser.assignedTeamMembers.map(id => 
+          mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
+        );
+        if (!matchFilter.interviewer) {
+          matchFilter.interviewer = { $in: assignedIds };
+        } else if (matchFilter.interviewer.$in) {
+          // Intersect with assigned interviewers
+          matchFilter.interviewer.$in = matchFilter.interviewer.$in.filter(id => 
+            assignedIds.some(assignedId => assignedId.toString() === id.toString())
+          );
+        }
+      }
+    }
+
+    // Import respondent info utilities (mirrors frontend logic)
+    const { getRespondentInfo, findQuestionResponse, getMainTextValue } = require('../utils/respondentInfoUtils');
+    const { getMainText } = require('../utils/genderUtils');
+
+    // Stage 1: Match filtered responses
+    const matchStage = { $match: matchFilter };
+
+    // Stage 2: Add computed fields for demographics extraction
+    const addFieldsStage = {
+      $addFields: {
+        // Extract AC (priority: selectedAC > selectedPollingStation.acName > responses array)
+        extractedAC: {
+          $cond: {
+            if: { $and: [{ $ne: ['$selectedAC', null] }, { $ne: ['$selectedAC', ''] }] },
+            then: '$selectedAC',
+            else: {
+              $cond: {
+                if: { $and: [{ $ne: ['$selectedPollingStation.acName', null] }, { $ne: ['$selectedPollingStation.acName', ''] }] },
+                then: '$selectedPollingStation.acName',
+                else: null
+              }
+            }
+          }
+        },
+        // Extract gender from responses array
+        genderResponse: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$responses',
+                as: 'resp',
+                cond: {
+                  $or: [
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'gender' } },
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'sex' } },
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionId', ''] } }, regex: 'gender' } }
+                  ]
+                }
+              }
+            },
+            0
+          ]
+        },
+        // Extract age from responses array
+        ageResponse: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$responses',
+                as: 'resp',
+                cond: {
+                  $or: [
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'age' } },
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'year' } }
+                  ]
+                }
+              }
+            },
+            0
+          ]
+        },
+        // Extract phone from responses array
+        phoneResponse: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$responses',
+                as: 'resp',
+                cond: {
+                  $or: [
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'phone' } },
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'mobile' } }
+                  ]
+                }
+              }
+            },
+            0
+          ]
+        },
+        // Extract caste from responses array (for specific survey)
+        casteResponse: surveyId === '68fd1915d41841da463f0d46' ? {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$responses',
+                as: 'resp',
+                cond: {
+                  $or: [
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'caste' } },
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'scheduled cast' } },
+                    { $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'category' } }
+                  ]
+                }
+              }
+            },
+            0
+          ]
+        } : null,
+        // Extract religion from responses array
+        religionResponse: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: '$responses',
+                as: 'resp',
+                cond: {
+                  $regexMatch: { input: { $toLower: { $ifNull: ['$$resp.questionText', ''] } }, regex: 'religion' }
+                }
+              }
+            },
+            0
+          ]
+        },
+        // Extract polling station info
+        pollingStationKey: {
+          $cond: {
+            if: { $and: [{ $ne: ['$selectedPollingStation.stationName', null] }] },
+            then: {
+              $concat: [
+                { $ifNull: ['$selectedPollingStation.stationName', ''] },
+                { $ifNull: [{ $concat: ['-', '$selectedPollingStation.groupName'] }, ''] }
+              ]
+            },
+            else: null
+          }
+        }
+      }
+    };
+
+    // Stage 3: Group by AC for AC stats
+    const acGroupStage = {
+      $group: {
+        _id: {
+          $ifNull: ['$extractedAC', 'N/A']
+        },
+        total: { $sum: 1 },
+        capi: {
+          $sum: {
+            $cond: [{ $eq: [{ $toUpper: { $ifNull: ['$interviewMode', ''] } }, 'CAPI'] }, 1, 0]
+          }
+        },
+        cati: {
+          $sum: {
+            $cond: [{ $eq: [{ $toUpper: { $ifNull: ['$interviewMode', ''] } }, 'CATI'] }, 1, 0]
+          }
+        },
+        approved: {
+          $sum: { $cond: [{ $eq: ['$status', 'Approved'] }, 1, 0] }
+        },
+        rejected: {
+          $sum: { $cond: [{ $eq: ['$status', 'Rejected'] }, 1, 0] }
+        },
+        autoRejected: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$status', 'Rejected'] },
+                  {
+                    $or: [
+                      { $eq: ['$verificationData.autoRejected', true] },
+                      { $gt: [{ $size: { $ifNull: ['$verificationData.autoRejectionReasons', []] } }, 0] }
+                    ]
+                  }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        },
+        manualRejected: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$status', 'Rejected'] },
+                  {
+                    $or: [
+                      { $ne: ['$verificationData.autoRejected', true] },
+                      { $eq: [{ $size: { $ifNull: ['$verificationData.autoRejectionReasons', []] } }, 0] }
+                    ]
+                  }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        },
+        underQC: {
+          $sum: { $cond: [{ $eq: ['$status', 'Pending_Approval'] }, 1, 0] }
+        },
+        femaleCount: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ['$genderResponse', null] },
+                  {
+                    $or: [
+                      { $regexMatch: { input: { $toLower: { $toString: { $ifNull: ['$genderResponse.response', ''] } } }, regex: 'female' } },
+                      { $eq: [{ $toLower: { $toString: { $ifNull: ['$genderResponse.response', ''] } } }, 'f'] },
+                      { $eq: [{ $toLower: { $toString: { $ifNull: ['$genderResponse.response', ''] } } }, '2'] }
+                    ]
+                  }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        },
+        withoutPhoneCount: {
+          $sum: {
+            $cond: [
+              {
+                $or: [
+                  { $eq: ['$phoneResponse', null] },
+                  { $eq: [{ $toString: { $ifNull: ['$phoneResponse.response', ''] } }, ''] },
+                  { $eq: [{ $toLower: { $toString: { $ifNull: ['$phoneResponse.response', ''] } } }, 'n/a'] },
+                  { $eq: [{ $toString: { $ifNull: ['$phoneResponse.response', ''] } }, '0'] }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        },
+        scCount: surveyId === '68fd1915d41841da463f0d46' ? {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ['$casteResponse', null] },
+                  {
+                    $regexMatch: {
+                      input: { $toLower: { $toString: { $ifNull: ['$casteResponse.response', ''] } } },
+                      regex: '(scheduled cast|sc|scheduled caste)'
+                    }
+                  }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        } : { $literal: 0 },
+        muslimCount: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ['$religionResponse', null] },
+                  {
+                    $regexMatch: {
+                      input: { $toLower: { $toString: { $ifNull: ['$religionResponse.response', ''] } } },
+                      regex: '(muslim|islam)'
+                    }
+                  }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        },
+        age18to24Count: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ['$ageResponse', null] },
+                  {
+                    $let: {
+                      vars: {
+                        age: {
+                          $toInt: {
+                            $arrayElemAt: [
+                              {
+                                $regexFind: {
+                                  input: { $toString: { $ifNull: ['$ageResponse.response', ''] } },
+                                  regex: /(\d+)/
+                                }
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      },
+                      in: {
+                        $and: [
+                          { $gte: ['$$age', 18] },
+                          { $lte: ['$$age', 24] }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        },
+        age50PlusCount: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ['$ageResponse', null] },
+                  {
+                    $let: {
+                      vars: {
+                        age: {
+                          $toInt: {
+                            $arrayElemAt: [
+                              {
+                                $regexFind: {
+                                  input: { $toString: { $ifNull: ['$ageResponse.response', ''] } },
+                                  regex: /(\d+)/
+                                }
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      },
+                      in: { $gte: ['$$age', 50] }
+                    }
+                  }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        },
+        pollingStations: { $addToSet: '$pollingStationKey' },
+        interviewers: { $addToSet: '$interviewer' },
+        totalResponseTime: {
+          $sum: {
+            $reduce: {
+              input: { $ifNull: ['$responses', []] },
+              initialValue: 0,
+              in: { $add: ['$$value', { $ifNull: ['$$this.responseTime', 0] }] }
+            }
+          }
+        }
+      }
+    };
+
+    // Run aggregation for AC stats
+    const acStatsPipeline = [
+      matchStage,
+      addFieldsStage,
+      acGroupStage,
+      {
+        $project: {
+          _id: 0,
+          ac: '$_id',
+          count: '$total',
+          capi: '$capi',
+          cati: '$cati',
+          approved: '$approved',
+          rejected: '$rejected',
+          autoRejected: '$autoRejected',
+          manualRejected: '$manualRejected',
+          underQC: '$underQC',
+          interviewersCount: { $size: { $ifNull: ['$interviewers', []] } },
+          psCovered: { $size: { $filter: { input: { $ifNull: ['$pollingStations', []] }, cond: { $ne: ['$$this', null] } } } },
+          femaleCount: '$femaleCount',
+          withoutPhoneCount: '$withoutPhoneCount',
+          scCount: '$scCount',
+          muslimCount: '$muslimCount',
+          age18to24Count: '$age18to24Count',
+          age50PlusCount: '$age50PlusCount',
+          totalResponseTime: '$totalResponseTime'
+        }
+      }
+    ];
+
+    // For accurate AC extraction, we need to use JavaScript processing
+    // Fetch minimal data: responses array, selectedAC, selectedPollingStation, interviewer, status, interviewMode, createdAt, verificationData
+    // This is still much faster than fetching full documents
+    const minimalResponses = await SurveyResponse.find(matchFilter)
+      .select('responses selectedAC selectedPollingStation interviewer status interviewMode createdAt verificationData')
+      .populate('interviewer', 'firstName lastName memberId')
+      .lean();
+
+    // Process responses using same logic as frontend
+    const acMap = new Map();
+    const districtMap = new Map();
+    const lokSabhaMap = new Map();
+    const interviewerMap = new Map();
+    const genderMap = new Map();
+    const ageMap = new Map();
+    const dailyMap = new Map();
+    let totalResponseTime = 0;
+
+    minimalResponses.forEach(response => {
+      const respondentInfo = getRespondentInfo(response.responses || [], response, survey);
+      const responseData = response.responses || [];
+      
+      // Extract AC
+      const ac = respondentInfo.ac;
+      if (ac && ac !== 'N/A') {
+        const currentCount = acMap.get(ac) || {
+          total: 0,
+          capi: 0,
+          cati: 0,
+          interviewers: new Set(),
+          approved: 0,
+          rejected: 0,
+          autoRejected: 0,
+          manualRejected: 0,
+          underQC: 0,
+          femaleCount: 0,
+          withoutPhoneCount: 0,
+          scCount: 0,
+          muslimCount: 0,
+          age18to24Count: 0,
+          age50PlusCount: 0,
+          pollingStations: new Set()
+        };
+        
+        currentCount.total += 1;
+        
+        // Polling station
+        if (response.selectedPollingStation?.stationName) {
+          const psKey = `${response.selectedPollingStation.stationName}${response.selectedPollingStation.groupName ? `-${response.selectedPollingStation.groupName}` : ''}`;
+          currentCount.pollingStations.add(psKey);
+        }
+        
+        // Interview mode
+        const interviewMode = response.interviewMode?.toUpperCase();
+        if (interviewMode === 'CAPI') {
+          currentCount.capi += 1;
+        } else if (interviewMode === 'CATI') {
+          currentCount.cati += 1;
+        }
+        
+        // Interviewers
+        if (response.interviewer?._id) {
+          currentCount.interviewers.add(response.interviewer._id.toString());
+        }
+        
+        // Status
+        if (response.status === 'Approved') {
+          currentCount.approved += 1;
+        } else if (response.status === 'Rejected') {
+          const isAutoRejected = response.verificationData?.autoRejected === true ||
+                                (response.verificationData?.autoRejectionReasons && response.verificationData.autoRejectionReasons.length > 0) ||
+                                (response.verificationData?.feedback && (
+                                  response.verificationData.feedback.includes('Interview Too Short') ||
+                                  response.verificationData.feedback.includes('Not Voter') ||
+                                  response.verificationData.feedback.includes('Not a Registered Voter') ||
+                                  response.verificationData.feedback.includes('Duplicate Response')
+                                ));
+          if (isAutoRejected) {
+            currentCount.autoRejected += 1;
+          } else {
+            currentCount.manualRejected += 1;
+          }
+          currentCount.rejected += 1;
+        } else if (response.status === 'Pending_Approval') {
+          currentCount.underQC += 1;
+        }
+        
+        // Demographics
+        const genderResponse = require('../utils/genderUtils').findGenderResponse(responseData, survey) || findQuestionResponse(responseData, ['gender', 'sex']);
+        if (genderResponse?.response) {
+          const normalizedGender = require('../utils/genderUtils').normalizeGenderResponse(genderResponse.response);
+          if (normalizedGender === 'female') {
+            currentCount.femaleCount += 1;
+          }
+        }
+        
+        // Phone
+        let phoneResponse = responseData.find(r => {
+          const questionText = getMainText(r.questionText || r.question?.text || '').toLowerCase();
+          return questionText.includes('mobile number') ||
+                 questionText.includes('phone number') ||
+                 questionText.includes('share your mobile') ||
+                 questionText.includes('would you like to share your mobile');
+        });
+        if (!phoneResponse) {
+          phoneResponse = findQuestionResponse(responseData, ['phone', 'mobile', 'contact', 'number']);
+        }
+        if (!phoneResponse?.response ||
+            String(phoneResponse.response).trim() === '' ||
+            String(phoneResponse.response).trim() === 'N/A' ||
+            String(phoneResponse.response).trim() === '0') {
+          currentCount.withoutPhoneCount += 1;
+        }
+        
+        // SC (for specific survey)
+        if (surveyId === '68fd1915d41841da463f0d46') {
+          const casteResponse = findQuestionResponse(responseData, ['caste', 'scheduled cast', 'sc', 'category']);
+          if (casteResponse?.response) {
+            const casteValue = getMainTextValue(String(casteResponse.response)).toLowerCase();
+            if (casteValue.includes('scheduled cast') ||
+                casteValue.includes('sc') ||
+                casteValue.includes('scheduled caste')) {
+              currentCount.scCount += 1;
+            }
+          }
+        }
+        
+        // Muslim
+        const religionResponse = findQuestionResponse(responseData, ['religion', 'muslim', 'hindu', 'christian']);
+        if (religionResponse?.response) {
+          const religionValue = getMainTextValue(String(religionResponse.response)).toLowerCase();
+          if (religionValue.includes('muslim') || religionValue.includes('islam')) {
+            currentCount.muslimCount += 1;
+          }
+        }
+        
+        // Age groups
+        const ageResponse = findQuestionResponse(responseData, ['age', 'year']);
+        if (ageResponse?.response) {
+          const age = parseInt(ageResponse.response);
+          if (!isNaN(age) && age > 0 && age < 150) {
+            if (age >= 18 && age <= 24) {
+              currentCount.age18to24Count += 1;
+            }
+            if (age >= 50) {
+              currentCount.age50PlusCount += 1;
+            }
+          }
+        }
+        
+        acMap.set(ac, currentCount);
+      }
+      
+      // District
+      const district = respondentInfo.district;
+      if (district && district !== 'N/A') {
+        districtMap.set(district, (districtMap.get(district) || 0) + 1);
+      }
+      
+      // Lok Sabha
+      const lokSabha = respondentInfo.lokSabha;
+      if (lokSabha && lokSabha !== 'N/A') {
+        lokSabhaMap.set(lokSabha, (lokSabhaMap.get(lokSabha) || 0) + 1);
+      }
+      
+      // Interviewer stats
+      if (response.interviewer) {
+        const interviewerName = `${response.interviewer.firstName} ${response.interviewer.lastName}`;
+        const interviewerMemberId = response.interviewer.memberId || '';
+        const currentCount = interviewerMap.get(interviewerName) || {
+          total: 0,
+          capi: 0,
+          cati: 0,
+          approved: 0,
+          rejected: 0,
+          autoRejected: 0,
+          manualRejected: 0,
+          pending: 0,
+          pollingStations: new Set(),
+          femaleCount: 0,
+          withoutPhoneCount: 0,
+          scCount: 0,
+          muslimCount: 0,
+          age18to24Count: 0,
+          age50PlusCount: 0,
+          memberId: interviewerMemberId
+        };
+        
+        if (!currentCount.memberId && interviewerMemberId) {
+          currentCount.memberId = interviewerMemberId;
+        }
+        currentCount.total += 1;
+        
+        // Polling station
+        if (response.selectedPollingStation?.stationName) {
+          const psKey = `${response.selectedPollingStation.stationName}${response.selectedPollingStation.groupName ? `-${response.selectedPollingStation.groupName}` : ''}`;
+          currentCount.pollingStations.add(psKey);
+        }
+        
+        // Interview mode
+        if (interviewMode === 'CAPI') {
+          currentCount.capi += 1;
+        } else if (interviewMode === 'CATI') {
+          currentCount.cati += 1;
+        }
+        
+        // Status
+        if (response.status === 'Approved') {
+          currentCount.approved += 1;
+        } else if (response.status === 'Rejected') {
+          const isAutoRejected = response.verificationData?.autoRejected === true ||
+                                (response.verificationData?.autoRejectionReasons && response.verificationData.autoRejectionReasons.length > 0) ||
+                                (response.verificationData?.feedback && (
+                                  response.verificationData.feedback.includes('Interview Too Short') ||
+                                  response.verificationData.feedback.includes('Not Voter') ||
+                                  response.verificationData.feedback.includes('Not a Registered Voter') ||
+                                  response.verificationData.feedback.includes('Duplicate Response')
+                                ));
+          if (isAutoRejected) {
+            currentCount.autoRejected += 1;
+          } else {
+            currentCount.manualRejected += 1;
+          }
+          currentCount.rejected += 1;
+        } else if (response.status === 'Pending_Approval') {
+          currentCount.pending += 1;
+        }
+        
+        // Demographics for interviewer
+        const genderResponseForInterviewer = require('../utils/genderUtils').findGenderResponse(responseData, survey) || findQuestionResponse(responseData, ['gender', 'sex']);
+        if (genderResponseForInterviewer?.response) {
+          const normalizedGender = require('../utils/genderUtils').normalizeGenderResponse(genderResponseForInterviewer.response);
+          if (normalizedGender === 'female') {
+            currentCount.femaleCount += 1;
+          }
+        }
+        
+        // Phone for interviewer
+        let phoneResponseForInterviewer = responseData.find(r => {
+          const questionText = getMainText(r.questionText || r.question?.text || '').toLowerCase();
+          return questionText.includes('mobile number') ||
+                 questionText.includes('phone number') ||
+                 questionText.includes('share your mobile') ||
+                 questionText.includes('would you like to share your mobile');
+        });
+        if (!phoneResponseForInterviewer) {
+          phoneResponseForInterviewer = findQuestionResponse(responseData, ['phone', 'mobile', 'contact', 'number']);
+        }
+        if (!phoneResponseForInterviewer?.response ||
+            String(phoneResponseForInterviewer.response).trim() === '' ||
+            String(phoneResponseForInterviewer.response).trim() === 'N/A' ||
+            String(phoneResponseForInterviewer.response).trim() === '0') {
+          currentCount.withoutPhoneCount += 1;
+        }
+        
+        // SC for interviewer
+        if (surveyId === '68fd1915d41841da463f0d46') {
+          const casteResponseForInterviewer = findQuestionResponse(responseData, ['caste', 'scheduled cast', 'sc', 'category']);
+          if (casteResponseForInterviewer?.response) {
+            const casteValue = getMainTextValue(String(casteResponseForInterviewer.response)).toLowerCase();
+            if (casteValue.includes('scheduled cast') ||
+                casteValue.includes('sc') ||
+                casteValue.includes('scheduled caste')) {
+              currentCount.scCount += 1;
+            }
+          }
+        }
+        
+        // Muslim for interviewer
+        const religionResponseForInterviewer = findQuestionResponse(responseData, ['religion', 'muslim', 'hindu', 'christian']);
+        if (religionResponseForInterviewer?.response) {
+          const religionValue = getMainTextValue(String(religionResponseForInterviewer.response)).toLowerCase();
+          if (religionValue.includes('muslim') || religionValue.includes('islam')) {
+            currentCount.muslimCount += 1;
+          }
+        }
+        
+        // Age for interviewer
+        const ageResponseForInterviewer = findQuestionResponse(responseData, ['age', 'year']);
+        if (ageResponseForInterviewer?.response) {
+          const age = parseInt(ageResponseForInterviewer.response);
+          if (!isNaN(age) && age > 0 && age < 150) {
+            if (age >= 18 && age <= 24) {
+              currentCount.age18to24Count += 1;
+            }
+            if (age >= 50) {
+              currentCount.age50PlusCount += 1;
+            }
+          }
+        }
+        
+        interviewerMap.set(interviewerName, currentCount);
+      }
+      
+      // Gender stats
+      const gender = respondentInfo.gender;
+      if (gender && gender !== 'N/A') {
+        const genderText = getMainText(gender);
+        genderMap.set(genderText, (genderMap.get(genderText) || 0) + 1);
+      }
+      
+      // Age stats
+      const age = parseInt(respondentInfo.age);
+      if (!isNaN(age)) {
+        const ageGroup = Math.floor(age / 10) * 10;
+        ageMap.set(ageGroup, (ageMap.get(ageGroup) || 0) + 1);
+      }
+      
+      // Daily stats
+      const date = new Date(response.createdAt).toDateString();
+      dailyMap.set(date, (dailyMap.get(date) || 0) + 1);
+      
+      // Response time
+      totalResponseTime += (response.responses?.reduce((sum, resp) => sum + (resp.responseTime || 0), 0) || 0);
+    });
+
+    // Calculate total responses
+    const totalResponses = minimalResponses.length;
+    const capiResponses = minimalResponses.filter(r => r.interviewMode?.toUpperCase() === 'CAPI').length;
+    const catiResponses = minimalResponses.filter(r => r.interviewMode?.toUpperCase() === 'CATI').length;
+    const capiApproved = minimalResponses.filter(r => r.interviewMode?.toUpperCase() === 'CAPI' && r.status === 'Approved').length;
+    const capiRejected = minimalResponses.filter(r => r.interviewMode?.toUpperCase() === 'CAPI' && r.status === 'Rejected').length;
+
+    // Format AC stats
+    const acStats = Array.from(acMap.entries()).map(([ac, data]) => ({
+      ac: ac,
+      count: data.total,
+      capi: data.capi,
+      cati: data.cati,
+      percentage: totalResponses > 0 ? (data.total / totalResponses) * 100 : 0,
+      interviewersCount: data.interviewers ? data.interviewers.size : 0,
+      approved: data.approved,
+      rejected: data.rejected,
+      autoRejected: data.autoRejected,
+      manualRejected: data.manualRejected,
+      underQC: data.underQC,
+      psCovered: data.pollingStations ? data.pollingStations.size : 0,
+      femalePercentage: data.total > 0 ? (data.femaleCount / data.total) * 100 : 0,
+      withoutPhonePercentage: data.total > 0 ? (data.withoutPhoneCount / data.total) * 100 : 0,
+      scPercentage: data.total > 0 ? (data.scCount / data.total) * 100 : 0,
+      muslimPercentage: data.total > 0 ? (data.muslimCount / data.total) * 100 : 0,
+      age18to24Percentage: data.total > 0 ? (data.age18to24Count / data.total) * 100 : 0,
+      age50PlusPercentage: data.total > 0 ? (data.age50PlusCount / data.total) * 100 : 0
+    })).sort((a, b) => b.count - a.count);
+
+    // District and Lok Sabha stats are already calculated from minimalResponses processing above
+    const districtStats = Array.from(districtMap.entries())
+      .map(([district, count]) => ({
+        district,
+        count: count,
+        percentage: totalResponses > 0 ? (count / totalResponses) * 100 : 0
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    const lokSabhaStats = Array.from(lokSabhaMap.entries())
+      .map(([lokSabha, count]) => ({
+        lokSabha,
+        count: count,
+        percentage: totalResponses > 0 ? (count / totalResponses) * 100 : 0
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // Format interviewer stats
+    const interviewerStats = Array.from(interviewerMap.entries()).map(([interviewer, data]) => ({
+      interviewer: interviewer,
+      interviewerId: null, // Will be populated if needed
+      memberId: data.memberId || '',
+      count: data.total,
+      capi: data.capi,
+      cati: data.cati,
+      approved: data.approved,
+      rejected: data.rejected,
+      autoRejected: data.autoRejected,
+      manualRejected: data.manualRejected,
+      pending: data.pending,
+      underQC: data.pending,
+      percentage: totalResponses > 0 ? (data.total / totalResponses) * 100 : 0,
+      psCovered: data.pollingStations ? data.pollingStations.size : 0,
+      femalePercentage: data.total > 0 ? (data.femaleCount / data.total) * 100 : 0,
+      withoutPhonePercentage: data.total > 0 ? (data.withoutPhoneCount / data.total) * 100 : 0,
+      scPercentage: data.total > 0 ? (data.scCount / data.total) * 100 : 0,
+      muslimPercentage: data.total > 0 ? (data.muslimCount / data.total) * 100 : 0,
+      age18to24Percentage: data.total > 0 ? (data.age18to24Count / data.total) * 100 : 0,
+      age50PlusPercentage: data.total > 0 ? (data.age50PlusCount / data.total) * 100 : 0
+    })).sort((a, b) => b.count - a.count);
+
+    // Basic stats are already calculated from minimalResponses
+
+    // Gender and Age stats are already calculated from minimalResponses
+    const genderStats = Object.fromEntries(genderMap);
+    const ageStats = Object.fromEntries(ageMap);
+
+    // Daily stats are already calculated from minimalResponses
+    const dailyStats = Array.from(dailyMap.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Calculate completion rate and average response time
+    const completionRate = survey?.sampleSize ? (basicStats.totalResponses / survey.sampleSize) * 100 : 0;
+    const averageResponseTime = basicStats.totalResponses > 0 
+      ? (basicStats.totalResponseTime / basicStats.totalResponses) 
+      : 0;
+
+    // Return analytics data
+    res.status(200).json({
+      success: true,
+      data: {
+        totalResponses: basicStats.totalResponses,
+        capiResponses: basicStats.capiResponses,
+        catiResponses: basicStats.catiResponses,
+        completionRate,
+        averageResponseTime,
+        acStats,
+        districtStats,
+        lokSabhaStats,
+        interviewerStats,
+        genderStats: genderMap,
+        ageStats: ageMap,
+        dailyStats,
+        capiPerformance: {
+          approved: basicStats.capiApproved,
+          rejected: basicStats.capiRejected,
+          total: basicStats.capiResponses
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get survey analytics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
 // Export multer middleware for use in routes
 exports.uploadRespondentContactsMiddleware = upload.single('file');

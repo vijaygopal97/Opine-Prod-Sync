@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getMainText } from '../../utils/translations';
+import { getMainText, getLanguageText, parseMultiTranslation } from '../../utils/translations';
 import { 
   Search,
   Filter,
@@ -86,7 +86,16 @@ const SurveyApprovals = () => {
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [catiCallDetails, setCatiCallDetails] = useState(null);
   const [catiRecordingBlobUrl, setCatiRecordingBlobUrl] = useState(null);
+  const [selectedLanguageIndex, setSelectedLanguageIndex] = useState(0); // Language index for responses display in modal
   const { showSuccess, showError } = useToast();
+
+  // Reset language index when modal opens/closes
+  useEffect(() => {
+    if (showResponseDetails && selectedInterview) {
+      // Reset to default language (0) when modal opens
+      setSelectedLanguageIndex(0);
+    }
+  }, [showResponseDetails, selectedInterview]);
 
   // Helper function to get target audience from survey object
   const getTargetAudience = (interview) => {
@@ -1428,7 +1437,7 @@ const SurveyApprovals = () => {
   };
 
   // Helper function to format response display text
-  const formatResponseDisplay = (response, surveyQuestion) => {
+  const formatResponseDisplay = (response, surveyQuestion, languageIndex = 0) => {
     if (!response || response === null || response === undefined) {
       return 'No response';
     }
@@ -1446,7 +1455,11 @@ const SurveyApprovals = () => {
         
         if (surveyQuestion && surveyQuestion.options) {
           const option = surveyQuestion.options.find(opt => opt.value === value);
-          return option ? option.text : value;
+          if (option) {
+            // Use getLanguageText to get the selected language
+            return getLanguageText(option.text, languageIndex);
+          }
+          return value;
         }
         return value;
       });
@@ -1468,7 +1481,8 @@ const SurveyApprovals = () => {
         const min = scale.min || 1;
         const label = labels[response - min];
         if (label) {
-          return `${response} (${label})`;
+          const labelText = getLanguageText(label, languageIndex);
+          return `${response} (${labelText})`;
         }
         return response.toString();
       }
@@ -1476,7 +1490,11 @@ const SurveyApprovals = () => {
       // Map to display text using question options
       if (surveyQuestion && surveyQuestion.options) {
         const option = surveyQuestion.options.find(opt => opt.value === response);
-        return option ? option.text : response.toString();
+        if (option) {
+          // Use getLanguageText to get the selected language
+          return getLanguageText(option.text, languageIndex);
+        }
+        return response.toString();
       }
       return response.toString();
     }
@@ -3874,7 +3892,78 @@ const SurveyApprovals = () => {
 
               {/* Responses */}
               <div className="mt-6">
-                <h4 className="font-medium text-gray-900 mb-3">Question Responses</h4>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Question Responses</h4>
+                  {(() => {
+                    // Detect available languages from all responses
+                    const languageCounts = new Set();
+                    if (selectedInterview?.responses) {
+                      selectedInterview.responses.forEach(resp => {
+                        if (resp.questionText) {
+                          try {
+                            const languages = parseMultiTranslation(resp.questionText);
+                            if (languages && Array.isArray(languages)) {
+                              languages.forEach((_, index) => languageCounts.add(index));
+                            }
+                          } catch (e) {
+                            // Ignore parsing errors
+                          }
+                        }
+                        if (resp.questionDescription) {
+                          try {
+                            const languages = parseMultiTranslation(resp.questionDescription);
+                            if (languages && Array.isArray(languages)) {
+                              languages.forEach((_, index) => languageCounts.add(index));
+                            }
+                          } catch (e) {
+                            // Ignore parsing errors
+                          }
+                        }
+                        // Also check survey question options
+                        if (selectedInterview.survey) {
+                          const surveyQuestion = findQuestionByText(resp.questionText, selectedInterview.survey);
+                          if (surveyQuestion?.options) {
+                            surveyQuestion.options.forEach(opt => {
+                              if (opt.text) {
+                                try {
+                                  const languages = parseMultiTranslation(String(opt.text));
+                                  if (languages && Array.isArray(languages)) {
+                                    languages.forEach((_, index) => languageCounts.add(index));
+                                  }
+                                } catch (e) {
+                                  // Ignore parsing errors
+                                }
+                              }
+                            });
+                          }
+                        }
+                      });
+                    }
+                    const languageCountsArray = Array.from(languageCounts);
+                    const maxLanguages = languageCountsArray.length > 0 
+                      ? Math.max(...languageCountsArray, 0) + 1 
+                      : 1;
+                    const availableLanguages = Array.from({ length: maxLanguages }, (_, i) => `Language ${i + 1}`);
+                    
+                    return availableLanguages.length > 1 ? (
+                      <div className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 rounded-lg border border-gray-300">
+                        <span className="text-sm text-gray-700">🌐</span>
+                        <select
+                          value={selectedLanguageIndex}
+                          onChange={(e) => setSelectedLanguageIndex(parseInt(e.target.value, 10))}
+                          className="text-sm border-none bg-transparent text-gray-700 focus:outline-none focus:ring-0 cursor-pointer font-medium"
+                          style={{ minWidth: '120px' }}
+                        >
+                          {availableLanguages.map((label, index) => (
+                            <option key={index} value={index}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                   {(() => {
                     const { regularQuestions } = separateQuestions(selectedInterview.responses, selectedInterview.survey);
@@ -3884,11 +3973,17 @@ const SurveyApprovals = () => {
                       const hasConditions = surveyQuestion?.conditions && surveyQuestion.conditions.length > 0;
                       const conditionsMet = hasConditions ? areConditionsMet(surveyQuestion.conditions, selectedInterview.responses, selectedInterview.survey) : true;
                       
+                      // Get display text for question and description using selected language
+                      const questionTextDisplay = getLanguageText(response.questionText || '', selectedLanguageIndex);
+                      const questionDescriptionDisplay = response.questionDescription 
+                        ? getLanguageText(response.questionDescription, selectedLanguageIndex)
+                        : null;
+                      
                       return (
                         <div key={index} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex items-start justify-between mb-2">
                             <h5 className="font-medium text-gray-900 text-sm">
-                              Q{index + 1}: {response.questionText}
+                              Q{index + 1}: {questionTextDisplay}
                             </h5>
                           <div className="flex items-center space-x-2">
                             {hasConditions && conditionsMet && (
@@ -3911,8 +4006,8 @@ const SurveyApprovals = () => {
                           </div>
                         </div>
                         
-                        {response.questionDescription && (
-                          <p className="text-xs text-gray-600 mb-2">{response.questionDescription}</p>
+                        {questionDescriptionDisplay && (
+                          <p className="text-xs text-gray-600 mb-2">{questionDescriptionDisplay}</p>
                         )}
                         
                         {/* Conditional Logic Display */}
@@ -3939,7 +4034,7 @@ const SurveyApprovals = () => {
                         
                         <div className="bg-gray-50 p-3 rounded-md">
                           <p className="text-sm text-gray-800">
-                            <strong>Answer:</strong> {formatResponseDisplay(response.response, surveyQuestion)}
+                            <strong>Answer:</strong> {formatResponseDisplay(response.response, surveyQuestion, selectedLanguageIndex)}
                           </p>
                         </div>
                         {response.responseTime > 0 && (
