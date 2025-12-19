@@ -10,6 +10,7 @@ const {
   assignInterviewers,
   assignQualityAgents,
   getSurveyStats,
+  getOverallStats,
   getCatiStats,
   getAvailableSurveys,
   rejectInterview,
@@ -29,6 +30,10 @@ router.route('/')
 
 router.route('/stats')
   .get(protect, authorize('company_admin', 'project_manager'), getSurveyStats);
+
+// Overall stats route (must be before /:id route to avoid route conflict)
+router.route('/overall-stats')
+  .get(protect, authorize('company_admin', 'project_manager'), getOverallStats);
 
 // Respondent contacts routes
 router.route('/respondent-contacts/template')
@@ -68,6 +73,7 @@ router.route('/:id/respondent-contacts')
   .get(protect, authorize('company_admin', 'project_manager'), getRespondentContacts)
   .put(protect, authorize('company_admin', 'project_manager'), saveRespondentContacts);
 
+// Generic /:id route must be LAST to avoid matching specific routes like /overall-stats
 router.route('/:id')
   .get(protect, authorize('company_admin', 'project_manager', 'interviewer'), getSurvey)
   .put(protect, authorize('company_admin', 'project_manager'), updateSurvey)

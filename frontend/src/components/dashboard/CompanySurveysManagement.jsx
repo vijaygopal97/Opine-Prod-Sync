@@ -280,25 +280,30 @@ const CompanySurveysManagement = () => {
   };
 
 
-  // Fetch overall statistics (unfiltered)
+  // Fetch overall statistics (optimized - uses aggregation endpoint)
   const fetchOverallStats = async () => {
     try {
-      // Fetching overall statistics
-      const response = await surveyAPI.getSurveys({ limit: 1000 }); // Get all surveys for stats
+      // Use optimized aggregation endpoint instead of fetching all surveys
+      const response = await surveyAPI.getOverallStats();
       
-      if (response.success && response.data.surveys) {
-        const allSurveys = response.data.surveys;
-        const stats = {
-          totalSurveys: allSurveys.length,
-          activeSurveys: allSurveys.filter(s => s.status === 'active').length,
-          totalResponses: allSurveys.reduce((sum, s) => sum + (s.responses || 0), 0),
-          totalCost: allSurveys.reduce((sum, s) => sum + (s.cost || 0), 0)
-        };
-        setOverallStats(stats);
+      if (response.success && response.data.stats) {
+        setOverallStats({
+          totalSurveys: response.data.stats.totalSurveys || 0,
+          activeSurveys: response.data.stats.activeSurveys || 0,
+          totalResponses: response.data.stats.totalResponses || 0,
+          totalCost: response.data.stats.totalCost || 0
+        });
         // Overall stats loaded successfully
       }
     } catch (error) {
       console.error('Error fetching overall stats:', error);
+      // Set default values on error to prevent UI issues
+      setOverallStats({
+        totalSurveys: 0,
+        activeSurveys: 0,
+        totalResponses: 0,
+        totalCost: 0
+      });
     }
   };
 

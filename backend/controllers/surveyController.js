@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Survey = require('../models/Survey');
 const User = require('../models/User');
 const Company = require('../models/Company');
@@ -269,11 +270,21 @@ exports.getSurveys = async (req, res) => {
         survey: survey._id
       });
       
-      // Also check what statuses actually exist
-      const allResponses = await SurveyResponse.find({ survey: survey._id });
+      // Use aggregation to get status counts (much faster than fetching all responses)
+      const statusCountsResult = await SurveyResponse.aggregate([
+        { $match: { survey: survey._id } },
+        {
+          $group: {
+            _id: '$status',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      // Convert aggregation result to object format
       const statusCounts = {};
-      allResponses.forEach(r => {
-        statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+      statusCountsResult.forEach(item => {
+        statusCounts[item._id] = item.count;
       });
       
       console.log(`✅ Found ${approvedResponses} approved responses for ${survey.surveyName}`);
@@ -982,6 +993,99 @@ exports.getSurveyStats = async (req, res) => {
 
   } catch (error) {
     console.error('Get survey stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+};
+
+// @desc    Get overall statistics for dashboard (optimized with aggregation)
+// @route   GET /api/surveys/overall-stats
+// @access  Private (Company Admin, Project Manager)
+exports.getOverallStats = async (req, res) => {
+  try {
+    // Get current user and their company
+    const currentUser = await User.findById(req.user.id).populate('company');
+    if (!currentUser || !currentUser.company) {
+      return res.status(400).json({
+        success: false,
+        message: 'User not associated with any company'
+      });
+    }
+
+    const companyId = currentUser.company._id;
+    
+    // Convert to ObjectId if it's not already (companyId from populate is already ObjectId, but ensure it's correct)
+    const companyObjectId = mongoose.Types.ObjectId.isValid(companyId) 
+      ? (typeof companyId === 'string' ? new mongoose.Types.ObjectId(companyId) : companyId)
+      : companyId;
+
+    // Use aggregation to calculate stats efficiently
+    // 1. Count total surveys and active surveys
+    const surveyStats = await Survey.aggregate([
+      { $match: { company: companyObjectId } },
+      {
+        $group: {
+          _id: null,
+          totalSurveys: { $sum: 1 },
+          activeSurveys: {
+            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    // 2. Count total responses using aggregation (much faster than fetching all responses)
+    // First get all survey IDs for this company, then count responses
+    const companySurveyIds = await Survey.find({ company: companyObjectId }).select('_id').lean();
+    const surveyIds = companySurveyIds.map(s => s._id);
+    
+    let responseStats = [{ totalResponses: 0 }];
+    if (surveyIds.length > 0) {
+      responseStats = await SurveyResponse.aggregate([
+        {
+          $match: {
+            survey: { $in: surveyIds }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalResponses: { $sum: 1 }
+          }
+        }
+      ]);
+    }
+
+    // 3. Calculate total cost from surveys (if cost field exists)
+    const costStats = await Survey.aggregate([
+      { $match: { company: companyObjectId } },
+      {
+        $group: {
+          _id: null,
+          totalCost: { $sum: { $ifNull: ['$cost', 0] } }
+        }
+      }
+    ]);
+
+    // Combine results
+    const stats = {
+      totalSurveys: surveyStats[0]?.totalSurveys || 0,
+      activeSurveys: surveyStats[0]?.activeSurveys || 0,
+      totalResponses: responseStats[0]?.totalResponses || 0,
+      totalCost: costStats[0]?.totalCost || 0
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'Overall statistics retrieved successfully',
+      data: { stats }
+    });
+
+  } catch (error) {
+    console.error('Get overall stats error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error',

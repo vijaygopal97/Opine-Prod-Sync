@@ -411,6 +411,16 @@ export const surveyAPI = {
     }
   },
 
+  // Get overall statistics (optimized endpoint using aggregation)
+  getOverallStats: async () => {
+    try {
+      const response = await api.get('/api/surveys/overall-stats');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   // Update an existing survey
   updateSurvey: async (id, surveyData) => {
     try {
