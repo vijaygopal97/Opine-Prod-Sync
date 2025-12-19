@@ -64,6 +64,10 @@ const SurveyApprovals = () => {
   const [audioPlaying, setAudioPlaying] = useState(null);
   const [audioElement, setAudioElement] = useState(null);
   const [audioSignedUrls, setAudioSignedUrls] = useState({}); // Cache for signed URLs
+  const [catiRecordingBlobUrls, setCatiRecordingBlobUrls] = useState({}); // Cache for CATI recording blob URLs
+  const [loadingCatiRecordings, setLoadingCatiRecordings] = useState({}); // Track loading state for CATI recordings
+  const [catiHasRecording, setCatiHasRecording] = useState({}); // Cache whether CATI interview has recording available
+  const [checkingCatiRecording, setCheckingCatiRecording] = useState({}); // Track checking state for recording availability
   const [verificationForm, setVerificationForm] = useState({
     audioStatus: '',
     genderMatching: '',
@@ -1794,6 +1798,247 @@ const SurveyApprovals = () => {
   });
 
   // Audio playback functions - now controls the HTML audio element
+  // Check if CATI interview has recording available (lightweight check - only fetches call details)
+  const checkCatiRecordingAvailability = async (interview) => {
+    if (!interview || interview.interviewMode !== 'cati') return false;
+    
+    const interviewId = interview._id;
+    
+    // If already checked, return cached result
+    if (catiHasRecording.hasOwnProperty(interviewId)) {
+      return catiHasRecording[interviewId];
+    }
+    
+    // If already checking, return false (will update when check completes)
+    if (checkingCatiRecording[interviewId]) {
+      return false;
+    }
+    
+    const callId = interview.call_id;
+    if (!callId) {
+      // Try fallback: search by survey and respondent phone
+      if (interview.survey?._id && interview.respondentPhone) {
+        try {
+          setCheckingCatiRecording(prev => ({ ...prev, [interviewId]: true }));
+          const callsResponse = await catiAPI.getCalls(1, 10, interview.survey._id);
+          if (callsResponse.success && callsResponse.data?.calls) {
+            const respondentPhoneLast10 = interview.respondentPhone.slice(-10);
+            const matchingCall = callsResponse.data.calls.find(call => 
+              call.toNumber && call.toNumber.slice(-10) === respondentPhoneLast10
+            );
+            const hasRecording = !!(matchingCall && matchingCall.recordingUrl);
+            setCatiHasRecording(prev => ({ ...prev, [interviewId]: hasRecording }));
+            setCheckingCatiRecording(prev => {
+              const newState = { ...prev };
+              delete newState[interviewId];
+              return newState;
+            });
+            return hasRecording;
+          }
+        } catch (fallbackError) {
+          console.error('Error in fallback call search:', fallbackError);
+        } finally {
+          setCheckingCatiRecording(prev => {
+            const newState = { ...prev };
+            delete newState[interviewId];
+            return newState;
+          });
+        }
+      }
+      // No call_id and no fallback - mark as no recording
+      setCatiHasRecording(prev => ({ ...prev, [interviewId]: false }));
+      return false;
+    }
+    
+    try {
+      setCheckingCatiRecording(prev => ({ ...prev, [interviewId]: true }));
+      const callResponse = await catiAPI.getCallById(callId);
+      const hasRecording = !!(callResponse.success && callResponse.data && callResponse.data.recordingUrl);
+      setCatiHasRecording(prev => ({ ...prev, [interviewId]: hasRecording }));
+      setCheckingCatiRecording(prev => {
+        const newState = { ...prev };
+        delete newState[interviewId];
+        return newState;
+      });
+      return hasRecording;
+    } catch (error) {
+      console.error('Error checking CATI call details:', error);
+      setCatiHasRecording(prev => ({ ...prev, [interviewId]: false }));
+      setCheckingCatiRecording(prev => {
+        const newState = { ...prev };
+        delete newState[interviewId];
+        return newState;
+      });
+      return false;
+    }
+  };
+
+  // Fetch CATI recording blob for playback (only called when user clicks Play)
+  const fetchCatiRecording = async (interview) => {
+    if (!interview || interview.interviewMode !== 'cati') return null;
+    
+    const interviewId = interview._id;
+    
+    // If already cached, return it
+    if (catiRecordingBlobUrls[interviewId]) {
+      return catiRecordingBlobUrls[interviewId];
+    }
+    
+    // If already loading, return null
+    if (loadingCatiRecordings[interviewId]) {
+      return null;
+    }
+    
+    const callId = interview.call_id;
+    if (!callId) {
+      // Try fallback: search by survey and respondent phone
+      if (interview.survey?._id && interview.respondentPhone) {
+        try {
+          setLoadingCatiRecordings(prev => ({ ...prev, [interviewId]: true }));
+          const callsResponse = await catiAPI.getCalls(1, 10, interview.survey._id);
+          if (callsResponse.success && callsResponse.data?.calls) {
+            const respondentPhoneLast10 = interview.respondentPhone.slice(-10);
+            const matchingCall = callsResponse.data.calls.find(call => 
+              call.toNumber && call.toNumber.slice(-10) === respondentPhoneLast10
+            );
+            if (matchingCall && matchingCall.recordingUrl) {
+              try {
+                const recordingResponse = await api.get(`/api/cati/recording/${matchingCall._id}`, {
+                  responseType: 'blob'
+                });
+                if (recordingResponse.data) {
+                  const blob = new Blob([recordingResponse.data], { type: 'audio/mpeg' });
+                  const blobUrl = URL.createObjectURL(blob);
+                  setCatiRecordingBlobUrls(prev => ({ ...prev, [interviewId]: blobUrl }));
+                  setLoadingCatiRecordings(prev => {
+                    const newState = { ...prev };
+                    delete newState[interviewId];
+                    return newState;
+                  });
+                  return blobUrl;
+                }
+              } catch (recordingError) {
+                console.error('Error fetching CATI recording via fallback:', recordingError);
+                showError('Failed to load CATI recording');
+              }
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Error in fallback call search:', fallbackError);
+        } finally {
+          setLoadingCatiRecordings(prev => {
+            const newState = { ...prev };
+            delete newState[interviewId];
+            return newState;
+          });
+        }
+      }
+      return null;
+    }
+    
+    try {
+      setLoadingCatiRecordings(prev => ({ ...prev, [interviewId]: true }));
+      const callResponse = await catiAPI.getCallById(callId);
+      if (callResponse.success && callResponse.data && callResponse.data.recordingUrl) {
+        try {
+          const recordingResponse = await api.get(`/api/cati/recording/${callResponse.data._id}`, {
+            responseType: 'blob'
+          });
+          if (recordingResponse.data) {
+            const blob = new Blob([recordingResponse.data], { type: 'audio/mpeg' });
+            const blobUrl = URL.createObjectURL(blob);
+            setCatiRecordingBlobUrls(prev => ({ ...prev, [interviewId]: blobUrl }));
+            setLoadingCatiRecordings(prev => {
+              const newState = { ...prev };
+              delete newState[interviewId];
+              return newState;
+            });
+            return blobUrl;
+          }
+        } catch (recordingError) {
+          console.error('Error fetching CATI recording:', recordingError);
+          showError('Failed to load CATI recording');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching CATI call details:', error);
+      showError('Failed to load CATI call details');
+    } finally {
+      setLoadingCatiRecordings(prev => {
+        const newState = { ...prev };
+        delete newState[interviewId];
+        return newState;
+      });
+    }
+    
+    return null;
+  };
+
+  // Handle playing CATI audio from blob URL
+  const handlePlayCatiAudio = async (interviewId, interview) => {
+    if (audioPlaying === interviewId) {
+      // Pause current audio
+      const audioEl = document.querySelector(`audio[data-interview-id="${interviewId}"][data-cati="true"]`);
+      if (audioEl) {
+        audioEl.pause();
+        setAudioPlaying(null);
+      }
+      return;
+    }
+    
+    // Stop any currently playing audio (both CAPI and CATI)
+    const allAudioElements = document.querySelectorAll('audio[data-interview-id]');
+    allAudioElements.forEach(el => {
+      if (el.getAttribute('data-interview-id') !== interviewId) {
+        el.pause();
+        el.currentTime = 0;
+      }
+    });
+    // Also stop CAPI audio if playing
+    if (audioPlaying && audioPlaying !== interviewId) {
+      setAudioPlaying(null);
+    }
+    
+    // Get or fetch CATI recording blob URL
+    let blobUrl = catiRecordingBlobUrls[interviewId];
+    if (!blobUrl) {
+      blobUrl = await fetchCatiRecording(interview);
+      if (!blobUrl) {
+        showError('Failed to load CATI recording');
+        return;
+      }
+    }
+    
+    // Find or create the audio element for this interview
+    let audioEl = document.querySelector(`audio[data-interview-id="${interviewId}"][data-cati="true"]`);
+    
+    if (!audioEl) {
+      audioEl = document.createElement('audio');
+      audioEl.setAttribute('data-interview-id', interviewId);
+      audioEl.setAttribute('data-cati', 'true');
+      audioEl.src = blobUrl;
+      audioEl.controls = false;
+      audioEl.onended = () => setAudioPlaying(null);
+      audioEl.onpause = () => setAudioPlaying(null);
+      audioEl.onplay = () => setAudioPlaying(interviewId);
+      audioEl.onerror = () => {
+        showError('Failed to play CATI recording');
+        setAudioPlaying(null);
+      };
+      document.body.appendChild(audioEl);
+    }
+    
+    // Play the audio
+    try {
+      await audioEl.play();
+      setAudioPlaying(interviewId);
+    } catch (error) {
+      console.error('Error playing CATI audio:', error);
+      showError('Failed to play CATI recording');
+      setAudioPlaying(null);
+    }
+  };
+
   const handlePlayAudio = async (audioUrl, interviewId, signedUrl = null) => {
     // Check for mock URLs
     if (audioUrl && (audioUrl.startsWith('mock://') || audioUrl.includes('mock://') || audioUrl.includes('mock%3A//'))) {
@@ -1809,7 +2054,7 @@ const SurveyApprovals = () => {
         setAudioPlaying(null);
       }
     } else {
-      // Stop any currently playing audio
+      // Stop any currently playing audio (both CAPI and CATI)
       const allAudioElements = document.querySelectorAll('audio[data-interview-id]');
       allAudioElements.forEach(el => {
         if (el.getAttribute('data-interview-id') !== interviewId) {
@@ -1817,6 +2062,10 @@ const SurveyApprovals = () => {
           el.currentTime = 0;
         }
       });
+      // Also stop CATI audio if playing
+      if (audioPlaying && audioPlaying !== interviewId) {
+        setAudioPlaying(null);
+      }
       
       // Find or create the audio element for this interview
       let audioEl = document.querySelector(`audio[data-interview-id="${interviewId}"]`);
@@ -2557,25 +2806,91 @@ const SurveyApprovals = () => {
                         </td>
                         
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {interview.audioRecording?.hasAudio ? (
-                            <button
-                              onClick={() => handlePlayAudio(
-                                interview.audioRecording.audioUrl, 
-                                interview._id,
-                                interview.audioRecording.signedUrl
-                              )}
-                              className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                              {audioPlaying === interview._id ? (
-                                <Pause className="w-4 h-4 mr-1" />
-                              ) : (
-                                <Play className="w-4 h-4 mr-1" />
-                              )}
-                              {audioPlaying === interview._id ? 'Pause' : 'Play'}
-                            </button>
-                          ) : (
-                            <span className="text-sm text-gray-400">No Audio</span>
-                          )}
+                          {(() => {
+                            // Handle CATI interviews
+                            if (interview.interviewMode === 'cati') {
+                              const interviewId = interview._id;
+                              const hasChecked = catiHasRecording.hasOwnProperty(interviewId);
+                              const hasRecording = catiHasRecording[interviewId] === true;
+                              const isChecking = checkingCatiRecording[interviewId];
+                              const isLoading = loadingCatiRecordings[interviewId];
+                              
+                              // Check if we can check for recording (have call_id or fallback conditions)
+                              const canCheck = interview.call_id || (interview.survey?._id && interview.respondentPhone);
+                              
+                              // If not checked yet and we can check, trigger check (but don't wait - show loading state)
+                              if (!hasChecked && !isChecking && canCheck) {
+                                // Trigger async check (fire and forget)
+                                checkCatiRecordingAvailability(interview).catch(err => {
+                                  console.error('Error checking CATI recording:', err);
+                                });
+                              }
+                              
+                              // Show loading while checking availability
+                              if (isChecking || (!hasChecked && canCheck)) {
+                                return (
+                                  <span className="text-sm text-gray-400 inline-flex items-center">
+                                    <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                                    Checking...
+                                  </span>
+                                );
+                              }
+                              
+                              // If checked and has recording, show play button
+                              if (hasRecording) {
+                                return (
+                                  <button
+                                    onClick={() => handlePlayCatiAudio(interviewId, interview)}
+                                    disabled={isLoading}
+                                    className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {isLoading ? (
+                                      <>
+                                        <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                                        Loading...
+                                      </>
+                                    ) : audioPlaying === interviewId ? (
+                                      <>
+                                        <Pause className="w-4 h-4 mr-1" />
+                                        Pause
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Play className="w-4 h-4 mr-1" />
+                                        Play
+                                      </>
+                                    )}
+                                  </button>
+                                );
+                              }
+                              
+                              // If checked and no recording, or can't check (no call_id and no fallback), show "No Audio"
+                              return <span className="text-sm text-gray-400">No Audio</span>;
+                            }
+                            
+                            // Handle CAPI interviews (existing logic)
+                            if (interview.audioRecording?.hasAudio) {
+                              return (
+                                <button
+                                  onClick={() => handlePlayAudio(
+                                    interview.audioRecording.audioUrl, 
+                                    interview._id,
+                                    interview.audioRecording.signedUrl
+                                  )}
+                                  className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                >
+                                  {audioPlaying === interview._id ? (
+                                    <Pause className="w-4 h-4 mr-1" />
+                                  ) : (
+                                    <Play className="w-4 h-4 mr-1" />
+                                  )}
+                                  {audioPlaying === interview._id ? 'Pause' : 'Play'}
+                                </button>
+                              );
+                            }
+                            
+                            return <span className="text-sm text-gray-400">No Audio</span>;
+                          })()}
                         </td>
                         
                         <td className="px-6 py-4 whitespace-nowrap">
