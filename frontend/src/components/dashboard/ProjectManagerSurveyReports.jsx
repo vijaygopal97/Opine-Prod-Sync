@@ -11,7 +11,8 @@ import {
   FileText,
   Calendar,
   TrendingUp,
-  Target
+  Target,
+  Phone
 } from 'lucide-react';
 import { surveyAPI } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
@@ -94,6 +95,10 @@ const ProjectManagerSurveyReports = () => {
 
   const handleViewResponses = (survey) => {
     navigate(`/project-manager/surveys/${survey._id || survey.id}/responses`);
+  };
+
+  const handleViewCallerPerformance = (survey) => {
+    navigate(`/project-manager/surveys/${survey._id || survey.id}/caller-performance`);
   };
 
   const filteredSurveys = surveys.filter(survey => {
@@ -226,6 +231,14 @@ const ProjectManagerSurveyReports = () => {
                           >
                             <BarChart3 className="w-4 h-4 mr-1.5" />
                             Reports
+                          </button>
+                          <button
+                            onClick={() => handleViewCallerPerformance(survey)}
+                            className="inline-flex items-center px-3 py-1.5 bg-teal-100 text-teal-700 text-sm font-medium rounded-lg hover:bg-teal-200 transition-colors"
+                            title="View Caller Performance"
+                          >
+                            <Phone className="w-4 h-4 mr-1.5" />
+                            Caller Performance
                           </button>
                           <button
                             onClick={() => handleViewResponses(survey)}
